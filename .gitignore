@@ -1,0 +1,41 @@
+# Lokale Planung und Dokumentation bleiben aus dem Repo
+*.md
+
+# Secrets und lokale Konfiguration
+.env
+.env.*
+!.env.example
+
+# Maven / Java
+target/
+*.class
+*.jar
+*.war
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Laufzeit-State (SQLite, Logs)
+*.db
+*.sqlite*
+*.log
+logs/
+
+# IDE und Editoren
+.idea/
+.vscode/
+*.iml
+*.code-workspace
+
+# Betriebssystem
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/

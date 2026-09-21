@@ -80,6 +80,11 @@ R7_EXPERIMENTS = [
     ("r7d", "data-r7", "models-r7-d", "100", ["--arch", "v3", "--no-focal"]),
 ]
 
+R8_EXPERIMENTS = [
+    ("r8a", "data-r8", "models-r8-a", "60", ["--arch", "v3", "--no-focal"]),
+    ("r8b", "data-r8", "models-r8-b", "60", ["--arch", "v3w", "--no-focal"]),
+]
+
 SUITES = {
     "exp9": {"experiments": EXPERIMENTS, "data_dirs": ("data", "data-exp-c"),
              "work": "/kaggle/working/exp9", "input": "/kaggle/input/vistructum-exp9-data"},
@@ -95,6 +100,8 @@ SUITES = {
            "work": "/kaggle/working/r6", "input": "/kaggle/input/vistructum-r6-data"},
     "r7": {"experiments": R7_EXPERIMENTS, "data_dirs": ("data-r7",),
            "work": "/kaggle/working/r7", "input": "/kaggle/input/vistructum-r7-data"},
+    "r8": {"experiments": R8_EXPERIMENTS, "data_dirs": ("data-r8",),
+           "work": "/kaggle/working/r8", "input": "/kaggle/input/vistructum-r8-data"},
 }
 
 

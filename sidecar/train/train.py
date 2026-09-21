@@ -66,6 +66,28 @@ class SymbolNetV2(nn.Module):
         return self.head(self.features(x).mean(dim=(2, 3)))
 
 
+class SymbolNetV3W(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 40, 3, padding=1),
+            nn.BatchNorm2d(40),
+            nn.Hardswish(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(40, 80, 3, padding=1),
+            nn.BatchNorm2d(80),
+            nn.Hardswish(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(80, 160, 3, padding=1),
+            nn.BatchNorm2d(160),
+            nn.Hardswish(),
+        )
+        self.head = nn.Linear(160, len(LABELS))
+
+    def forward(self, x):
+        return self.head(self.features(x).mean(dim=(2, 3)))
+
+
 class SymbolNetV3(nn.Module):
     def __init__(self):
         super().__init__()
@@ -282,7 +304,7 @@ def train(data_dir, out_dir, epochs, arch, batch, optimizer_name, learning_rate,
     val_loader = DataLoader(load_split(data_dir, "val"), batch_size=batch)
     test_loader = DataLoader(load_split(data_dir, "test"), batch_size=batch)
 
-    model = {"v3": SymbolNetV3, "v2": SymbolNetV2}.get(arch, SymbolNet)()
+    model = {"v3w": SymbolNetV3W, "v3": SymbolNetV3, "v2": SymbolNetV2}.get(arch, SymbolNet)()
     model.to(device)
     param_count = sum(p.numel() for p in model.parameters())
     best_val_worst = fit(model, train_loader, val_loader, generator, epochs, optimizer_name, learning_rate, weight_decay, label_smoothing, use_focal, warmup_epochs, ema_decay, checkpoint_path, resume, log_every, stop_after, device)
@@ -338,7 +360,7 @@ if __name__ == "__main__":
     parser.add_argument("data", nargs="?", default="data")
     parser.add_argument("target", nargs="?", default="models")
     parser.add_argument("rounds", nargs="?", type=int, default=EPOCHS)
-    parser.add_argument("--arch", choices=("v1", "v2", "v3"), default="v1")
+    parser.add_argument("--arch", choices=("v1", "v2", "v3", "v3w"), default="v1")
     parser.add_argument("--batch", type=int, default=BATCH)
     parser.add_argument("--optimizer", choices=("adam", "adamw"), default="adam")
     parser.add_argument("--lr", type=float, default=LEARNING_RATE)

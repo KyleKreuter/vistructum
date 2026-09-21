@@ -20,6 +20,12 @@ GEN_RECIPES = {
                     "--zoom-min", "0.6", "--zoom-max", "1.4", "--inversion", "0.05",
                     "--low-contrast", "0.4", "--hard-ok-share", "0.5",
                     "--mined-ok-share", "0.5", "--slop-share", "0.5"]},
+    "r8": {"target": "data-r8", "count": "50000",
+           "args": ["--adversarial-fraction", "0.4", "--wall-share", "0.4",
+                    "--clipped-share", "0.6", "--translate", "12", "--cutout", "0.5",
+                    "--zoom-min", "0.6", "--zoom-max", "1.4", "--inversion", "0.05",
+                    "--low-contrast", "0.4", "--hard-ok-share", "0.5",
+                    "--mined-ok-share", "0.5", "--slop-share", "0.5"]},
 }
 
 POOL_DIRS = ("backgrounds-ground", "backgrounds-sky", "mined")

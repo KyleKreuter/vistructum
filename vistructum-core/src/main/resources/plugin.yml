@@ -1,0 +1,6 @@
+name: vistructum
+version: '${project.version}'
+main: de.kylekreuter.vistructum.core.VistructumCore
+api-version: '1.21'
+author: Kyle Kreuter
+description: BuildFilter infrastructure against prohibited flat and wall builds.

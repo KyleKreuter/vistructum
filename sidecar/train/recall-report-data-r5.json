@@ -1,0 +1,82 @@
+{
+  "r5:a": {
+    "data-r5": {
+      "ok": {
+        "recall": 0.781437125748503,
+        "precision": 0.8207547169811321,
+        "missed": 73,
+        "total": 334
+      },
+      "hakenkreuz": {
+        "recall": 0.8293413173652695,
+        "precision": 0.7914285714285715,
+        "missed": 57,
+        "total": 334
+      }
+    }
+  },
+  "r5:b": {
+    "data-r5": {
+      "ok": {
+        "recall": 0.8203592814371258,
+        "precision": 0.8509316770186336,
+        "missed": 60,
+        "total": 334
+      },
+      "hakenkreuz": {
+        "recall": 0.8562874251497006,
+        "precision": 0.8265895953757225,
+        "missed": 48,
+        "total": 334
+      }
+    }
+  },
+  "r5:c": {
+    "data-r5": {
+      "ok": {
+        "recall": 0.8293413173652695,
+        "precision": 0.7959770114942529,
+        "missed": 57,
+        "total": 334
+      },
+      "hakenkreuz": {
+        "recall": 0.7874251497005988,
+        "precision": 0.821875,
+        "missed": 71,
+        "total": 334
+      }
+    }
+  },
+  "r5:d": {
+    "data-r5": {
+      "ok": {
+        "recall": 0.781437125748503,
+        "precision": 0.8642384105960265,
+        "missed": 73,
+        "total": 334
+      },
+      "hakenkreuz": {
+        "recall": 0.8772455089820359,
+        "precision": 0.8005464480874317,
+        "missed": 41,
+        "total": 334
+      }
+    }
+  },
+  "r5:e": {
+    "data-r5": {
+      "ok": {
+        "recall": 0.8143712574850299,
+        "precision": 0.8217522658610272,
+        "missed": 62,
+        "total": 334
+      },
+      "hakenkreuz": {
+        "recall": 0.8233532934131736,
+        "precision": 0.8160237388724035,
+        "missed": 59,
+        "total": 334
+      }
+    }
+  }
+}

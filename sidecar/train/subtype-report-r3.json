@@ -1,0 +1,1202 @@
+{
+  "a": {
+    "clipped": {
+      "ok": {
+        "n": 71,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 71,
+        "recall": 0.38235294117647056,
+        "precision": 0.7222222222222222
+      },
+      "ss_runen": {
+        "n": 71,
+        "recall": 0.6756756756756757,
+        "precision": 0.6578947368421053
+      }
+    },
+    "dense": {
+      "ok": {
+        "n": 33,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 33,
+        "recall": 0.7857142857142857,
+        "precision": 0.7333333333333333
+      },
+      "ss_runen": {
+        "n": 33,
+        "recall": 0.7894736842105263,
+        "precision": 1.0
+      }
+    },
+    "lowcontrast": {
+      "ok": {
+        "n": 163,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 163,
+        "recall": 0.5617977528089888,
+        "precision": 0.8333333333333334
+      },
+      "ss_runen": {
+        "n": 163,
+        "recall": 0.7297297297297297,
+        "precision": 0.6428571428571429
+      }
+    },
+    "ok-checker": {
+      "ok": {
+        "n": 32,
+        "recall": 1.0,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 32,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 32,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-corner": {
+      "ok": {
+        "n": 42,
+        "recall": 0.7380952380952381,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 42,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 42,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-diagonal": {
+      "ok": {
+        "n": 32,
+        "recall": 0.6875,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 32,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 32,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-letter": {
+      "ok": {
+        "n": 36,
+        "recall": 0.8611111111111112,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-noise": {
+      "ok": {
+        "n": 36,
+        "recall": 1.0,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-plus": {
+      "ok": {
+        "n": 31,
+        "recall": 0.8064516129032258,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 31,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 31,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-ring": {
+      "ok": {
+        "n": 45,
+        "recall": 0.9777777777777777,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 45,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 45,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-sprite": {
+      "ok": {
+        "n": 36,
+        "recall": 0.8333333333333334,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-stripes": {
+      "ok": {
+        "n": 44,
+        "recall": 0.9090909090909091,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 44,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 44,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "standard": {
+      "ok": {
+        "n": 326,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 326,
+        "recall": 0.8490566037735849,
+        "precision": 0.9183673469387755
+      },
+      "ss_runen": {
+        "n": 326,
+        "recall": 0.8203592814371258,
+        "precision": 0.9647887323943662
+      }
+    },
+    "wall": {
+      "ok": {
+        "n": 75,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 75,
+        "recall": 0.8421052631578947,
+        "precision": 0.9142857142857143
+      },
+      "ss_runen": {
+        "n": 75,
+        "recall": 0.8378378378378378,
+        "precision": 0.9117647058823529
+      }
+    }
+  },
+  "b": {
+    "clipped": {
+      "ok": {
+        "n": 71,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 71,
+        "recall": 0.47058823529411764,
+        "precision": 0.6956521739130435
+      },
+      "ss_runen": {
+        "n": 71,
+        "recall": 0.5405405405405406,
+        "precision": 0.6666666666666666
+      }
+    },
+    "dense": {
+      "ok": {
+        "n": 33,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 33,
+        "recall": 0.7142857142857143,
+        "precision": 0.9090909090909091
+      },
+      "ss_runen": {
+        "n": 33,
+        "recall": 0.8421052631578947,
+        "precision": 0.8888888888888888
+      }
+    },
+    "lowcontrast": {
+      "ok": {
+        "n": 163,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 163,
+        "recall": 0.6853932584269663,
+        "precision": 0.7439024390243902
+      },
+      "ss_runen": {
+        "n": 163,
+        "recall": 0.5135135135135135,
+        "precision": 0.7169811320754716
+      }
+    },
+    "ok-checker": {
+      "ok": {
+        "n": 32,
+        "recall": 1.0,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 32,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 32,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-corner": {
+      "ok": {
+        "n": 42,
+        "recall": 0.7619047619047619,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 42,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 42,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-diagonal": {
+      "ok": {
+        "n": 32,
+        "recall": 0.875,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 32,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 32,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-letter": {
+      "ok": {
+        "n": 36,
+        "recall": 0.8888888888888888,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-noise": {
+      "ok": {
+        "n": 36,
+        "recall": 1.0,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-plus": {
+      "ok": {
+        "n": 31,
+        "recall": 0.7096774193548387,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 31,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 31,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-ring": {
+      "ok": {
+        "n": 45,
+        "recall": 1.0,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 45,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 45,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-sprite": {
+      "ok": {
+        "n": 36,
+        "recall": 0.8333333333333334,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-stripes": {
+      "ok": {
+        "n": 44,
+        "recall": 0.9772727272727273,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 44,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 44,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "standard": {
+      "ok": {
+        "n": 326,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 326,
+        "recall": 0.8301886792452831,
+        "precision": 0.9496402877697842
+      },
+      "ss_runen": {
+        "n": 326,
+        "recall": 0.8383233532934131,
+        "precision": 0.9655172413793104
+      }
+    },
+    "wall": {
+      "ok": {
+        "n": 75,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 75,
+        "recall": 0.9210526315789473,
+        "precision": 0.9210526315789473
+      },
+      "ss_runen": {
+        "n": 75,
+        "recall": 0.8918918918918919,
+        "precision": 0.9428571428571428
+      }
+    }
+  },
+  "c": {
+    "clipped": {
+      "ok": {
+        "n": 71,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 71,
+        "recall": 0.4411764705882353,
+        "precision": 0.75
+      },
+      "ss_runen": {
+        "n": 71,
+        "recall": 0.6216216216216216,
+        "precision": 0.7419354838709677
+      }
+    },
+    "dense": {
+      "ok": {
+        "n": 33,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 33,
+        "recall": 0.7142857142857143,
+        "precision": 0.8333333333333334
+      },
+      "ss_runen": {
+        "n": 33,
+        "recall": 0.8421052631578947,
+        "precision": 0.8421052631578947
+      }
+    },
+    "lowcontrast": {
+      "ok": {
+        "n": 163,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 163,
+        "recall": 0.6067415730337079,
+        "precision": 0.7714285714285715
+      },
+      "ss_runen": {
+        "n": 163,
+        "recall": 0.7162162162162162,
+        "precision": 0.6794871794871795
+      }
+    },
+    "ok-checker": {
+      "ok": {
+        "n": 32,
+        "recall": 1.0,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 32,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 32,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-corner": {
+      "ok": {
+        "n": 42,
+        "recall": 0.6904761904761905,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 42,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 42,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-diagonal": {
+      "ok": {
+        "n": 32,
+        "recall": 0.78125,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 32,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 32,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-letter": {
+      "ok": {
+        "n": 36,
+        "recall": 0.8333333333333334,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-noise": {
+      "ok": {
+        "n": 36,
+        "recall": 1.0,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-plus": {
+      "ok": {
+        "n": 31,
+        "recall": 0.8064516129032258,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 31,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 31,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-ring": {
+      "ok": {
+        "n": 45,
+        "recall": 0.9777777777777777,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 45,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 45,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-sprite": {
+      "ok": {
+        "n": 36,
+        "recall": 0.75,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-stripes": {
+      "ok": {
+        "n": 44,
+        "recall": 0.9545454545454546,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 44,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 44,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "standard": {
+      "ok": {
+        "n": 326,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 326,
+        "recall": 0.9433962264150944,
+        "precision": 0.974025974025974
+      },
+      "ss_runen": {
+        "n": 326,
+        "recall": 0.9341317365269461,
+        "precision": 0.9629629629629629
+      }
+    },
+    "wall": {
+      "ok": {
+        "n": 75,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 75,
+        "recall": 0.9210526315789473,
+        "precision": 0.9459459459459459
+      },
+      "ss_runen": {
+        "n": 75,
+        "recall": 0.8918918918918919,
+        "precision": 0.9428571428571428
+      }
+    }
+  },
+  "d": {
+    "clipped": {
+      "ok": {
+        "n": 71,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 71,
+        "recall": 0.6764705882352942,
+        "precision": 0.575
+      },
+      "ss_runen": {
+        "n": 71,
+        "recall": 0.40540540540540543,
+        "precision": 0.6818181818181818
+      }
+    },
+    "dense": {
+      "ok": {
+        "n": 33,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 33,
+        "recall": 0.7857142857142857,
+        "precision": 0.7857142857142857
+      },
+      "ss_runen": {
+        "n": 33,
+        "recall": 0.8421052631578947,
+        "precision": 0.8888888888888888
+      }
+    },
+    "lowcontrast": {
+      "ok": {
+        "n": 163,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 163,
+        "recall": 0.7865168539325843,
+        "precision": 0.7216494845360825
+      },
+      "ss_runen": {
+        "n": 163,
+        "recall": 0.6081081081081081,
+        "precision": 0.7377049180327869
+      }
+    },
+    "ok-checker": {
+      "ok": {
+        "n": 32,
+        "recall": 1.0,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 32,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 32,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-corner": {
+      "ok": {
+        "n": 42,
+        "recall": 0.5714285714285714,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 42,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 42,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-diagonal": {
+      "ok": {
+        "n": 32,
+        "recall": 0.65625,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 32,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 32,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-letter": {
+      "ok": {
+        "n": 36,
+        "recall": 0.7777777777777778,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-noise": {
+      "ok": {
+        "n": 36,
+        "recall": 0.9722222222222222,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-plus": {
+      "ok": {
+        "n": 31,
+        "recall": 0.7096774193548387,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 31,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 31,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-ring": {
+      "ok": {
+        "n": 45,
+        "recall": 0.9333333333333333,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 45,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 45,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-sprite": {
+      "ok": {
+        "n": 36,
+        "recall": 0.5555555555555556,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-stripes": {
+      "ok": {
+        "n": 44,
+        "recall": 0.8863636363636364,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 44,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 44,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "standard": {
+      "ok": {
+        "n": 326,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 326,
+        "recall": 0.9748427672955975,
+        "precision": 0.9226190476190477
+      },
+      "ss_runen": {
+        "n": 326,
+        "recall": 0.8922155688622755,
+        "precision": 0.9802631578947368
+      }
+    },
+    "wall": {
+      "ok": {
+        "n": 75,
+        "recall": null,
+        "precision": null
+      },
+      "hakenkreuz": {
+        "n": 75,
+        "recall": 0.9736842105263158,
+        "precision": 0.8604651162790697
+      },
+      "ss_runen": {
+        "n": 75,
+        "recall": 0.8378378378378378,
+        "precision": 0.96875
+      }
+    }
+  },
+  "e": {
+    "clipped": {
+      "ok": {
+        "n": 71,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 71,
+        "recall": 0.7352941176470589,
+        "precision": 0.5952380952380952
+      },
+      "ss_runen": {
+        "n": 71,
+        "recall": 0.40540540540540543,
+        "precision": 0.6818181818181818
+      }
+    },
+    "dense": {
+      "ok": {
+        "n": 33,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 33,
+        "recall": 0.9285714285714286,
+        "precision": 0.7222222222222222
+      },
+      "ss_runen": {
+        "n": 33,
+        "recall": 0.7368421052631579,
+        "precision": 1.0
+      }
+    },
+    "lowcontrast": {
+      "ok": {
+        "n": 163,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 163,
+        "recall": 0.8651685393258427,
+        "precision": 0.6695652173913044
+      },
+      "ss_runen": {
+        "n": 163,
+        "recall": 0.4594594594594595,
+        "precision": 0.8292682926829268
+      }
+    },
+    "ok-checker": {
+      "ok": {
+        "n": 32,
+        "recall": 1.0,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 32,
+        "recall": null,
+        "precision": null
+      },
+      "ss_runen": {
+        "n": 32,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-corner": {
+      "ok": {
+        "n": 42,
+        "recall": 0.6428571428571429,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 42,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 42,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-diagonal": {
+      "ok": {
+        "n": 32,
+        "recall": 0.5625,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 32,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 32,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-letter": {
+      "ok": {
+        "n": 36,
+        "recall": 0.6666666666666666,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-noise": {
+      "ok": {
+        "n": 36,
+        "recall": 0.9722222222222222,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-plus": {
+      "ok": {
+        "n": 31,
+        "recall": 0.5806451612903226,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 31,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 31,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-ring": {
+      "ok": {
+        "n": 45,
+        "recall": 0.9333333333333333,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 45,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 45,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-sprite": {
+      "ok": {
+        "n": 36,
+        "recall": 0.6388888888888888,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 36,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-stripes": {
+      "ok": {
+        "n": 44,
+        "recall": 0.8409090909090909,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 44,
+        "recall": null,
+        "precision": 0.0
+      },
+      "ss_runen": {
+        "n": 44,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "standard": {
+      "ok": {
+        "n": 326,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 326,
+        "recall": 0.9559748427672956,
+        "precision": 0.8786127167630058
+      },
+      "ss_runen": {
+        "n": 326,
+        "recall": 0.844311377245509,
+        "precision": 0.9657534246575342
+      }
+    },
+    "wall": {
+      "ok": {
+        "n": 75,
+        "recall": null,
+        "precision": null
+      },
+      "hakenkreuz": {
+        "n": 75,
+        "recall": 0.9736842105263158,
+        "precision": 0.8409090909090909
+      },
+      "ss_runen": {
+        "n": 75,
+        "recall": 0.8108108108108109,
+        "precision": 0.967741935483871
+      }
+    }
+  }
+}

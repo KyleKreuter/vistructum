@@ -1,0 +1,13 @@
+{
+  "id": "__KAGGLE_USER__/vistructum-workflow",
+  "title": "vistructum-workflow",
+  "code_file": "bootstrap.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": ["__KAGGLE_USER__/vistructum-pools"],
+  "competition_sources": [],
+  "kernel_sources": []
+}

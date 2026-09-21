@@ -1,0 +1,184 @@
+{
+  "mc": {
+    "clipped": {
+      "ok": {
+        "n": 271,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 271,
+        "recall": 0.7859778597785978,
+        "precision": 1.0
+      }
+    },
+    "dense": {
+      "ok": {
+        "n": 143,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 143,
+        "recall": 0.958041958041958,
+        "precision": 1.0
+      }
+    },
+    "lowcontrast": {
+      "ok": {
+        "n": 979,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 979,
+        "recall": 0.8692543411644535,
+        "precision": 1.0
+      }
+    },
+    "ok-checker": {
+      "ok": {
+        "n": 69,
+        "recall": 1.0,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 69,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-corner": {
+      "ok": {
+        "n": 182,
+        "recall": 0.7802197802197802,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 182,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-diagonal": {
+      "ok": {
+        "n": 194,
+        "recall": 0.8917525773195877,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 194,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-letter": {
+      "ok": {
+        "n": 186,
+        "recall": 0.7688172043010753,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 186,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-mined": {
+      "ok": {
+        "n": 1251,
+        "recall": 0.929656274980016,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 1251,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-noise": {
+      "ok": {
+        "n": 83,
+        "recall": 1.0,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 83,
+        "recall": null,
+        "precision": null
+      }
+    },
+    "ok-plus": {
+      "ok": {
+        "n": 213,
+        "recall": 0.7323943661971831,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 213,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-ring": {
+      "ok": {
+        "n": 66,
+        "recall": 0.9545454545454546,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 66,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-sprite": {
+      "ok": {
+        "n": 183,
+        "recall": 0.7978142076502732,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 183,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "ok-stripes": {
+      "ok": {
+        "n": 73,
+        "recall": 0.9452054794520548,
+        "precision": 1.0
+      },
+      "hakenkreuz": {
+        "n": 73,
+        "recall": null,
+        "precision": 0.0
+      }
+    },
+    "standard": {
+      "ok": {
+        "n": 929,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 929,
+        "recall": 0.9698600645855759,
+        "precision": 1.0
+      }
+    },
+    "wall": {
+      "ok": {
+        "n": 178,
+        "recall": null,
+        "precision": 0.0
+      },
+      "hakenkreuz": {
+        "n": 178,
+        "recall": 0.9775280898876404,
+        "precision": 1.0
+      }
+    }
+  }
+}

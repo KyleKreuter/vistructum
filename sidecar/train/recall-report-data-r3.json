@@ -1,0 +1,112 @@
+{
+  "r3:a": {
+    "data-r3": {
+      "ok": {
+        "recall": 0.8712574850299402,
+        "precision": 0.784366576819407,
+        "missed": 43,
+        "total": 334
+      },
+      "hakenkreuz": {
+        "recall": 0.7215568862275449,
+        "precision": 0.8281786941580757,
+        "missed": 93,
+        "total": 334
+      },
+      "ss_runen": {
+        "recall": 0.7844311377245509,
+        "precision": 0.7705882352941177,
+        "missed": 72,
+        "total": 334
+      }
+    }
+  },
+  "r3:b": {
+    "data-r3": {
+      "ok": {
+        "recall": 0.8982035928143712,
+        "precision": 0.7614213197969543,
+        "missed": 34,
+        "total": 334
+      },
+      "hakenkreuz": {
+        "recall": 0.7604790419161677,
+        "precision": 0.8193548387096774,
+        "missed": 80,
+        "total": 334
+      },
+      "ss_runen": {
+        "recall": 0.7395209580838323,
+        "precision": 0.8288590604026845,
+        "missed": 87,
+        "total": 334
+      }
+    }
+  },
+  "r3:c": {
+    "data-r3": {
+      "ok": {
+        "recall": 0.8682634730538922,
+        "precision": 0.8529411764705882,
+        "missed": 44,
+        "total": 334
+      },
+      "hakenkreuz": {
+        "recall": 0.7904191616766467,
+        "precision": 0.8571428571428571,
+        "missed": 70,
+        "total": 334
+      },
+      "ss_runen": {
+        "recall": 0.8413173652694611,
+        "precision": 0.7937853107344632,
+        "missed": 53,
+        "total": 334
+      }
+    }
+  },
+  "r3:d": {
+    "data-r3": {
+      "ok": {
+        "recall": 0.7874251497005988,
+        "precision": 0.926056338028169,
+        "missed": 71,
+        "total": 334
+      },
+      "hakenkreuz": {
+        "recall": 0.8862275449101796,
+        "precision": 0.7167070217917676,
+        "missed": 38,
+        "total": 334
+      },
+      "ss_runen": {
+        "recall": 0.7664670658682635,
+        "precision": 0.839344262295082,
+        "missed": 78,
+        "total": 334
+      }
+    }
+  },
+  "r3:e": {
+    "data-r3": {
+      "ok": {
+        "recall": 0.7664670658682635,
+        "precision": 0.920863309352518,
+        "missed": 78,
+        "total": 334
+      },
+      "hakenkreuz": {
+        "recall": 0.9101796407185628,
+        "precision": 0.6652078774617067,
+        "missed": 30,
+        "total": 334
+      },
+      "ss_runen": {
+        "recall": 0.7005988023952096,
+        "precision": 0.8764044943820225,
+        "missed": 100,
+        "total": 334
+      }
+    }
+  }
+}

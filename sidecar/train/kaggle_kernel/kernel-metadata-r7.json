@@ -1,0 +1,13 @@
+{
+  "id": "__KAGGLE_USER__/vistructum-r7",
+  "title": "vistructum-r7",
+  "code_file": "kaggle_run.py",
+  "language": "python",
+  "kernel_type": "script",
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": ["__KAGGLE_USER__/vistructum-r7-data"],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": []
+}

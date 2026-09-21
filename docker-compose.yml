@@ -1,0 +1,20 @@
+services:
+  sidecar:
+    build: ./sidecar
+    ports:
+      - "${SIDECAR_PORT:-8000}:8000"
+
+  server:
+    build:
+      context: .
+      dockerfile: vistructum-core/Dockerfile
+    ports:
+      - "25565:25565"
+    environment:
+      EULA: "TRUE"
+      TYPE: PAPER
+      VERSION: "1.21.4"
+      MEMORY: 2G
+      ONLINE_MODE: "FALSE"
+    depends_on:
+      - sidecar

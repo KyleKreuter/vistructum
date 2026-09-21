@@ -54,21 +54,16 @@ def generate(suite_name, pools_dir, work_dir):
     return target
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--suite", choices=tuple(SUITES), default="r7")
-    parser.add_argument("--input", default="/kaggle/input/vistructum-pools")
-    parser.add_argument("--work", default="")
-    args = parser.parse_args()
-    suite = SUITES[args.suite]
+def run_suite(train_dir, pools_dir, runs_dir, suite_name):
+    suite = SUITES[suite_name]
     sha = repo_sha()
-    print(f"=== workflow suite={args.suite} repo={sha} ===", flush=True)
+    print(f"=== workflow suite={suite_name} repo={sha} ===", flush=True)
     require_cuda()
     require_onnxruntime()
-    work_dir = Path(args.work) if args.work else Path(suite["work"])
+    work_dir = Path(runs_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
-    data_dir = generate(args.suite, Path(args.input), work_dir)
-    script = REPO / "train.py"
+    data_dir = generate(suite_name, Path(pools_dir), work_dir)
+    script = Path(train_dir) / "train.py"
     outcomes = []
     for name, _, target, rounds, extra in suite["experiments"]:
         returncode = run_experiment(sys.executable, script, work_dir, work_dir,
@@ -93,13 +88,25 @@ def main():
             board[name] = entry
     results_dir = work_dir / "results"
     board_path = results_dir / "leaderboard.json"
-    board_path.write_text(json.dumps({"repo": sha, "suite": args.suite,
+    board_path.write_text(json.dumps({"repo": sha, "suite": suite_name,
                                       "models": board}, indent=2))
     print(f"=== leaderboard ({len(board)} models, repo={sha}) ===", flush=True)
     for name, entry in board.items():
         fused = entry["fused"]
         print(f"{name} | fused P/R {fused['precision']:.3f}/{fused['recall']:.3f} | "
               f"{entry['gate']}", flush=True)
+    return str(board_path)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--suite", choices=tuple(SUITES), default="r7")
+    parser.add_argument("--input", default="/kaggle/input/vistructum-pools")
+    parser.add_argument("--work", default="")
+    args = parser.parse_args()
+    suite = SUITES[args.suite]
+    work = args.work if args.work else suite["work"]
+    print("leaderboard written: " + run_suite(REPO, args.input, work, args.suite))
 
 
 if __name__ == "__main__":

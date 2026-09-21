@@ -49,6 +49,8 @@ trap 'rm -rf "$STAGE"' EXIT
 mkdir -p "$KERNEL_STAGE" "$DATA_STAGE/data" "$DATA_STAGE/data-exp-c" "$DATA_STAGE/data-r2" "$DATA_STAGE/data-r3" "$DATA_STAGE/data-r4" "$DATA_STAGE/data-r5" "$DATA_STAGE/data-r6m" "$DATA_STAGE/data-r6s" "$DATA_STAGE/data-r7"
 if [[ "$SUITE" == "workflow" ]]; then
   cp "$TRAIN_DIR/bootstrap.py" "$KERNEL_STAGE/"
+  sed "s/__KAGGLE_USER__/$KAGGLE_USERNAME/g" \
+    "$METADATA_TEMPLATE" > "$KERNEL_STAGE/kernel-metadata.json"
   mkdir -p "$DATA_STAGE/backgrounds-ground" "$DATA_STAGE/backgrounds-sky" "$DATA_STAGE/mined"
   cp "$TRAIN_DIR"/data-r3/backgrounds-ground/*.npy "$DATA_STAGE/backgrounds-ground/"
   cp "$TRAIN_DIR"/data-r3/backgrounds-sky/*.npy "$DATA_STAGE/backgrounds-sky/"

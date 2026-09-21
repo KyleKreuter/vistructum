@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -33,7 +34,21 @@ def repo_sha():
         return "unknown"
 
 
+def resolve_pools(candidate):
+    wanted = set(POOL_DIRS)
+    root = Path(candidate)
+    if wanted.issubset({p.name for p in root.iterdir()} if root.is_dir() else ()):
+        return root
+    base = Path("/kaggle/input")
+    if base.is_dir():
+        for dirpath, dirnames, _ in os.walk(base):
+            if wanted.issubset(set(dirnames)):
+                return Path(dirpath)
+    raise SystemExit(f"pools not found under {candidate} nor /kaggle/input")
+
+
 def generate(suite_name, pools_dir, work_dir):
+    pools_dir = resolve_pools(pools_dir)
     recipe = GEN_RECIPES[suite_name]
     target = work_dir / recipe["target"]
     for pool in POOL_DIRS:

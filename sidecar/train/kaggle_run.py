@@ -92,6 +92,11 @@ R9_EXPERIMENTS = [
     ("r9d", "data-r9base", "models-r9-d", "60", ["--arch", "v3w"] + ADAMW_MILD),
 ]
 
+R10_EXPERIMENTS = [
+    ("r10a", "data-r10a", "models-r10-a", "60", ["--arch", "v3w"] + ADAMW_MILD),
+    ("r10b", "data-r10b", "models-r10-b", "60", ["--arch", "v3w"] + ADAMW_MILD),
+]
+
 SUITES = {
     "exp9": {"experiments": EXPERIMENTS, "data_dirs": ("data", "data-exp-c"),
              "work": "/kaggle/working/exp9", "input": "/kaggle/input/vistructum-exp9-data"},
@@ -112,6 +117,9 @@ SUITES = {
     "r9": {"experiments": R9_EXPERIMENTS,
            "data_dirs": ("data-r9base", "data-r9pure", "data-r9clip"),
            "work": "/kaggle/working/r9", "input": "/kaggle/input/vistructum-pools"},
+    "r10": {"experiments": R10_EXPERIMENTS,
+            "data_dirs": ("data-r9base", "data-r10a", "data-r10b"),
+            "work": "/kaggle/working/r10", "input": "/kaggle/input/vistructum-pools"},
 }
 
 

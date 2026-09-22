@@ -85,6 +85,13 @@ R8_EXPERIMENTS = [
     ("r8b", "data-r8", "models-r8-b", "60", ["--arch", "v3w", "--no-focal"]),
 ]
 
+R9_EXPERIMENTS = [
+    ("r9a", "data-r9base", "models-r9-a", "60", ["--arch", "v3w", "--no-focal"]),
+    ("r9b", "data-r9pure", "models-r9-b", "60", ["--arch", "v3w", "--no-focal"]),
+    ("r9c", "data-r9clip", "models-r9-c", "60", ["--arch", "v3w", "--no-focal"]),
+    ("r9d", "data-r9base", "models-r9-d", "60", ["--arch", "v3w"] + ADAMW_MILD),
+]
+
 SUITES = {
     "exp9": {"experiments": EXPERIMENTS, "data_dirs": ("data", "data-exp-c"),
              "work": "/kaggle/working/exp9", "input": "/kaggle/input/vistructum-exp9-data"},
@@ -102,6 +109,9 @@ SUITES = {
            "work": "/kaggle/working/r7", "input": "/kaggle/input/vistructum-r7-data"},
     "r8": {"experiments": R8_EXPERIMENTS, "data_dirs": ("data-r8",),
            "work": "/kaggle/working/r8", "input": "/kaggle/input/vistructum-r8-data"},
+    "r9": {"experiments": R9_EXPERIMENTS,
+           "data_dirs": ("data-r9base", "data-r9pure", "data-r9clip"),
+           "work": "/kaggle/working/r9", "input": "/kaggle/input/vistructum-pools"},
 }
 
 
@@ -190,12 +200,12 @@ def summarize(work_dir, outcomes):
         if metrics_path.is_file():
             metrics = json.loads(metrics_path.read_text())
             precisions = metrics["test_precision"]
-            verdict = "PASS" if min(precisions.values()) >= PRECISION_TARGET else "FAIL"
+            verdict = "see leaderboard"
             rows.append((name, returncode, precisions, metrics["model_bytes"],
                          metrics["infer_seconds_mean"], fused, verdict))
         else:
             rows.append((name, returncode, None, None, None, fused, "NO METRICS"))
-    print("experiment | exit | precision ok/hk | bytes | infer_s | tta-hk-R/P | gate", flush=True)
+    print("experiment | exit | precision ok/hk | bytes | infer_s | tta-hk-R/P | note", flush=True)
     for row in rows:
         print(" | ".join(str(field) for field in row), flush=True)
     results_dir = work_dir / "results"

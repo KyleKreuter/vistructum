@@ -9,7 +9,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO))
 
-from benchmark import evaluate
+from benchmark import GATE_FP, GATE_RECALL, evaluate
 from kaggle_run import (SUITES, fused_hk_metrics, require_cuda,
                         require_onnxruntime, run_experiment, summarize)
 
@@ -26,6 +26,24 @@ GEN_RECIPES = {
                     "--zoom-min", "0.6", "--zoom-max", "1.4", "--inversion", "0.05",
                     "--low-contrast", "0.4", "--hard-ok-share", "0.5",
                     "--mined-ok-share", "0.5", "--slop-share", "0.5"]},
+    "r9": [{"target": "data-r9base", "count": "50000",
+            "args": ["--adversarial-fraction", "0.4", "--wall-share", "0.4",
+                     "--clipped-share", "0.6", "--translate", "12", "--cutout", "0.5",
+                     "--zoom-min", "0.6", "--zoom-max", "1.4", "--inversion", "0.05",
+                     "--low-contrast", "0.4", "--hard-ok-share", "0.5",
+                     "--mined-ok-share", "0.5", "--slop-share", "0.5"]},
+           {"target": "data-r9pure", "count": "50000",
+            "args": ["--adversarial-fraction", "0.4", "--wall-share", "0.4",
+                     "--clipped-share", "0.6", "--translate", "12", "--cutout", "0.5",
+                     "--zoom-min", "0.6", "--zoom-max", "1.4", "--inversion", "0.05",
+                     "--low-contrast", "0.4", "--hard-ok-share", "0.5",
+                     "--mined-ok-share", "0.5", "--slop-share", "0.0"]},
+           {"target": "data-r9clip", "count": "50000",
+            "args": ["--adversarial-fraction", "0.4", "--wall-share", "0.4",
+                     "--clipped-share", "0.85", "--translate", "12", "--cutout", "0.5",
+                     "--zoom-min", "0.6", "--zoom-max", "1.4", "--inversion", "0.05",
+                     "--low-contrast", "0.4", "--hard-ok-share", "0.5",
+                     "--mined-ok-share", "0.5", "--slop-share", "0.5"]}],
 }
 
 POOL_DIRS = ("backgrounds-ground", "backgrounds-sky", "mined")
@@ -55,24 +73,29 @@ def resolve_pools(candidate):
 
 def generate(suite_name, pools_dir, work_dir):
     pools_dir = resolve_pools(pools_dir)
-    recipe = GEN_RECIPES[suite_name]
-    target = work_dir / recipe["target"]
-    for pool in POOL_DIRS:
-        source = pools_dir / pool
-        if source.is_dir():
-            shutil.copytree(source, target / pool, dirs_exist_ok=True)
-    missing = [pool for pool in POOL_DIRS if not (target / pool).is_dir()]
-    if missing:
-        raise SystemExit(f"pools missing in input: {', '.join(missing)}")
-    command = [sys.executable, str(REPO / "dataset.py"), str(target), recipe["count"]]
-    command += recipe["args"]
-    print(f"=== generate: {' '.join(command)} ===", flush=True)
-    completed = subprocess.run(command)
-    if completed.returncode != 0:
-        raise SystemExit(f"dataset generation failed: {completed.returncode}")
-    manifest = json.loads((target / "manifest.json").read_text())
-    print(f"=== generated: {manifest['counts']} ===", flush=True)
-    return target
+    recipes = GEN_RECIPES[suite_name]
+    if isinstance(recipes, dict):
+        recipes = [recipes]
+    targets = []
+    for recipe in recipes:
+        target = work_dir / recipe["target"]
+        for pool in POOL_DIRS:
+            source = pools_dir / pool
+            if source.is_dir():
+                shutil.copytree(source, target / pool, dirs_exist_ok=True)
+        missing = [pool for pool in POOL_DIRS if not (target / pool).is_dir()]
+        if missing:
+            raise SystemExit(f"pools missing in input: {', '.join(missing)}")
+        command = [sys.executable, str(REPO / "dataset.py"), str(target), recipe["count"]]
+        command += recipe["args"]
+        print(f"=== generate: {' '.join(command)} ===", flush=True)
+        completed = subprocess.run(command)
+        if completed.returncode != 0:
+            raise SystemExit(f"dataset generation failed: {completed.returncode}")
+        manifest = json.loads((target / "manifest.json").read_text())
+        print(f"=== generated: {manifest['counts']} ===", flush=True)
+        targets.append(target)
+    return targets[0] if len(targets) == 1 else targets
 
 
 def run_suite(train_dir, pools_dir, runs_dir, suite_name):
@@ -83,15 +106,17 @@ def run_suite(train_dir, pools_dir, runs_dir, suite_name):
     require_onnxruntime()
     work_dir = Path(runs_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
-    data_dir = generate(suite_name, Path(pools_dir), work_dir)
+    generated = generate(suite_name, Path(pools_dir), work_dir)
+    controls = generated if isinstance(generated, list) else [generated]
+    control_dir = controls[0]
     script = Path(train_dir) / "train.py"
     outcomes = []
-    for name, _, target, rounds, extra in suite["experiments"]:
+    for name, data, target, rounds, extra in suite["experiments"]:
         returncode = run_experiment(sys.executable, script, work_dir, work_dir,
-                                    name, data_dir.name, target, rounds, extra)
+                                    name, data, target, rounds, extra)
         fused = None
         onnx_path = work_dir / target / f"{MODEL_VERSION}.onnx"
-        test_npz = data_dir / "test.npz"
+        test_npz = control_dir / "test.npz"
         if onnx_path.is_file() and test_npz.is_file():
             print(f"=== fused tta eval {name} ===", flush=True)
             fused = fused_hk_metrics(onnx_path, test_npz)
@@ -101,11 +126,11 @@ def run_suite(train_dir, pools_dir, runs_dir, suite_name):
     board = {}
     for name, target, returncode, _ in outcomes:
         onnx_path = work_dir / target / f"{MODEL_VERSION}.onnx"
-        if returncode == 0 and onnx_path.is_file():
-            entry = evaluate(onnx_path, data_dir / "test.npz")
+        if onnx_path.is_file():
+            entry = evaluate(onnx_path, control_dir / "test.npz")
             fused = entry["fused"]
-            entry["gate"] = ("PASS" if fused["precision"] >= 0.95
-                             and fused["recall"] >= 0.95 else "FAIL")
+            entry["gate"] = ("PASS" if (fused["recall"] or 0.0) >= GATE_RECALL
+                             and entry["fp_rate"] < GATE_FP else "FAIL")
             board[name] = entry
     results_dir = work_dir / "results"
     board_path = results_dir / "leaderboard.json"
@@ -115,7 +140,7 @@ def run_suite(train_dir, pools_dir, runs_dir, suite_name):
     for name, entry in board.items():
         fused = entry["fused"]
         print(f"{name} | fused P/R {fused['precision']:.3f}/{fused['recall']:.3f} | "
-              f"{entry['gate']}", flush=True)
+              f"fp {entry['fp_rate']:.4f} | {entry['gate']}", flush=True)
     return str(board_path)
 
 

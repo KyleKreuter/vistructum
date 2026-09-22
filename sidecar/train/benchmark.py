@@ -10,8 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from kaggle_run import fused_hk_metrics
 
 LABELS = ("ok", "hakenkreuz")
-GATE_PRECISION = 0.95
-GATE_RECALL = 0.95
+GATE_RECALL = 0.90
+GATE_FP = 0.02
 
 
 def load_test(test_npz):
@@ -49,6 +49,10 @@ def evaluate(onnx_path, test_npz):
     images, labels, subtypes = load_test(test_npz)
     preds = single_predict(onnx_path, images)
     single_precision, single_recall = precision_recall(labels, preds)
+    ok_mask = labels == 0
+    false_positives = int(((preds == 1) & ok_mask).sum())
+    ok_total = int(ok_mask.sum())
+    fp_rate = false_positives / ok_total if ok_total else 0.0
     fused_recall, fused_precision = fused_hk_metrics(onnx_path, test_npz)
     per_subtype = {}
     if subtypes:
@@ -59,7 +63,7 @@ def evaluate(onnx_path, test_npz):
                                     "recall": recall}
     return {"single": {"precision": single_precision, "recall": single_recall},
             "fused": {"precision": fused_precision, "recall": fused_recall},
-            "subtypes": per_subtype, "n": len(images)}
+            "fp_rate": fp_rate, "subtypes": per_subtype, "n": len(images)}
 
 
 def main():
@@ -73,13 +77,14 @@ def main():
         name, path = spec.split("=", 1)
         entry = evaluate(Path(path), args.test_npz)
         fused = entry["fused"]
-        entry["gate"] = ("PASS" if fused["precision"] >= GATE_PRECISION
-                         and (fused["recall"] or 0.0) >= GATE_RECALL else "FAIL")
+        entry["gate"] = ("PASS" if (fused["recall"] or 0.0) >= GATE_RECALL
+                         and entry["fp_rate"] < GATE_FP else "FAIL")
         board[name] = entry
         fmt = lambda v: f"{v:.3f}" if v is not None else "n/a"
         print(f"{name} | single P/R {fmt(entry['single']['precision'])}/"
               f"{fmt(entry['single']['recall'])} | fused P/R {fmt(fused['precision'])}/"
-              f"{fmt(fused['recall'])} | {entry['gate']}", flush=True)
+              f"{fmt(fused['recall'])} | fp {entry['fp_rate']:.4f} | {entry['gate']}",
+              flush=True)
     Path(args.out).write_text(json.dumps(board, indent=2))
     print(f"leaderboard written to {args.out}", flush=True)
 

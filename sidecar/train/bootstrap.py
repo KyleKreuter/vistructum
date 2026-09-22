@@ -6,7 +6,7 @@ REPO_URL = os.environ.get("VISTRUCTUM_REPO", "https://github.com/KyleKreuter/vis
 REPO_REF = os.environ.get("VISTRUCTUM_REF", "main")
 POOL_DATASET = os.environ.get(
     "VISTRUCTUM_POOLS", "/kaggle/input/vistructum-pools")
-SUITE = os.environ.get("VISTRUCTUM_SUITE", "r8")
+SUITE = os.environ.get("VISTRUCTUM_SUITE", "r9")
 WORK = os.environ.get("VISTRUCTUM_WORK", "/kaggle/working/vistructum")
 
 

@@ -43,5 +43,5 @@ if [[ "${DRY_RUN:-0}" == "1" ]]; then
   exit 0
 fi
 
-python3 -m kaggle kernels push -p "$STAGE"
+${KAGGLE_CMD:-python3 -m kaggle} kernels push -p "$STAGE"
 echo "pushed $SLUG at $REF with $CONFIGS; fetch results with: kaggle kernels output $KAGGLE_USERNAME/$SLUG -p results/"

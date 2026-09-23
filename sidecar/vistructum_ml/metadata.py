@@ -1,6 +1,16 @@
 import json
 
-from .contract import FEATURE_SPEC, KINDS, LABELS, META_FEATURE_SPEC, META_KIND, META_LABELS, META_THRESHOLD, META_VERSION, REQUIRED_META
+from .contract import (
+    FEATURE_SPEC,
+    KINDS,
+    LABELS,
+    META_FEATURE_SPEC,
+    META_KIND,
+    META_LABELS,
+    META_THRESHOLD,
+    META_VERSION,
+    REQUIRED_META,
+)
 
 
 class ContractError(ValueError):

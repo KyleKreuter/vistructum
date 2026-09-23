@@ -7,6 +7,7 @@ from pathlib import Path
 
 import evaluate as evaluate_mod
 import export as export_mod
+import scan_eval
 import torch
 from config import add_config_args, load_config
 
@@ -54,6 +55,15 @@ def main():
     session, meta = evaluate_mod.load_session(onnx_path)
     report = evaluate_mod.build_report(session, meta, cfg.data_dir, args.splits)
     report["model_bytes"] = onnx_path.stat().st_size
+    scan = {}
+    if cfg.scan_negatives > 0:
+        scan["calib"] = scan_eval.run(onnx_path, "calib", cfg.scan_negatives, cfg.scan_positives, cfg.seed,
+                                      cfg.scan_workers, write=True)
+        for scan_name, holdout in (("scan", False), ("scan-holdout", True)):
+            scan[scan_name] = scan_eval.run(onnx_path, "scan", cfg.scan_negatives, cfg.scan_positives,
+                                       cfg.seed + holdout, cfg.scan_workers, holdout=holdout)
+        for scan_name, entry in scan.items():
+            (run_dir / f"{scan_name}.json").write_text(json.dumps(entry, indent=2))
 
     manifest = {
         "config": name,
@@ -64,10 +74,12 @@ def main():
         "data_manifest_sha256": data_manifest_hash(cfg.data_dir),
         "export": export_result,
         "metrics": report,
+        "scan": {key: {k: v for k, v in entry.items() if k != "sweep"} for key, entry in scan.items()},
     }
     (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
     print(json.dumps(manifest, indent=2))
-    if not args.no_gate and report["splits"].get("test", {}).get("verdict") == "FAIL":
+    verdict = scan["scan"]["verdict"] if scan else report["splits"].get("test", {}).get("verdict")
+    if not args.no_gate and verdict == "FAIL":
         raise SystemExit(1)
 
 

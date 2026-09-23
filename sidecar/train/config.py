@@ -29,6 +29,9 @@ class TrainConfig:
     seed: int = 42
     num_threads: int = 4
     quantize: bool = True
+    scan_negatives: int = 0
+    scan_positives: int = 0
+    scan_workers: int = 4
 
 
 VALID_KEYS = {f.name for f in fields(TrainConfig)}

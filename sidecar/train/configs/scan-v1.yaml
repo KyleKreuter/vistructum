@@ -18,3 +18,6 @@ device: cpu
 seed: 42
 num_threads: 4
 quantize: true
+scan_negatives: 2000
+scan_positives: 600
+scan_workers: 4

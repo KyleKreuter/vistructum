@@ -59,7 +59,7 @@ def generate(train_dir, kind, data_dir, seed, env):
 def launch(train_dir, config, data_dir, runs_dir, gpu, threads, env):
     job_env = dict(env, CUDA_VISIBLE_DEVICES=str(gpu))
     command = [sys.executable, "run.py", "--config", config, "--runs-dir", str(runs_dir),
-               "--set", f"data_dir={data_dir}", "--set", f"device={DEVICE}", "--set", f"num_threads={threads}"]
+               "--set", f"data_dir={data_dir}", "--set", f"device={DEVICE}", "--set", f"num_threads={threads}", "--set", f"scan_workers={threads}"]
     print(f"+ [gpu {gpu}] " + " ".join(command), flush=True)
     with open(runs_dir / f"{Path(config).stem}.log", "w") as log:
         return subprocess.Popen(command, cwd=train_dir, env=job_env, stdout=log, stderr=subprocess.STDOUT)

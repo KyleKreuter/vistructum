@@ -45,6 +45,9 @@ def write_config(path, kind, data_dir):
                 "ema_decay: 0.0",
                 "quantize: false",
                 "num_threads: 1",
+                "scan_negatives: 6",
+                "scan_positives: 3",
+                "scan_workers: 1",
                 "",
             ]
         )
@@ -77,3 +80,4 @@ def test_run_smoke(tmp_path, kind):
     assert manifest["config"] == "config"
     assert "commit" in manifest and isinstance(manifest["dirty"], bool)
     assert (runs_dir / manifests[0].parent.name / f"{kind}.onnx").exists()
+    assert set(manifest["scan"]) == {"calib", "scan", "scan-holdout"}

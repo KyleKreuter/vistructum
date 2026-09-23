@@ -1,0 +1,65 @@
+{
+  "ref": "d6a765925cad644d13597b1b198e85bdd417b8a3",
+  "exit_codes": {
+    "configs/mask-v1.yaml": 1,
+    "configs/scan-v1.yaml": 1
+  },
+  "models": {
+    "mask": {
+      "val": {
+        "verdict": "PASS",
+        "failures": [],
+        "precision": 0.9959016393442623,
+        "recall": 0.972,
+        "fp_rate": 0.001,
+        "threshold": 0.85
+      },
+      "test": {
+        "verdict": "PASS",
+        "failures": [],
+        "precision": 0.996319018404908,
+        "recall": 0.9744,
+        "fp_rate": 0.0009,
+        "threshold": 0.85
+      },
+      "holdout": {
+        "verdict": "PASS",
+        "failures": [],
+        "precision": 0.9963039014373717,
+        "recall": 0.9704,
+        "fp_rate": 0.0009,
+        "threshold": 0.85
+      }
+    },
+    "fullscan": {
+      "val": {
+        "verdict": "PASS",
+        "failures": [],
+        "precision": 0.9960474308300395,
+        "recall": 0.8064,
+        "fp_rate": 0.0008,
+        "threshold": 0.92
+      },
+      "test": {
+        "verdict": "FAIL",
+        "failures": [
+          "fp_rate 0.00210 > 0.001"
+        ],
+        "precision": 0.9898550724637681,
+        "recall": 0.8196,
+        "fp_rate": 0.0021,
+        "threshold": 0.92
+      },
+      "holdout": {
+        "verdict": "FAIL",
+        "failures": [
+          "fp_rate 0.00150 > 0.001"
+        ],
+        "precision": 0.9924089068825911,
+        "recall": 0.7844,
+        "fp_rate": 0.0015,
+        "threshold": 0.92
+      }
+    }
+  }
+}

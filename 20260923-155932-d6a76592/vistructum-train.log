@@ -1,0 +1,136 @@
+[{"stream_name":"stdout","time":0.981537454,"data":"+ git clone https://github.com/KyleKreuter/vistructum.git /tmp/vistructum/repo\n"}
+,{"stream_name":"stderr","time":1.01743196,"data":"Cloning into '/tmp/vistructum/repo'...\n"}
+,{"stream_name":"stdout","time":1.898546801,"data":"+ git fetch origin d6a765925cad644d13597b1b198e85bdd417b8a3\n"}
+,{"stream_name":"stderr","time":2.167619247,"data":"From https://github.com/KyleKreuter/vistructum\n"}
+,{"stream_name":"stderr","time":2.167642692,"data":" * branch            d6a765925cad644d13597b1b198e85bdd417b8a3 -\u003e FETCH_HEAD\n"}
+,{"stream_name":"stdout","time":2.173308863,"data":"+ git checkout --detach d6a765925cad644d13597b1b198e85bdd417b8a3\n"}
+,{"stream_name":"stderr","time":2.185409282,"data":"HEAD is now at d6a7659 Place shapes anywhere in the crop and stop burying mask symbols\n"}
+,{"stream_name":"stdout","time":2.185858943,"data":"+ /usr/bin/python3 -m pip install --quiet -r /tmp/vistructum/repo/sidecar/train/requirements.txt\n"}
+,{"stream_name":"stdout","time":6.078550431,"data":"     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 62.0/62.0 kB 1.9 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":21.511583873,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 906.4/906.4 MB 1.9 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":22.198586913,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.1/16.1 MB 17.1 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":22.474491723,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.0/16.0 MB 54.7 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":22.709426277,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 13.3/13.3 MB 58.1 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":22.843722153999998,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.9/6.9 MB 62.1 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":29.319100287,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 363.4/363.4 MB 3.9 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":29.538944857,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 13.8/13.8 MB 64.2 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":29.909063984,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 24.6/24.6 MB 51.9 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":29.956793544,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 883.7/883.7 kB 40.6 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":53.736690848,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 664.8/664.8 MB 2.2 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":60.859702358,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 211.5/211.5 MB 7.5 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":62.419156015,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 56.3/56.3 MB 21.5 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":65.731125092,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 127.9/127.9 MB 12.2 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":72.147559686,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 207.5/207.5 MB 5.2 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":80.277316739,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 188.7/188.7 MB 7.3 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":81.19871518,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 21.1/21.1 MB 21.7 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":81.23505669,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 99.1/99.1 kB 7.8 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":81.51523407,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.2/6.2 MB 24.2 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":90.76245523,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 209.6/209.6 MB 7.1 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":90.797359851,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 46.0/46.0 kB 3.1 MB/s eta 0:00:00\n"}
+,{"stream_name":"stdout","time":90.834034835,"data":"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 86.8/86.8 kB 6.2 MB/s eta 0:00:00\n"}
+,{"stream_name":"stderr","time":240.915197807,"data":"ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\n"}
+,{"stream_name":"stderr","time":240.915230192,"data":"bigframes 2.39.0 requires google-cloud-bigquery-storage\u003c3.0.0,\u003e=2.30.0, which is not installed.\n"}
+,{"stream_name":"stderr","time":240.915237186,"data":"google-colab 1.0.0 requires jupyter-server==2.14.0, but you have jupyter-server 2.12.5 which is incompatible.\n"}
+,{"stream_name":"stderr","time":240.915242309,"data":"google-colab 1.0.0 requires pandas==2.2.2, but you have pandas 2.3.3 which is incompatible.\n"}
+,{"stream_name":"stderr","time":240.915247457,"data":"dopamine-rl 4.1.2 requires gym\u003c=0.25.2, but you have gym 0.26.2 which is incompatible.\n"}
+,{"stream_name":"stderr","time":240.915252902,"data":"moviepy 1.0.3 requires decorator\u003c5.0,\u003e=4.0.2, but you have decorator 5.3.1 which is incompatible.\n"}
+,{"stream_name":"stderr","time":240.915257897,"data":"torchaudio 2.10.0+cu128 requires torch==2.10.0, but you have torch 2.5.1 which is incompatible.\n"}
+,{"stream_name":"stderr","time":240.915262457,"data":"torchvision 0.25.0+cu128 requires torch==2.10.0, but you have torch 2.5.1 which is incompatible.\n"}
+,{"stream_name":"stderr","time":240.915266745,"data":"numba 0.60.0 requires numpy\u003c2.1,\u003e=1.22, but you have numpy 2.2.1 which is incompatible.\n"}
+,{"stream_name":"stderr","time":240.915271571,"data":"gradio 5.50.0 requires pillow\u003c12.0,\u003e=8.0, but you have pillow 12.3.0 which is incompatible.\n"}
+,{"stream_name":"stdout","time":241.606390006,"data":"+ /usr/bin/python3 -m pip install --quiet --no-deps -e /tmp/vistructum/repo/sidecar\n"}
+,{"stream_name":"stdout","time":250.922457865,"data":"{\"ref\": \"d6a765925cad644d13597b1b198e85bdd417b8a3\", \"configs\": [\"configs/mask-v1.yaml\", \"configs/scan-v1.yaml\"], \"gpus\": 2, \"cpus\": 4}\n"}
+,{"stream_name":"stdout","time":250.957349984,"data":"+ /usr/bin/python3 -m generator.build --kind mask --out /tmp/vistructum/data/mask-v1 --seed 0 --workers 4 --train 60000 --val 12500 --test 12500 --holdout 12500\n"}
+,{"stream_name":"stderr","time":251.196021439,"data":"building train: n=60000 kind=mask\n"}
+,{"stream_name":"stderr","time":313.915259571,"data":"  60000 samples in 57.9s (1035.9/s)\n"}
+,{"stream_name":"stderr","time":313.915314962,"data":"building val: n=12500 kind=mask\n"}
+,{"stream_name":"stderr","time":326.390036441,"data":"  12500 samples in 11.4s (1094.2/s)\n"}
+,{"stream_name":"stderr","time":326.390070717,"data":"building test: n=12500 kind=mask\n"}
+,{"stream_name":"stderr","time":339.073853925,"data":"  12500 samples in 11.7s (1071.0/s)\n"}
+,{"stream_name":"stderr","time":339.073889738,"data":"building holdout: n=12500 kind=mask\n"}
+,{"stream_name":"stderr","time":352.325752527,"data":"  12500 samples in 12.2s (1021.1/s)\n"}
+,{"stream_name":"stdout","time":352.397507162,"data":"+ /usr/bin/python3 -m generator.build --kind fullscan --out /tmp/vistructum/data/scan-v1 --seed 1000 --workers 4 --train 120000 --val 12500 --test 12500 --holdout 12500\n"}
+,{"stream_name":"stderr","time":352.569439568,"data":"building train: n=120000 kind=fullscan\n"}
+,{"stream_name":"stderr","time":1480.564460306,"data":"  120000 samples in 1074.7s (111.7/s)\n"}
+,{"stream_name":"stderr","time":1480.564494646,"data":"building val: n=12500 kind=fullscan\n"}
+,{"stream_name":"stderr","time":1591.497616663,"data":"  12500 samples in 105.4s (118.6/s)\n"}
+,{"stream_name":"stderr","time":1591.497653604,"data":"building test: n=12500 kind=fullscan\n"}
+,{"stream_name":"stderr","time":1708.179867431,"data":"  12500 samples in 111.0s (112.6/s)\n"}
+,{"stream_name":"stderr","time":1708.179908015,"data":"building holdout: n=12500 kind=fullscan\n"}
+,{"stream_name":"stderr","time":1833.32251163,"data":"  12500 samples in 117.6s (106.3/s)\n"}
+,{"stream_name":"stdout","time":1833.546041327,"data":"+ [gpu 0] /usr/bin/python3 run.py --config configs/mask-v1.yaml --runs-dir /kaggle/working/runs --set data_dir=/tmp/vistructum/data/mask-v1 --set device=cuda --set num_threads=2 --set scan_workers=2\n"}
+,{"stream_name":"stdout","time":1833.547319676,"data":"+ [gpu 1] /usr/bin/python3 run.py --config configs/scan-v1.yaml --runs-dir /kaggle/working/runs --set data_dir=/tmp/vistructum/data/scan-v1 --set device=cuda --set num_threads=2 --set scan_workers=2\n"}
+,{"stream_name":"stdout","time":4108.507132306,"data":"{\n"}
+,{"stream_name":"stdout","time":4108.507197425,"data":"  \"ref\": \"d6a765925cad644d13597b1b198e85bdd417b8a3\",\n"}
+,{"stream_name":"stdout","time":4108.507204596,"data":"  \"exit_codes\": {\n"}
+,{"stream_name":"stdout","time":4108.507209243,"data":"    \"configs/mask-v1.yaml\": 1,\n"}
+,{"stream_name":"stdout","time":4108.50721387,"data":"    \"configs/scan-v1.yaml\": 1\n"}
+,{"stream_name":"stdout","time":4108.507223518,"data":"  },\n"}
+,{"stream_name":"stdout","time":4108.507226718,"data":"  \"models\": {\n"}
+,{"stream_name":"stdout","time":4108.507229936,"data":"    \"mask\": {\n"}
+,{"stream_name":"stdout","time":4108.507232948,"data":"      \"val\": {\n"}
+,{"stream_name":"stdout","time":4108.507236061,"data":"        \"verdict\": \"PASS\",\n"}
+,{"stream_name":"stdout","time":4108.507239185,"data":"        \"failures\": [],\n"}
+,{"stream_name":"stdout","time":4108.507242244,"data":"        \"precision\": 0.9959016393442623,\n"}
+,{"stream_name":"stdout","time":4108.507245363,"data":"        \"recall\": 0.972,\n"}
+,{"stream_name":"stdout","time":4108.507248421,"data":"        \"fp_rate\": 0.001,\n"}
+,{"stream_name":"stdout","time":4108.507274671,"data":"        \"threshold\": 0.85\n"}
+,{"stream_name":"stdout","time":4108.507279439,"data":"      },\n"}
+,{"stream_name":"stdout","time":4108.50728281,"data":"      \"test\": {\n"}
+,{"stream_name":"stdout","time":4108.507286443,"data":"        \"verdict\": \"PASS\",\n"}
+,{"stream_name":"stdout","time":4108.507344161,"data":"        \"failures\": [],\n"}
+,{"stream_name":"stdout","time":4108.507353818,"data":"        \"precision\": 0.996319018404908,\n"}
+,{"stream_name":"stdout","time":4108.507356753,"data":"        \"recall\": 0.9744,\n"}
+,{"stream_name":"stdout","time":4108.507359025,"data":"        \"fp_rate\": 0.0009,\n"}
+,{"stream_name":"stdout","time":4108.507361249,"data":"        \"threshold\": 0.85\n"}
+,{"stream_name":"stdout","time":4108.507364569,"data":"      },\n"}
+,{"stream_name":"stdout","time":4108.507379848,"data":"      \"holdout\": {\n"}
+,{"stream_name":"stdout","time":4108.50738361,"data":"        \"verdict\": \"PASS\",\n"}
+,{"stream_name":"stdout","time":4108.507387653,"data":"        \"failures\": [],\n"}
+,{"stream_name":"stdout","time":4108.507391334,"data":"        \"precision\": 0.9963039014373717,\n"}
+,{"stream_name":"stdout","time":4108.507395324,"data":"        \"recall\": 0.9704,\n"}
+,{"stream_name":"stdout","time":4108.507399053,"data":"        \"fp_rate\": 0.0009,\n"}
+,{"stream_name":"stdout","time":4108.507402326,"data":"        \"threshold\": 0.85\n"}
+,{"stream_name":"stdout","time":4108.507405788,"data":"      }\n"}
+,{"stream_name":"stdout","time":4108.507408951,"data":"    },\n"}
+,{"stream_name":"stdout","time":4108.507412143,"data":"    \"fullscan\": {\n"}
+,{"stream_name":"stdout","time":4108.507415345,"data":"      \"val\": {\n"}
+,{"stream_name":"stdout","time":4108.507418718,"data":"        \"verdict\": \"PASS\",\n"}
+,{"stream_name":"stdout","time":4108.507422104,"data":"        \"failures\": [],\n"}
+,{"stream_name":"stdout","time":4108.507425466,"data":"        \"precision\": 0.9960474308300395,\n"}
+,{"stream_name":"stdout","time":4108.507428815,"data":"        \"recall\": 0.8064,\n"}
+,{"stream_name":"stdout","time":4108.507432056,"data":"        \"fp_rate\": 0.0008,\n"}
+,{"stream_name":"stdout","time":4108.507435345,"data":"        \"threshold\": 0.92\n"}
+,{"stream_name":"stdout","time":4108.507438708,"data":"      },\n"}
+,{"stream_name":"stdout","time":4108.507441848,"data":"      \"test\": {\n"}
+,{"stream_name":"stdout","time":4108.507445141,"data":"        \"verdict\": \"FAIL\",\n"}
+,{"stream_name":"stdout","time":4108.507448479,"data":"        \"failures\": [\n"}
+,{"stream_name":"stdout","time":4108.507453507,"data":"          \"fp_rate 0.00210 \u003e 0.001\"\n"}
+,{"stream_name":"stdout","time":4108.507460177,"data":"        ],\n"}
+,{"stream_name":"stdout","time":4108.507463277,"data":"        \"precision\": 0.9898550724637681,\n"}
+,{"stream_name":"stdout","time":4108.507487844,"data":"        \"recall\": 0.8196,\n"}
+,{"stream_name":"stdout","time":4108.507492017,"data":"        \"fp_rate\": 0.0021,\n"}
+,{"stream_name":"stdout","time":4108.507495774,"data":"        \"threshold\": 0.92\n"}
+,{"stream_name":"stdout","time":4108.507500244,"data":"      },\n"}
+,{"stream_name":"stdout","time":4108.507504074,"data":"      \"holdout\": {\n"}
+,{"stream_name":"stdout","time":4108.507507429,"data":"        \"verdict\": \"FAIL\",\n"}
+,{"stream_name":"stdout","time":4108.50751086,"data":"        \"failures\": [\n"}
+,{"stream_name":"stdout","time":4108.507514259,"data":"          \"fp_rate 0.00150 \u003e 0.001\"\n"}
+,{"stream_name":"stdout","time":4108.507517682,"data":"        ],\n"}
+,{"stream_name":"stdout","time":4108.507526584,"data":"        \"precision\": 0.9924089068825911,\n"}
+,{"stream_name":"stdout","time":4108.507530089,"data":"        \"recall\": 0.7844,\n"}
+,{"stream_name":"stdout","time":4108.507533487,"data":"        \"fp_rate\": 0.0015,\n"}
+,{"stream_name":"stdout","time":4108.507536751,"data":"        \"threshold\": 0.92\n"}
+,{"stream_name":"stdout","time":4108.507540002,"data":"      }\n"}
+,{"stream_name":"stdout","time":4108.507543111,"data":"    }\n"}
+,{"stream_name":"stdout","time":4108.507546754,"data":"  }\n"}
+,{"stream_name":"stdout","time":4108.507549915,"data":"}\n"}
+,{"stream_name":"stdout","time":4108.507553146,"data":"!! configs/mask-v1.yaml exited 1, see runs/mask-v1.log\n"}
+,{"stream_name":"stdout","time":4108.507556581,"data":"!! configs/scan-v1.yaml exited 1, see runs/scan-v1.log\n"}
+,{"stream_name":"stderr","time":4110.553856906,"data":"/usr/local/lib/python3.12/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":4110.553886745,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":4110.808558115,"data":"/usr/local/lib/python3.12/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":4110.808582181,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":4111.490337375,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":4112.671889598,"data":"[NbConvertApp] Writing 306607 bytes to __results__.html\n"}
+]

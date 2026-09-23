@@ -1,0 +1,7 @@
+ref d6a765925cad644d13597b1b198e85bdd417b8a3  exit codes {'configs/mask-v1.yaml': 1, 'configs/scan-v1.yaml': 1}
+fullscan calib         calibrated t=0.96 votes=2 recall=0.41583333333333333 false_flags=6/210600 
+fullscan scan          FAIL       t=0.96 votes=2 recall=0.405 false_flags=12/210600 ['false flags/window 5.70e-05 > 3e-05', 'recall 0.4050 < 0.5']
+fullscan scan-holdout  FAIL       t=0.96 votes=2 recall=0.415 false_flags=9/210600 ['false flags/window 4.27e-05 > 3e-05', 'recall 0.4150 < 0.5']
+mask     calib         calibrated t=0.9 votes=1 recall=0.932129963898917 false_flags=4/51200 
+mask     scan          FAIL       t=0.9 votes=1 recall=0.9468902865129281 false_flags=7/51200 ['false flags/window 1.37e-04 > 1e-04']
+mask     scan-holdout  PASS       t=0.9 votes=1 recall=0.9143064633260711 false_flags=2/51200 

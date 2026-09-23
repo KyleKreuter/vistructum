@@ -1,0 +1,4 @@
+ref 8c9d897446d8caffabe899eff6cd06dfc673051d  exit codes {'configs/mask-v1.yaml': 1, 'configs/scan-v1.yaml': -9}
+mask     calib         calibrated t=0.93 votes=1 recall=0.1376597836774828 false_flags=5/51200 
+mask     scan          FAIL       t=0.93 votes=1 recall=0.11641221374045801 false_flags=9/51200 ['false flags/window 1.76e-04 > 1e-04', 'recall 0.1164 < 0.9']
+mask     scan-holdout  FAIL       t=0.93 votes=1 recall=0.1067193675889328 false_flags=17/51200 ['false flags/window 3.32e-04 > 1e-04', 'recall 0.1067 < 0.9']

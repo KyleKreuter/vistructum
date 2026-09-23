@@ -1,0 +1,43 @@
+{
+  "ref": "8c9d897446d8caffabe899eff6cd06dfc673051d",
+  "exit_codes": {
+    "configs/mask-v1.yaml": 1,
+    "configs/scan-v1.yaml": -9
+  },
+  "models": {
+    "mask": {
+      "val": {
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.5936 < 0.9"
+        ],
+        "precision": 0.9933065595716198,
+        "recall": 0.5936,
+        "fp_rate": 0.001,
+        "threshold": 0.92
+      },
+      "test": {
+        "verdict": "FAIL",
+        "failures": [
+          "fp_rate 0.00150 > 0.001",
+          "recall 0.6064 < 0.9"
+        ],
+        "precision": 0.9902024820378837,
+        "recall": 0.6064,
+        "fp_rate": 0.0015,
+        "threshold": 0.92
+      },
+      "holdout": {
+        "verdict": "FAIL",
+        "failures": [
+          "fp_rate 0.00190 > 0.001",
+          "recall 0.5964 < 0.9"
+        ],
+        "precision": 0.9874172185430463,
+        "recall": 0.5964,
+        "fp_rate": 0.0019,
+        "threshold": 0.92
+      }
+    }
+  }
+}

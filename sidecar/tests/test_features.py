@@ -67,7 +67,7 @@ def test_feature_shapes_and_dtype():
     assert mask[0, 5, 5] == 1
 
 
-@pytest.mark.parametrize("length,expected", [(64, [0]), (40, [0]), (100, [0, 36]), (160, [0, 48, 96])])
+@pytest.mark.parametrize("length,expected", [(64, [0]), (40, [0]), (100, [0, 24, 36]), (160, [0, 24, 48, 72, 96])])
 def test_window_origins_cover_edges(length, expected):
     assert window_origins(length, GRID, STRIDE) == expected
 

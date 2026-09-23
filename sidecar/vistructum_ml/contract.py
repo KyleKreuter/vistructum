@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 GRID = 64
-STRIDE = 48
+STRIDE = 24
 LABELS = ("ok", "hakenkreuz")
 POSITIVE = 1
 FEATURE_SPEC = "fs-1"

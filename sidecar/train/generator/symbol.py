@@ -1,5 +1,14 @@
 import numpy as np
 
+MIN_SIZE = 5
+MAX_SIZE = 60
+
+
+def sample_size_thick(rng, max_size=MAX_SIZE, min_size=MIN_SIZE):
+    size = int(rng.integers(min_size, max_size + 1))
+    thick = int(rng.integers(1, max(2, size // 5) + 1))
+    return size, thick
+
 
 def build_symbol_mask(size, thick, mirror):
     size = max(5, size)

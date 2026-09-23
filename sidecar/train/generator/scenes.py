@@ -6,7 +6,7 @@ from vistructum_ml.scene import Scene
 from .builds import BUILD_FAMILIES, village
 from .palette import BUILD_BLOCKS, ID_LUMINANCE, block_id
 from .shapes import HARD_NEGATIVE_FAMILIES
-from .symbol import build_symbol_mask, rotate45, sanitize_negative_mask, visible_fraction
+from .symbol import build_symbol_mask, rotate45, sample_size_thick, sanitize_negative_mask, visible_fraction
 from .terrain import generate_terrain
 
 CANVAS = 96
@@ -22,6 +22,8 @@ POS_BASE_MODES = (
     "raised", "raised-same", "flush-diff", "flush-same-lum", "carved", "mixed", "outlined",
 )
 POS_CONTEXTS = ("plain", "on-roof", "in-water", "in-snow", "on-plaza")
+
+_BUILD_POOL_NAMES = list(BUILD_FAMILIES) + ["village"]
 
 
 def _stamp(blocks, heights, mask, block_arr, delta_arr, top, left):
@@ -56,22 +58,19 @@ def _random_top_left(rng, size, h, w, bias_center, jitter):
     return top, left
 
 
-def _stamp_decoys(rng, blocks, heights, n, avoid_center_box=None):
-    families = list(BUILD_FAMILIES.values()) + [village]
+def _random_build_stamp(rng):
+    name = _BUILD_POOL_NAMES[int(rng.integers(0, len(_BUILD_POOL_NAMES)))]
+    fn = BUILD_FAMILIES.get(name, village)
+    return name, fn(rng)
+
+
+def _stamp_decoys(rng, blocks, heights, n):
     for _ in range(n):
-        fn = families[int(rng.integers(0, len(families)))]
-        stamp = fn(rng)
+        _name, stamp = _random_build_stamp(rng)
         h, w = stamp.mask.shape
         if h >= CANVAS or w >= CANVAS:
             continue
-        for _try in range(4):
-            top, left = _random_top_left(rng, CANVAS, h, w, bias_center=False, jitter=0)
-            if avoid_center_box is not None:
-                at, al, ah, aw = avoid_center_box
-                overlap = not (top + h <= at or top >= at + ah or left + w <= al or left >= al + aw)
-                if overlap:
-                    continue
-            break
+        top, left = _random_top_left(rng, CANVAS, h, w, bias_center=False, jitter=0)
         _stamp(blocks, heights, stamp.mask, stamp.block, stamp.height_delta, top, left)
 
 
@@ -107,8 +106,7 @@ def _same_luminance_other_block(rng, ground_id):
 
 def _build_symbol_variant(rng, holdout):
     size_max = 64 if holdout else 60
-    size = int(rng.integers(5, size_max + 1))
-    thick = int(rng.integers(1, max(2, size // 5) + 1))
+    size, thick = sample_size_thick(rng, max_size=size_max)
     mirror = bool(rng.random() < 0.5)
     rot_k = int(rng.integers(0, 4))
     mask = build_symbol_mask(size, thick, mirror)
@@ -135,7 +133,7 @@ def _place_shape(rng, canvas_size, mask):
 def _context_box(rng, blocks, heights, context, top, left, h, w):
     if context == "on-roof":
         stamp = BUILD_FAMILIES["house"](rng)
-        sh, sw = max(h + 4, stamp.mask.shape[0]), max(w + 4, stamp.mask.shape[1])
+        sh, sw = max(h + 4, min(stamp.mask.shape[0], CANVAS)), max(w + 4, min(stamp.mask.shape[1], CANVAS))
         roof_blk = int(stamp.block[0, 0])
         roof_h = int(stamp.height_delta.max())
         rtop, rleft = top - (sh - h) // 2, left - (sw - w) // 2
@@ -148,7 +146,7 @@ def _context_box(rng, blocks, heights, context, top, left, h, w):
         return "raised", int(rng.integers(1, 3))
     if context == "on-plaza":
         stamp = BUILD_FAMILIES["plaza"](rng)
-        sh, sw = max(h + 4, stamp.mask.shape[0]), max(w + 4, stamp.mask.shape[1])
+        sh, sw = max(h + 4, min(stamp.mask.shape[0], CANVAS)), max(w + 4, min(stamp.mask.shape[1], CANVAS))
         ptop, pleft = top - (sh - h) // 2, left - (sw - w) // 2
         base = int(np.median(heights))
         r0, r1 = max(0, ptop), min(blocks.shape[0], ptop + sh)
@@ -182,8 +180,7 @@ def _context_box(rng, blocks, heights, context, top, left, h, w):
     return None, None
 
 
-def _stamp_symbol(rng, blocks, heights, holdout):
-    mask, _mirror, diag = _build_symbol_variant(rng, holdout)
+def _stamp_shape(rng, blocks, heights, mask):
     top, left, vis = _place_shape(rng, CANVAS, mask)
     h, w = mask.shape
 
@@ -238,11 +235,18 @@ def _stamp_symbol(rng, blocks, heights, holdout):
 
     footprint = _stamp(blocks, heights, stamp_mask, block, delta_arr, top, left)
 
-    subtype = f"pos-{mode}"
+    suffix = mode
     if context != "plain":
-        subtype += f"-{context}"
+        suffix += f"-{context}"
     if sloppy:
-        subtype += "-sloppy"
+        suffix += "-sloppy"
+    return footprint, suffix, vis
+
+
+def _stamp_symbol(rng, blocks, heights, holdout):
+    mask, _mirror, diag = _build_symbol_variant(rng, holdout)
+    footprint, suffix, vis = _stamp_shape(rng, blocks, heights, mask)
+    subtype = f"pos-{suffix}"
     if diag:
         subtype += "-diag45"
     return footprint, subtype, vis
@@ -254,21 +258,25 @@ def _negative_pool(holdout):
     return hard, builds
 
 
+def _stamp_hard_negative(rng, blocks, heights, holdout):
+    hard, _builds = _negative_pool(holdout)
+    name = hard[int(rng.integers(0, len(hard)))]
+    raw = HARD_NEGATIVE_FAMILIES[name](rng)
+    raw = sanitize_negative_mask(raw, rng)
+    rot_k = int(rng.integers(0, 4))
+    raw = np.rot90(raw, rot_k)
+    footprint, suffix, vis = _stamp_shape(rng, blocks, heights, raw)
+    return footprint, f"neg-hard-{name}-{suffix}", vis
+
+
 def _stamp_negative_family(rng, blocks, heights, holdout):
-    hard, builds = _negative_pool(holdout)
+    _hard, builds = _negative_pool(holdout)
     roll = rng.random()
-    if roll < 0.12:
+    if roll < 0.10:
         return "neg-terrain", np.zeros(blocks.shape, dtype=bool)
-    if roll < 0.12 + 0.35:
-        name = hard[int(rng.integers(0, len(hard)))]
-        raw = HARD_NEGATIVE_FAMILIES[name](rng)
-        raw = sanitize_negative_mask(raw, rng)
-        h, w = raw.shape
-        top, left = _place_shape(rng, CANVAS, raw)[:2]
-        blk = block_id(BUILD_BLOCKS[int(rng.integers(0, len(BUILD_BLOCKS)))])
-        delta = int(rng.integers(0, 4))
-        footprint = _stamp(blocks, heights, raw, blk, delta, top, left)
-        return f"neg-hard-{name}", footprint
+    if roll < 0.10 + 0.70:
+        footprint, subtype, _vis = _stamp_hard_negative(rng, blocks, heights, holdout)
+        return subtype, footprint
     name = builds[int(rng.integers(0, len(builds)))]
     fn = BUILD_FAMILIES.get(name, village)
     stamp = fn(rng)
@@ -331,43 +339,49 @@ def make_fullscan_sample(rng, label, holdout=False):
     return cropped.astype(np.uint8), int(label), subtype, biome, vis
 
 
-def _mask_negative_footprints(rng, blocks, heights, holdout):
-    modified = np.zeros((CANVAS, CANVAS), dtype=bool)
-    n_builds = int(rng.integers(1, 4))
-    subtype = "neg-scatter"
-    for i in range(n_builds):
-        hard, builds = _negative_pool(holdout)
-        if rng.random() < 0.35:
-            name = hard[int(rng.integers(0, len(hard)))]
-            raw = HARD_NEGATIVE_FAMILIES[name](rng)
-            raw = sanitize_negative_mask(raw, rng)
-            top, left, _ = _place_shape(rng, CANVAS, raw)
-            blk = block_id(BUILD_BLOCKS[int(rng.integers(0, len(BUILD_BLOCKS)))])
-            footprint = _stamp(blocks, heights, raw, blk, int(rng.integers(0, 3)), top, left)
-            subtype = f"neg-hard-{name}"
-        else:
-            name = builds[int(rng.integers(0, len(builds)))]
-            fn = BUILD_FAMILIES.get(name, village)
-            stamp = fn(rng)
-            h, w = stamp.mask.shape
-            if h >= CANVAS or w >= CANVAS:
-                continue
-            top, left, _ = _place_shape(rng, CANVAS, stamp.mask)
-            footprint = _stamp(blocks, heights, stamp.mask, stamp.block, stamp.height_delta, top, left)
-            subtype = f"neg-{name}"
-        keep_frac = float(rng.uniform(0.3, 1.0))
-        cells = np.argwhere(footprint)
-        if len(cells):
-            n_keep = max(1, int(len(cells) * keep_frac))
-            idx = rng.choice(len(cells), size=n_keep, replace=False)
-            modified[cells[idx, 0], cells[idx, 1]] = True
-    if rng.random() < 0.3:
-        n_scatter = int(rng.integers(1, 15))
-        rr = rng.integers(0, CANVAS, size=n_scatter)
-        cc = rng.integers(0, CANVAS, size=n_scatter)
+def _apply_dropout(rng, footprint, keep_lo=0.85, keep_hi=1.0):
+    modified = np.zeros(footprint.shape, dtype=bool)
+    cells = np.argwhere(footprint)
+    if len(cells) == 0:
+        return modified
+    keep_frac = float(rng.uniform(keep_lo, keep_hi))
+    n_keep = max(1, int(len(cells) * keep_frac))
+    idx = rng.choice(len(cells), size=n_keep, replace=False)
+    modified[cells[idx, 0], cells[idx, 1]] = True
+    return modified
+
+
+def _sprinkle_scatter(rng, modified, p=0.25, max_n=8):
+    if rng.random() < p:
+        n = int(rng.integers(1, max_n + 1))
+        rr = rng.integers(0, CANVAS, size=n)
+        cc = rng.integers(0, CANVAS, size=n)
+        modified = modified.copy()
         modified[rr, cc] = True
-        subtype = "neg-scatter"
-    return modified, subtype
+    return modified
+
+
+def _stamp_plain_build(rng, blocks, heights, holdout):
+    _hard, builds = _negative_pool(holdout)
+    name = builds[int(rng.integers(0, len(builds)))]
+    fn = BUILD_FAMILIES.get(name, village)
+    stamp = fn(rng)
+    h, w = stamp.mask.shape
+    if h >= CANVAS or w >= CANVAS:
+        return np.zeros((CANVAS, CANVAS), dtype=bool), None
+    top, left, _ = _place_shape(rng, CANVAS, stamp.mask)
+    footprint = _stamp(blocks, heights, stamp.mask, stamp.block, stamp.height_delta, top, left)
+    return footprint, f"neg-{name}"
+
+
+def _mask_primary_negative(rng, blocks, heights, holdout):
+    if rng.random() < 0.65:
+        footprint, subtype, _vis = _stamp_hard_negative(rng, blocks, heights, holdout)
+        return footprint, subtype
+    footprint, subtype = _stamp_plain_build(rng, blocks, heights, holdout)
+    if subtype is None:
+        return np.zeros((CANVAS, CANVAS), dtype=bool), "neg-terrain"
+    return footprint, subtype
 
 
 def make_mask_sample(rng, label, holdout=False):
@@ -377,20 +391,21 @@ def make_mask_sample(rng, label, holdout=False):
 
     if label == 1:
         footprint, subtype, vis = _stamp_symbol(rng, blocks, heights, holdout)
-        keep_frac = float(rng.uniform(0.85, 1.0))
-        cells = np.argwhere(footprint)
-        modified = np.zeros((CANVAS, CANVAS), dtype=bool)
-        if len(cells):
-            n_keep = max(1, int(len(cells) * keep_frac))
-            idx = rng.choice(len(cells), size=n_keep, replace=False)
-            modified[cells[idx, 0], cells[idx, 1]] = True
-        if rng.random() < 0.5:
-            extra_modified, _ = _mask_negative_footprints(rng, blocks, heights, holdout)
-            modified |= extra_modified
     else:
-        modified, subtype = _mask_negative_footprints(rng, blocks, heights, holdout)
+        footprint, subtype = _mask_primary_negative(rng, blocks, heights, holdout)
         vis = None
 
+    modified = _apply_dropout(rng, footprint)
+
+    # the same "several builds in one crop" mixing applies to positives and
+    # negatives alike, with the same probabilities, so the NUMBER of shapes
+    # merged into `modified` is not itself a label cue.
+    n_extra = int(rng.integers(0, 3))
+    for _ in range(n_extra):
+        extra_footprint, _extra_subtype = _stamp_plain_build(rng, blocks, heights, holdout)
+        modified |= _apply_dropout(rng, extra_footprint)
+
+    modified = _sprinkle_scatter(rng, modified)
     _, _, modified = _apply_d4(rng, blocks, heights, modified)
     luminance = np.zeros((CANVAS, CANVAS), dtype=np.uint8)
     scene = Scene(blocks, heights, luminance, modified)

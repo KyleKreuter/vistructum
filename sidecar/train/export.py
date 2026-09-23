@@ -36,9 +36,9 @@ def git_commit():
     return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
 
 
-def export_onnx(model, kind, out_path, opset=OPSET):
+def export_onnx(model, kind, out_path, opset=OPSET, tta=False):
     model.eval()
-    wrapper = ExportNet(model)
+    wrapper = ExportNet(model, tta).eval()  # export restores the wrapper's mode afterwards; a fresh module is in train mode
     spec = KINDS[kind]
     dummy = torch.zeros(1, spec.channels, GRID, GRID, dtype=torch.uint8)
     torch.onnx.export(
@@ -113,7 +113,7 @@ def export_checkpoint(checkpoint_path, onnx_path, commit=None, quantize=None, op
     threshold = payload["threshold"]
     commit = commit or git_commit()
     quantize = cfg_dict.get("quantize", True) if quantize is None else quantize
-    export_onnx(model, kind, onnx_path, opset)
+    export_onnx(model, kind, onnx_path, opset, cfg_dict.get("tta", False))
     add_metadata(onnx_path, kind, threshold, commit, cfg_dict, payload.get("metrics"))
     validate_export(onnx_path)
     quantize_info = {"applied": False, "disagreement": None}

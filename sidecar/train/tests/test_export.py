@@ -96,3 +96,21 @@ def test_quantized_decisions_agree_on_random_inputs(tmp_path, kind):
     p8 = sess8.run(None, {INPUT_NAME: x})[0]
     # compare scores, not argmax: untrained scores sit within ~1e-4 of 0.5, where any rounding flips the decision
     assert np.abs(p32 - p8).max() < 0.02
+
+
+def test_tta_export_averages_all_eight_d4_views(tmp_path):
+    torch.manual_seed(1)
+    model = SymbolNet("fullscan", [8, 16], 0.0).eval()
+    onnx_path = tmp_path / "tta.onnx"
+    export_mod.export_onnx(model, "fullscan", onnx_path, tta=True)
+    x = np.random.default_rng(0).integers(0, 256, size=(5, 3, GRID, GRID), dtype=np.uint8)
+    onnx_probs = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"]).run(None, {INPUT_NAME: x})[0]
+
+    views = [np.rot90(v, k, axes=(2, 3)) for v in (x, x[:, :, :, ::-1]) for k in range(4)]
+    with torch.no_grad():
+        expected = np.mean([torch.softmax(model(torch.from_numpy(v.copy())), dim=1).numpy() for v in views], axis=0)
+    assert np.abs(onnx_probs - expected).max() < 1e-4
+    # a mirrored or rotated window gets the same score, whatever the orientation of the symbol in the world
+    turned = np.ascontiguousarray(np.rot90(x, 1, axes=(2, 3)))
+    turned_probs = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"]).run(None, {INPUT_NAME: turned})[0]
+    assert np.abs(turned_probs - onnx_probs).max() < 1e-4

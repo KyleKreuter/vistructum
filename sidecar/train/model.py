@@ -48,10 +48,23 @@ class SymbolNet(nn.Module):
         return self.head(x)
 
 
+def d4_views(x):
+    """the 8 rotations/mirrors of a (n, c, h, w) batch, stacked along the batch axis; flips and a transpose only,
+    so the ONNX graph needs no rot90 support"""
+    t = x.transpose(2, 3)
+    return torch.cat([x, x.flip(3), x.flip(2), x.flip(2).flip(3), t, t.flip(3), t.flip(2), t.flip(2).flip(3)])
+
+
 class ExportNet(nn.Module):
-    def __init__(self, model):
+    """softmax scores; with tta the score is the mean over all 8 D4 views of the window (8x the compute)"""
+
+    def __init__(self, model, tta=False):
         super().__init__()
         self.model = model
+        self.tta = tta
 
     def forward(self, x):
-        return torch.softmax(self.model(x), dim=1)
+        if not self.tta:
+            return torch.softmax(self.model(x), dim=1)
+        probs = torch.softmax(self.model(d4_views(x)), dim=1)
+        return probs.reshape(8, x.shape[0], probs.shape[1]).mean(dim=0)

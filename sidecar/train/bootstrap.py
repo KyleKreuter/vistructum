@@ -11,7 +11,7 @@ REPO_REF = os.environ.get("VISTRUCTUM_REF", "__VISTRUCTUM_REF__")
 CONFIGS = os.environ.get("VISTRUCTUM_CONFIGS", "__VISTRUCTUM_CONFIGS__")
 SCRATCH = Path(os.environ.get("VISTRUCTUM_SCRATCH", "/tmp/vistructum"))
 OUTPUT = Path(os.environ.get("VISTRUCTUM_OUTPUT", "/kaggle/working"))
-SIZES = {split: os.environ.get(f"VISTRUCTUM_{split.upper()}_N") for split in ("train", "val", "test", "holdout")}
+SPLITS = ("train", "val", "test", "holdout")
 SEED = int(os.environ.get("VISTRUCTUM_SEED", "0"))
 DEVICE = os.environ.get("VISTRUCTUM_DEVICE", "cuda")
 
@@ -41,18 +41,19 @@ def gpu_count():
     return int(out.stdout.strip())
 
 
-def config_kind(path):
+def read_config(path):
     import yaml
 
-    return yaml.safe_load(path.read_text())["kind"]
+    return yaml.safe_load(path.read_text())
 
 
-def generate(train_dir, kind, data_dir, seed, env):
-    command = [sys.executable, "-m", "generator.build", "--kind", kind, "--out", str(data_dir),
+def generate(train_dir, cfg, data_dir, seed, env):
+    command = [sys.executable, "-m", "generator.build", "--kind", cfg["kind"], "--out", str(data_dir),
                "--seed", str(seed), "--workers", str(os.cpu_count() or 4)]
-    for split, size in SIZES.items():
+    for split in SPLITS:
+        size = os.environ.get(f"VISTRUCTUM_{split.upper()}_N") or cfg.get(f"gen_{split}")
         if size:
-            command += [f"--{split}", size]
+            command += [f"--{split}", str(size)]
     run(command, cwd=train_dir, env=env)
 
 
@@ -98,9 +99,8 @@ def main():
     release_dir.mkdir(parents=True, exist_ok=True)
     jobs = []
     for index, config in enumerate(configs):
-        kind = config_kind(train_dir / config)
         data_dir = SCRATCH / "data" / Path(config).stem
-        generate(train_dir, kind, data_dir, SEED + 1000 * index, env)
+        generate(train_dir, read_config(train_dir / config), data_dir, SEED + 1000 * index, env)
         jobs.append((config, data_dir))
     threads = max(1, (os.cpu_count() or 4) // min(len(jobs), gpus))
     exit_codes = {}

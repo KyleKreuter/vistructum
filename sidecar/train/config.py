@@ -32,6 +32,10 @@ class TrainConfig:
     scan_negatives: int = 0
     scan_positives: int = 0
     scan_workers: int = 4
+    gen_train: int = 60000
+    gen_val: int = 12500
+    gen_test: int = 12500
+    gen_holdout: int = 12500
 
 
 VALID_KEYS = {f.name for f in fields(TrainConfig)}

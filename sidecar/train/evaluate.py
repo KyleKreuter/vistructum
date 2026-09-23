@@ -6,6 +6,8 @@ from pathlib import Path
 
 import numpy as np
 import onnxruntime as ort
+from generator.scenes import POS_BASE_MODES
+from generator.shapes import HARD_NEGATIVE_FAMILIES
 
 from vistructum_ml.contract import OUTPUT_NAME
 from vistructum_ml.gates import GATES, metrics_at, verdict
@@ -44,18 +46,43 @@ def latency_per_window(session, x, batch, runs=LATENCY_RUNS):
     return (time.perf_counter() - start) / runs / batch
 
 
+MODES = sorted(set(POS_BASE_MODES) | {"raised-diff"}, key=len, reverse=True)
+FAMILIES = sorted(HARD_NEGATIVE_FAMILIES, key=len, reverse=True)
+
+
+def _longest_prefix(text, options):
+    return next((option for option in options if text == option or text.startswith(option + "-")), None)
+
+
+def subtype_groups(name):
+    if name.startswith("pos-"):
+        rest = name[4:]
+        return "pos", _longest_prefix(rest, MODES) or rest
+    if name.startswith("neg-hard-"):
+        rest = name[9:]
+        family = _longest_prefix(rest, FAMILIES) or rest
+        remainder = rest[len(family) + 1:]
+        return f"neg-hard-{family}", _longest_prefix(remainder, MODES) or "plain"
+    return name, "plain"
+
+
+def _rates(flagged, positive, mask):
+    n = int(mask.sum())
+    if positive[mask].any():
+        return {"n": n, "recall": round(float(flagged[mask & positive].mean()), 4)}
+    return {"n": n, "fp_rate": round(float(flagged[mask].mean()), 5)}
+
+
 def subtype_breakdown(scores, y, subtype, threshold):
     flagged = scores >= threshold
     positive = y == 1
-    out = {}
-    for name in sorted(set(subtype.tolist())):
-        mask = subtype == name
-        n = int(mask.sum())
-        if positive[mask].any():
-            out[name] = {"n": n, "recall": float(flagged[mask & positive].mean())}
-        else:
-            out[name] = {"n": n, "fp_rate": float(flagged[mask].mean())}
-    return out
+    groups = [subtype_groups(str(name)) for name in subtype.tolist()]
+    shapes = np.array([g[0] for g in groups])
+    modes = np.array([f"{'pos' if g[0] == 'pos' else 'neg'}:{g[1]}" for g in groups])
+    return {
+        "by_shape": {name: _rates(flagged, positive, shapes == name) for name in sorted(set(shapes.tolist()))},
+        "by_mode": {name: _rates(flagged, positive, modes == name) for name in sorted(set(modes.tolist()))},
+    }
 
 
 def evaluate_split(session, meta, data_dir, split):

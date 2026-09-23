@@ -17,14 +17,35 @@ jobs:
 
   sidecar:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sidecar
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r sidecar/requirements.txt
-      - run: python -c "import app"
-        working-directory: sidecar
+          cache: pip
+          cache-dependency-path: |
+            sidecar/requirements*.txt
+            sidecar/train/requirements.txt
+      - run: pip install -r requirements-dev.txt
+      - run: pip install --extra-index-url https://download.pytorch.org/whl/cpu -r train/requirements.txt
+      - run: pip install --no-deps -e .
+      - run: ruff check --line-length 120 .
+      - run: python -m compileall -q app.py service.py vistructum_ml train
+      - run: python -m pytest -q tests train/tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/sidecar/train
+      - name: smoke (generate, train, export, evaluate)
+        working-directory: sidecar/train
+        env:
+          PYTHONPATH: ${{ github.workspace }}/sidecar:${{ github.workspace }}/sidecar/train
+        run: |
+          python -m generator.build --kind mask --out runs/data/smoke --train 64 --val 32 --test 32 --holdout 32 --workers 2 --seed 1
+          python run.py --config configs/smoke.yaml --no-gate
+          python -m generator.build --kind fullscan --out runs/data/smoke-scan --train 32 --val 16 --test 16 --holdout 16 --workers 2 --seed 2
+          python run.py --config configs/smoke.yaml --set kind=fullscan --set data_dir=runs/data/smoke-scan --no-gate
 
   docker:
     runs-on: ubuntu-latest

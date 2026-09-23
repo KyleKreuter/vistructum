@@ -33,6 +33,7 @@ def main():
     parser.add_argument("--allow-dirty", action="store_true")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--splits", nargs="+", default=["val", "test", "holdout"])
+    parser.add_argument("--no-gate", action="store_true", help="write the report but do not fail on a test verdict FAIL")
     args = parser.parse_args()
     cfg = load_config(args.config, args.set)
     sha, dirty = git_info()
@@ -66,7 +67,7 @@ def main():
     }
     (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
     print(json.dumps(manifest, indent=2))
-    if report["splits"].get("test", {}).get("verdict") == "FAIL":
+    if not args.no_gate and report["splits"].get("test", {}).get("verdict") == "FAIL":
         raise SystemExit(1)
 
 

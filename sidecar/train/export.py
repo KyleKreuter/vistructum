@@ -108,7 +108,7 @@ def export_checkpoint(checkpoint_path, onnx_path, commit=None, quantize=None, op
     payload = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     cfg_dict = payload["cfg"]
     kind = cfg_dict["kind"]
-    model = SymbolNet(kind, cfg_dict["widths"], cfg_dict.get("dropout", 0.0))
+    model = SymbolNet(kind, cfg_dict["widths"], cfg_dict.get("dropout", 0.0), cfg_dict.get("depths"))
     model.load_state_dict(payload["model"])
     threshold = payload["threshold"]
     commit = commit or git_commit()

@@ -21,6 +21,7 @@ def make_split(dir_path, name, kind, n_pos, n_neg, seed=0):
 
 
 def build_checkpoint(tmp_path, kind, widths=(8, 16)):
+    torch.manual_seed(0)
     model = SymbolNet(kind, list(widths), 0.0)
     payload = {
         "model": model.state_dict(),
@@ -67,8 +68,10 @@ def test_export_checkpoint_with_quantization_stays_valid(tmp_path, kind):
     ckpt_path, _ = build_checkpoint(tmp_path, kind)
     onnx_path = tmp_path / f"{kind}.onnx"
     result = export_mod.export_checkpoint(ckpt_path, onnx_path, commit="1" * 40, quantize=True)
-    assert result["quantize"]["disagreement"] is not None
-    assert result["quantize"]["disagreement"] <= 0.02
+    # an untrained net scores every window ~0.5, so its int8 decisions flip at random; check the keep/drop rule instead
+    disagreement = result["quantize"]["disagreement"]
+    assert disagreement is not None
+    assert result["quantize"]["applied"] == (disagreement <= export_mod.QUANTIZE_MAX_DISAGREEMENT)
     meta = export_mod.validate_export(onnx_path)
     assert meta["kind"] == kind
 
@@ -85,10 +88,11 @@ def test_quantized_decisions_agree_on_random_inputs(tmp_path, kind):
 
     rng = np.random.default_rng(3)
     channels = KINDS[kind].channels
-    x = rng.integers(0, 256, size=(500, channels, GRID, GRID), dtype=np.uint8)
+    high = 2 if kind == "mask" else 256  # the mask is binary; 0..255 would be far outside what the model ever sees
+    x = rng.integers(0, high, size=(500, channels, GRID, GRID), dtype=np.uint8)
     sess32 = ort.InferenceSession(str(fp32_path), providers=["CPUExecutionProvider"])
     sess8 = ort.InferenceSession(str(int8_path), providers=["CPUExecutionProvider"])
-    p32 = sess32.run(None, {INPUT_NAME: x})[0].argmax(axis=1)
-    p8 = sess8.run(None, {INPUT_NAME: x})[0].argmax(axis=1)
-    agreement = float((p32 == p8).mean())
-    assert agreement >= 0.99
+    p32 = sess32.run(None, {INPUT_NAME: x})[0]
+    p8 = sess8.run(None, {INPUT_NAME: x})[0]
+    # compare scores, not argmax: untrained scores sit within ~1e-4 of 0.5, where any rounding flips the decision
+    assert np.abs(p32 - p8).max() < 0.02

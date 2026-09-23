@@ -13,6 +13,7 @@ class TrainConfig:
     data_dir: str = "data"
     out_dir: str = "out"
     widths: list = field(default_factory=lambda: [16, 32, 64])
+    depths: list = field(default_factory=list)
     dropout: float = 0.0
     epochs: int = 30
     batch: int = 128

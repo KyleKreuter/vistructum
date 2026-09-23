@@ -1,3 +1,4 @@
+import pytest
 import torch
 from model import ExportNet, SymbolNet
 
@@ -58,3 +59,14 @@ def test_d4_augment_is_a_permutation_of_d4_views():
         views += [torch.flip(v, dims=(2,)) for v in views]
         assert any(torch.equal(out[i], v) for v in views)
     assert not torch.equal(out, x)
+
+
+def test_depths_add_convs_per_stage_and_keep_output_shape():
+    shallow = SymbolNet("fullscan", [8, 16, 32], 0.0)
+    deep = SymbolNet("fullscan", [8, 16, 32], 0.0, depths=[1, 2, 3])
+    convs = [sum(isinstance(m, torch.nn.Conv2d) for m in net.modules()) for net in (shallow, deep)]
+    assert convs == [3, 6]
+    x = torch.zeros(2, 3, 64, 64, dtype=torch.uint8)
+    assert deep(x).shape == (2, 2)
+    with pytest.raises(ValueError):
+        SymbolNet("fullscan", [8, 16], 0.0, depths=[1])

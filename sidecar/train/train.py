@@ -189,7 +189,7 @@ def train_model(cfg, resume=False):
         raise SystemExit("device mps requested but torch.backends.mps.is_available() is False")
     out_dir = Path(cfg.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    model = SymbolNet(cfg.kind, cfg.widths, cfg.dropout).to(device)
+    model = SymbolNet(cfg.kind, cfg.widths, cfg.dropout, cfg.depths).to(device)
     checkpoint_path = out_dir / "checkpoint.pt"
     model, threshold, best = fit(model, cfg, device, checkpoint_path, resume)
     model.cpu()

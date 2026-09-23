@@ -39,6 +39,7 @@ def load_models(model_dir):
             feature_spec=raw_meta.get(META_FEATURE_SPEC, ""),
             commit=raw_meta.get(META_COMMIT, ""),
             path=str(path),
+            min_votes=info["min_votes"],
         )
     return models
 

@@ -11,11 +11,9 @@ from service import (
     build_scene,
     decode_int16,
     decode_uint8,
-    iou,
-    non_max_suppression,
     run_inference,
 )
-from vistructum_ml.contract import GRID
+from vistructum_ml.contract import STRIDE
 
 
 def b64_int16(values):
@@ -86,53 +84,9 @@ def test_build_scene_bad_modified_values_raise():
         build_scene(payload)
 
 
-def test_iou_full_overlap_is_one():
-    assert iou((0, 0), (0, 0), GRID) == 1.0
-
-
-def test_iou_no_overlap_is_zero():
-    assert iou((0, 0), (0, 200), GRID) == 0.0
-
-
-def test_iou_partial_overlap():
-    value = iou((0, 0), (0, 32), GRID)
-    assert 0.0 < value < 1.0
-
-
-def test_non_max_suppression_below_threshold_dropped():
-    positions = [(0, 0), (0, 100)]
-    scores = [0.2, 0.1]
-    result = non_max_suppression(positions, scores, threshold=0.5)
-    assert result == []
-
-
-def test_non_max_suppression_keeps_far_apart_detections():
-    positions = [(0, 0), (0, 200)]
-    scores = [0.9, 0.8]
-    result = non_max_suppression(positions, scores, threshold=0.5)
-    assert len(result) == 2
-    assert result[0]["score"] == 0.9
-    assert result[1]["score"] == 0.8
-
-
-def test_non_max_suppression_suppresses_overlapping_lower_score():
-    positions = [(0, 0), (0, 10)]
-    scores = [0.9, 0.6]
-    result = non_max_suppression(positions, scores, threshold=0.5)
-    assert len(result) == 1
-    assert result[0]["top"] == 0 and result[0]["left"] == 0
-
-
-def test_non_max_suppression_respects_cap():
-    positions = [(0, i * 200) for i in range(30)]
-    scores = [0.9] * 30
-    result = non_max_suppression(positions, scores, threshold=0.5, cap=20)
-    assert len(result) == 20
-
-
 def test_detection_and_infer_request_models_validate():
-    det = Detection(top=0, left=0, size=64, score=0.5)
-    assert det.size == 64
+    det = Detection(top=0, left=0, bottom=64, right=64, score=0.5, votes=1)
+    assert det.bottom == 64
     req = InferRequest(kind="mask", width=64, height=64)
     assert req.width == 64
 
@@ -160,7 +114,7 @@ class FakeSession:
 
 def test_run_inference_flags_high_score_window():
     session = FakeSession(lambda window: 1.0 if window.mean() > 0.4 else 0.0)
-    model = LoadedModel(session, "mask", "v1", ("ok", "hakenkreuz"), 0.5, "fs-1", "commit1", "path")
+    model = LoadedModel(session, "mask", "v1", ("ok", "hakenkreuz"), 0.5, "fs-1", "commit1", "path", 1)
     modified = np.zeros((64, 64), dtype=bool)
     modified[:, :] = True
     from vistructum_ml.scene import Scene
@@ -169,16 +123,47 @@ def test_run_inference_flags_high_score_window():
     assert result["flagged"] is True
     assert result["max_score"] == 1.0
     assert result["windows"] == 1
-    assert result["detections"][0]["score"] == 1.0
+    assert result["min_votes"] == 1
+    det = result["detections"][0]
+    assert det["score"] == 1.0
+    assert det["votes"] == 1
+    assert set(det.keys()) == {"top", "left", "bottom", "right", "score", "votes"}
     assert "elapsed_ms" in result
 
 
 def test_run_inference_batches_in_groups_of_64():
     from vistructum_ml.scene import Scene
     session = FakeSession(lambda window: 0.0)
-    model = LoadedModel(session, "mask", "v1", ("ok", "hakenkreuz"), 0.5, "fs-1", "commit1", "path")
+    model = LoadedModel(session, "mask", "v1", ("ok", "hakenkreuz"), 0.5, "fs-1", "commit1", "path", 1)
     modified = np.zeros((400, 400), dtype=bool)
     scene = Scene(np.zeros((400, 400)), np.zeros((400, 400)), np.zeros((400, 400), dtype=np.uint8), modified)
     result = run_inference(model, scene)
     assert result["windows"] > 64
     assert max(session.calls) <= 64
+
+
+def test_run_inference_isolated_hit_not_flagged_when_min_votes_two():
+    session = FakeSession(lambda window: 1.0 if window.mean() == 1.0 else 0.0)
+    model = LoadedModel(session, "mask", "v1", ("ok", "hakenkreuz"), 0.5, "fs-1", "commit1", "path", 2)
+    modified = np.zeros((88, 88), dtype=bool)
+    modified[:64, :64] = True
+    from vistructum_ml.scene import Scene
+    scene = Scene(np.zeros((88, 88)), np.zeros((88, 88)), np.zeros((88, 88), dtype=np.uint8), modified)
+    result = run_inference(model, scene)
+    assert result["max_score"] >= model.threshold
+    assert result["flagged"] is False
+    assert result["detections"] == []
+
+
+def test_run_inference_overlapping_hits_flagged_when_min_votes_two():
+    session = FakeSession(lambda window: 1.0 if window.mean() == 1.0 else 0.0)
+    model = LoadedModel(session, "mask", "v1", ("ok", "hakenkreuz"), 0.5, "fs-1", "commit1", "path", 2)
+    modified = np.zeros((64 + STRIDE, 64), dtype=bool)
+    modified[:, :] = True
+    from vistructum_ml.scene import Scene
+    scene = Scene(np.zeros((64 + STRIDE, 64)), np.zeros((64 + STRIDE, 64)),
+                   np.zeros((64 + STRIDE, 64), dtype=np.uint8), modified)
+    result = run_inference(model, scene)
+    assert result["flagged"] is True
+    assert len(result["detections"]) == 1
+    assert result["detections"][0]["votes"] >= 2

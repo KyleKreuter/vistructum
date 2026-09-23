@@ -20,7 +20,7 @@ def b64_uint8(values):
 
 
 def build_onnx_model(path, channels, kind, version, threshold=0.5, feature_spec="fs-1",
-                      labels=("ok", "hakenkreuz"), commit="deadbeef", drop_key=None):
+                      labels=("ok", "hakenkreuz"), commit="deadbeef", drop_key=None, min_votes=None):
     features_in = helper.make_tensor_value_info("features", TensorProto.UINT8, ["N", channels, GRID, GRID])
     scores_out = helper.make_tensor_value_info("scores", TensorProto.FLOAT, ["N", 2])
     cast = helper.make_node("Cast", ["features"], ["feat_f"], to=TensorProto.FLOAT)
@@ -48,6 +48,8 @@ def build_onnx_model(path, channels, kind, version, threshold=0.5, feature_spec=
         "vistructum.threshold": str(threshold),
         "vistructum.commit": commit,
     }
+    if min_votes is not None:
+        meta["vistructum.min_votes"] = str(min_votes)
     if drop_key:
         del meta[drop_key]
     helper.set_model_props(model, meta)
@@ -126,7 +128,17 @@ def test_version_reports_metadata_not_hardcoded(monkeypatch, both_models_dir):
         assert body["mask"]["threshold"] == 0.5
         assert body["mask"]["feature_spec"] == "fs-1"
         assert body["mask"]["commit"] == "deadbeef"
+        assert body["mask"]["min_votes"] == 1
         assert body["fullscan"]["model_version"] == "bf-scan-1"
+
+
+def test_version_reports_min_votes_from_metadata(monkeypatch, tmp_path):
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5, min_votes=3)
+    client = make_client(monkeypatch, tmp_path)
+    with client:
+        resp = client.get("/version")
+        assert resp.status_code == 200
+        assert resp.json()["mask"]["min_votes"] == 3
 
 
 def test_infer_mask_flagged_true_for_heavily_modified_area(monkeypatch, both_models_dir):
@@ -229,7 +241,7 @@ def test_infer_width_out_of_bounds_returns_422(monkeypatch, both_models_dir):
         assert resp2.status_code == 422
 
 
-def test_infer_nms_suppresses_overlapping_high_score_windows(monkeypatch, both_models_dir):
+def test_infer_detections_shape_sorted_by_score_and_capped(monkeypatch, both_models_dir):
     client = make_client(monkeypatch, both_models_dir)
     with client:
         modified = np.ones((150, 150), dtype=np.uint8)
@@ -237,18 +249,39 @@ def test_infer_nms_suppresses_overlapping_high_score_windows(monkeypatch, both_m
         resp = client.post("/infer", json=payload)
         body = resp.json()
         assert body["windows"] > 1
+        assert body["min_votes"] == 1
         assert len(body["detections"]) >= 1
+        assert len(body["detections"]) <= 20
         for det in body["detections"]:
             assert det["score"] >= body["threshold"]
+            assert set(det.keys()) == {"top", "left", "bottom", "right", "score", "votes"}
         scores = [d["score"] for d in body["detections"]]
         assert scores == sorted(scores, reverse=True)
-        for i, a in enumerate(body["detections"]):
-            for b in body["detections"][i + 1:]:
-                ax0, ay0 = a["top"], a["left"]
-                bx0, by0 = b["top"], b["left"]
-                ix0, iy0 = max(ax0, bx0), max(ay0, by0)
-                ix1 = min(ax0 + a["size"], bx0 + b["size"])
-                iy1 = min(ay0 + a["size"], by0 + b["size"])
-                inter = max(0, ix1 - ix0) * max(0, iy1 - iy0)
-                union = a["size"] * a["size"] + b["size"] * b["size"] - inter
-                assert inter / union <= 0.3
+
+
+def test_infer_isolated_single_window_not_flagged_when_min_votes_two(monkeypatch, tmp_path):
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5, min_votes=2)
+    client = make_client(monkeypatch, tmp_path)
+    with client:
+        modified = b64_uint8(np.ones(64 * 64, dtype=np.uint8))
+        resp = client.post("/infer", json={"kind": "mask", "width": 64, "height": 64, "modified": modified})
+        body = resp.json()
+        assert body["windows"] == 1
+        assert body["max_score"] >= body["threshold"]
+        assert body["min_votes"] == 2
+        assert body["flagged"] is False
+        assert body["detections"] == []
+
+
+def test_infer_overlapping_windows_flagged_when_min_votes_two(monkeypatch, tmp_path):
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5, min_votes=2)
+    client = make_client(monkeypatch, tmp_path)
+    with client:
+        modified = np.ones((64 + GRID, 64), dtype=np.uint8)
+        payload = {"kind": "mask", "width": 64, "height": 64 + GRID, "modified": b64_uint8(modified.flatten())}
+        resp = client.post("/infer", json=payload)
+        body = resp.json()
+        assert body["windows"] > 1
+        assert body["flagged"] is True
+        assert len(body["detections"]) == 1
+        assert body["detections"][0]["votes"] >= 2

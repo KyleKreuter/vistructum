@@ -5,12 +5,11 @@ from dataclasses import dataclass
 import numpy as np
 from pydantic import BaseModel, Field
 
-from vistructum_ml import features
-from vistructum_ml.contract import FULLSCAN, GRID, INPUT_NAME, MASK, OUTPUT_NAME, POSITIVE
+from vistructum_ml import detect, features
+from vistructum_ml.contract import FULLSCAN, INPUT_NAME, MASK, OUTPUT_NAME, POSITIVE
 from vistructum_ml.scene import Scene
 
 BATCH_SIZE = 64
-NMS_IOU_THRESHOLD = 0.3
 MAX_DETECTIONS = 20
 
 REQUIRED_FIELDS = {
@@ -29,6 +28,7 @@ class LoadedModel:
     feature_spec: str
     commit: str
     path: str
+    min_votes: int
 
     def version_info(self):
         return {
@@ -37,6 +37,7 @@ class LoadedModel:
             "threshold": self.threshold,
             "feature_spec": self.feature_spec,
             "commit": self.commit,
+            "min_votes": self.min_votes,
         }
 
 
@@ -53,8 +54,10 @@ class InferRequest(BaseModel):
 class Detection(BaseModel):
     top: int
     left: int
-    size: int
+    bottom: int
+    right: int
     score: float
+    votes: int
 
 
 class InferResponse(BaseModel):
@@ -66,6 +69,7 @@ class InferResponse(BaseModel):
     flagged: bool
     detections: list[Detection]
     elapsed_ms: float
+    min_votes: int
 
 
 def decode_int16(data_b64, count, name):
@@ -104,33 +108,6 @@ def build_scene(payload):
     return Scene(blocks, heights, luminance, modified.reshape(shape).astype(bool))
 
 
-def iou(a, b, size):
-    ax0, ay0 = a
-    bx0, by0 = b
-    ix0 = max(ax0, bx0)
-    iy0 = max(ay0, by0)
-    ix1 = min(ax0 + size, bx0 + size)
-    iy1 = min(ay0 + size, by0 + size)
-    iw = max(0, ix1 - ix0)
-    ih = max(0, iy1 - iy0)
-    inter = iw * ih
-    union = 2 * size * size - inter
-    return inter / union if union else 0.0
-
-
-def non_max_suppression(positions, scores, threshold, size=GRID, iou_threshold=NMS_IOU_THRESHOLD, cap=MAX_DETECTIONS):
-    candidates = [(float(score), top, left) for (top, left), score in zip(positions, scores) if score >= threshold]
-    candidates.sort(key=lambda c: c[0], reverse=True)
-    kept = []
-    for score, top, left in candidates:
-        if any(iou((top, left), (kt, kl), size) > iou_threshold for _, kt, kl in kept):
-            continue
-        kept.append((score, top, left))
-        if len(kept) >= cap:
-            break
-    return [{"top": top, "left": left, "size": size, "score": score} for score, top, left in kept]
-
-
 def run_batches(session, batch):
     n = batch.shape[0]
     scores = np.empty(n, dtype=np.float64)
@@ -147,7 +124,11 @@ def run_inference(model, scene):
     positions, batch = features.windows(model.kind, feats)
     scores = run_batches(model.session, batch)
     max_score = float(scores.max()) if scores.size else 0.0
-    detections = non_max_suppression(positions, scores, model.threshold)
+    flagged_clusters = detect.flagged(positions, scores, model.threshold, model.min_votes)
+    detections = [
+        {key: cluster[key] for key in ("top", "left", "bottom", "right", "score", "votes")}
+        for cluster in flagged_clusters[:MAX_DETECTIONS]
+    ]
     elapsed_ms = (time.perf_counter() - start) * 1000.0
     return {
         "kind": model.kind,
@@ -155,7 +136,8 @@ def run_inference(model, scene):
         "threshold": model.threshold,
         "windows": int(batch.shape[0]),
         "max_score": max_score,
-        "flagged": max_score >= model.threshold,
+        "flagged": len(flagged_clusters) > 0,
         "detections": detections,
         "elapsed_ms": elapsed_ms,
+        "min_votes": model.min_votes,
     }

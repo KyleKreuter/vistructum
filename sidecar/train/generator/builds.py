@@ -4,6 +4,8 @@ import numpy as np
 
 from .palette import BUILD_BLOCKS, PATH_BLOCKS, ROOF_BLOCKS, block_id
 
+MAX_SPAN = 60
+
 
 @dataclass
 class Stamp:
@@ -22,16 +24,16 @@ def _rect_mask(h, w):
 
 
 def house(rng):
-    w = int(rng.integers(4, 13))
-    h = int(rng.integers(4, 13))
+    w = int(rng.integers(4, MAX_SPAN + 1))
+    h = int(rng.integers(4, MAX_SPAN + 1))
     mask = _rect_mask(h, w)
     roof = block_id(_pick(rng, ROOF_BLOCKS))
     block = np.full((h, w), roof, dtype=np.int32)
     if rng.random() < 0.5:
-        delta = np.full((h, w), int(rng.integers(3, 7)), dtype=np.int32)
+        delta = np.full((h, w), int(rng.integers(3, 9)), dtype=np.int32)
     else:
-        peak = int(rng.integers(4, 9))
-        eave = int(rng.integers(2, peak))
+        peak = int(rng.integers(4, 6 + max(h, w) // 3))
+        eave = int(rng.integers(2, max(3, peak)))
         along_rows = rng.random() < 0.5
         n = h if along_rows else w
         ridge = n // 2
@@ -65,8 +67,8 @@ def road(rng):
 
 
 def farm(rng):
-    w = int(rng.integers(8, 20))
-    h = int(rng.integers(8, 20))
+    w = int(rng.integers(8, MAX_SPAN + 1))
+    h = int(rng.integers(8, MAX_SPAN + 1))
     mask = _rect_mask(h, w)
     block = np.full((h, w), block_id("farmland"), dtype=np.int32)
     delta = np.zeros((h, w), dtype=np.int32)
@@ -81,13 +83,14 @@ def farm(rng):
 
 
 def fence(rng):
-    w = int(rng.integers(6, 30))
-    h = int(rng.integers(6, 30))
+    w = int(rng.integers(6, MAX_SPAN + 1))
+    h = int(rng.integers(6, MAX_SPAN + 1))
+    thick = int(rng.integers(1, 3))
     mask = np.zeros((h, w), dtype=bool)
-    mask[0, :] = True
-    mask[-1, :] = True
-    mask[:, 0] = True
-    mask[:, -1] = True
+    mask[0:thick, :] = True
+    mask[h - thick:h, :] = True
+    mask[:, 0:thick] = True
+    mask[:, w - thick:w] = True
     blk = block_id(_pick(rng, ("oak_planks", "spruce_planks", "cobblestone", "stone_bricks")))
     block = np.full((h, w), blk, dtype=np.int32)
     delta = np.full((h, w), int(rng.integers(1, 4)), dtype=np.int32)
@@ -96,26 +99,28 @@ def fence(rng):
 
 def _pattern(kind, h, w, rng):
     yy, xx = np.mgrid[0:h, 0:w]
+    if kind == "solid":
+        return np.ones((h, w), dtype=bool)
     if kind == "checker":
-        cell = int(rng.integers(1, 4))
+        cell = int(rng.integers(1, 5))
         return ((yy // cell + xx // cell) % 2) == 0
     if kind == "stripes":
-        cell = int(rng.integers(1, 4))
+        cell = int(rng.integers(1, 5))
         return (xx // cell % 2) == 0
     if kind == "diagonal":
-        cell = int(rng.integers(2, 5))
+        cell = int(rng.integers(2, 6))
         return ((xx + yy) // cell % 2) == 0
     if kind == "concentric":
         cy, cx = h / 2, w / 2
         dist = np.sqrt((yy - cy) ** 2 + (xx - cx) ** 2)
-        ring = int(rng.integers(2, 5))
+        ring = int(rng.integers(2, 6))
         return (dist.astype(np.int32) // ring % 2) == 0
     if kind == "circles":
         cy, cx = h / 2, w / 2
         dist = np.sqrt((yy - cy) ** 2 + (xx - cx) ** 2)
-        return dist <= min(h, w) * 0.4
+        return dist <= min(h, w) * 0.45
     cy, cx = h // 2, w // 2
-    thick = max(1, min(h, w) // 8)
+    thick = max(1, min(h, w) // 6)
     out = np.zeros((h, w), dtype=bool)
     out[cy - thick:cy + thick, :] = True
     out[:, cx - thick:cx + thick] = True
@@ -123,9 +128,9 @@ def _pattern(kind, h, w, rng):
 
 
 def plaza(rng):
-    w = int(rng.integers(10, 30))
-    h = int(rng.integers(10, 30))
-    kind = _pick(rng, ("checker", "stripes", "diagonal", "concentric", "circles", "plus"))
+    w = int(rng.integers(6, MAX_SPAN + 1))
+    h = int(rng.integers(6, MAX_SPAN + 1))
+    kind = _pick(rng, ("solid", "checker", "stripes", "diagonal", "concentric", "circles", "plus"))
     pat = _pattern(kind, h, w, rng)
     a, b = block_id(_pick(rng, BUILD_BLOCKS)), block_id(_pick(rng, BUILD_BLOCKS))
     block = np.where(pat, a, b).astype(np.int32)
@@ -133,8 +138,18 @@ def plaza(rng):
     return Stamp(mask, block, np.zeros((h, w), dtype=np.int32), f"plaza-{kind}")
 
 
+def platform(rng):
+    w = int(rng.integers(10, MAX_SPAN + 1))
+    h = int(rng.integers(10, MAX_SPAN + 1))
+    mask = _rect_mask(h, w)
+    blk = block_id(_pick(rng, BUILD_BLOCKS))
+    block = np.full((h, w), blk, dtype=np.int32)
+    delta = np.full((h, w), int(rng.integers(0, 5)), dtype=np.int32)
+    return Stamp(mask, block, delta, "platform")
+
+
 def tower(rng):
-    radius = int(rng.integers(3, 10))
+    radius = int(rng.integers(3, MAX_SPAN // 2 + 1))
     size = radius * 2 + 1
     yy, xx = np.mgrid[0:size, 0:size]
     dist = np.sqrt((yy - radius) ** 2 + (xx - radius) ** 2)
@@ -146,8 +161,8 @@ def tower(rng):
 
 
 def pool(rng):
-    w = int(rng.integers(6, 20))
-    h = int(rng.integers(6, 20))
+    w = int(rng.integers(6, MAX_SPAN + 1))
+    h = int(rng.integers(6, MAX_SPAN + 1))
     mask = _rect_mask(h, w)
     block = np.full((h, w), block_id("water"), dtype=np.int32)
     delta = np.full((h, w), -int(rng.integers(1, 4)), dtype=np.int32)
@@ -185,7 +200,7 @@ def railway(rng):
     return Stamp(mask, block, np.zeros(mask.shape, dtype=np.int32), "railway")
 
 
-SPRITE_ROWS = (5, 6, 7, 8)
+SPRITE_ROWS = (5, 6, 7, 8, 10, 12, 16, 20)
 
 
 def pixelart(rng):
@@ -210,11 +225,14 @@ BUILD_FAMILIES = {
     "farm": farm,
     "fence": fence,
     "plaza": plaza,
+    "platform": platform,
     "tower": tower,
     "pool": pool,
     "railway": railway,
     "pixelart": pixelart,
 }
+
+DENSE_BUILD_FAMILIES = ("house", "farm", "plaza", "platform", "pool", "tower")
 
 
 def village(rng):

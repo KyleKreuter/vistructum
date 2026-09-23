@@ -4,6 +4,7 @@ from generator.build import build_split
 from generator.rng import rng_for, sample_seed, split_offset
 from generator.scenes import CROP, make_fullscan_sample, make_mask_sample
 from generator.shapes import HARD_NEGATIVE_FAMILIES
+from generator.shortcut_check import compute_shortcut_auc
 from generator.symbol import (
     build_symbol_mask,
     is_c4_chiral,
@@ -141,6 +142,30 @@ def test_holdout_only_hard_negative_family_absent_outside_holdout():
         for _i in range(80):
             _x, _y, subtype, _biome, _vis = make_fullscan_sample(rng, 0, holdout=False)
             assert "windmill-3" not in subtype
+
+
+def _build_npz_pair(kind, out_dir, n_train, n_test, seed):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    train_data, _stats = build_split(kind, seed, "train", n_train, workers=4)
+    test_data, _stats = build_split(kind, seed, "test", n_test, workers=4)
+    np.savez_compressed(out_dir / "train.npz", x=train_data["x"], y=train_data["y"],
+                         subtype=train_data["subtype"], seed=train_data["seed"])
+    np.savez_compressed(out_dir / "test.npz", x=test_data["x"], y=test_data["y"],
+                         subtype=test_data["subtype"], seed=test_data["seed"])
+
+
+def test_shortcut_auc_fullscan(tmp_path):
+    out = tmp_path / "shortcut-fullscan"
+    _build_npz_pair("fullscan", out, n_train=1200, n_test=600, seed=321)
+    auc, info = compute_shortcut_auc(out)
+    assert auc <= 0.65, info
+
+
+def test_shortcut_auc_mask(tmp_path):
+    out = tmp_path / "shortcut-mask"
+    _build_npz_pair("mask", out, n_train=1500, n_test=800, seed=321)
+    auc, info = compute_shortcut_auc(out)
+    assert auc <= 0.65, info
 
 
 def test_end_to_end_tiny_build(tmp_path):

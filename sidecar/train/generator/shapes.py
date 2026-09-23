@@ -1,5 +1,7 @@
 import numpy as np
 
+from .symbol import sample_size_thick
+
 
 def _canvas(size):
     return np.zeros((size, size), dtype=bool)
@@ -12,9 +14,8 @@ def _fill(canvas, r0, r1, c0, c1):
         canvas[r0c:r1c, c0c:c1c] = True
 
 
-def greek_cross(rng):
-    size = int(rng.integers(9, 41)) | 1
-    thick = max(1, int(rng.integers(1, max(2, size // 4))))
+def greek_cross(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
     c = size // 2
     half = thick // 2
     canvas = _canvas(size)
@@ -23,26 +24,22 @@ def greek_cross(rng):
     return canvas
 
 
-def latin_cross(rng):
-    w = int(rng.integers(9, 31))
-    h = int(rng.integers(int(w * 1.3), w * 3))
-    thick = max(1, int(rng.integers(1, max(2, w // 4))))
-    canvas = np.zeros((h, w), dtype=bool)
-    c = w // 2
+def latin_cross(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
+    canvas = _canvas(size)
+    c = size // 2
     half = thick // 2
-    _fill(canvas, 0, h, c - half, c + half + thick % 2)
-    bar_row = int(rng.integers(h // 6, h // 3))
-    _fill(canvas, bar_row - half, bar_row + half + thick % 2, 0, w)
+    _fill(canvas, 0, size, c - half, c + half + thick % 2)
+    bar_row = max(thick, size // 4)
+    _fill(canvas, bar_row - half, bar_row + half + thick % 2, 0, size)
     return canvas
 
 
-def iron_cross(rng):
-    size = int(rng.integers(11, 41)) | 1
-    canvas = greek_cross(rng)
-    canvas = canvas[: min(size, canvas.shape[0]), :]
-    size = canvas.shape[0]
+def iron_cross(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
+    canvas = greek_cross_fixed(size, thick)
     c = size // 2
-    flare = max(1, size // 8)
+    flare = max(1, thick)
     _fill(canvas, 0, flare, c - flare - flare, c - flare)
     _fill(canvas, 0, flare, c + flare, c + flare + flare)
     _fill(canvas, size - flare, size, c - flare - flare, c - flare)
@@ -54,45 +51,45 @@ def iron_cross(rng):
     return canvas
 
 
-def celtic_cross(rng):
-    size = int(rng.integers(15, 41)) | 1
-    canvas = greek_cross(rng)
-    if canvas.shape[0] != size:
-        pad = np.zeros((size, size), dtype=bool)
-        s = min(size, canvas.shape[0])
-        off = (size - s) // 2
-        pad[off:off + s, off:off + s] = canvas[:s, :s]
-        canvas = pad
-    center = size / 2.0
-    radius = size * 0.32
-    thick = max(1, size // 16)
-    yy, xx = np.mgrid[0:size, 0:size]
-    dist = np.sqrt((yy - center) ** 2 + (xx - center) ** 2)
-    canvas |= np.abs(dist - radius) <= thick / 2
+def greek_cross_fixed(size, thick):
+    c = size // 2
+    half = thick // 2
+    canvas = _canvas(size)
+    _fill(canvas, 0, size, c - half, c + half + thick % 2)
+    _fill(canvas, c - half, c + half + thick % 2, 0, size)
     return canvas
 
 
-def l_shapes_d4(rng):
-    size = int(rng.integers(12, 41))
-    arm = max(2, size // 4)
-    thick = max(1, size // 10)
+def celtic_cross(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
+    canvas = greek_cross_fixed(size, thick)
+    center = size / 2.0
+    radius = size * 0.36
+    yy, xx = np.mgrid[0:size, 0:size]
+    dist = np.sqrt((yy - center) ** 2 + (xx - center) ** 2)
+    canvas |= np.abs(dist - radius) <= max(1, thick) / 2
+    return canvas
+
+
+def l_shapes_d4(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
+    arm = max(2, size // 3)
     canvas = _canvas(size)
     q = size // 2
-    _fill(canvas, 1, 1 + thick, 1, 1 + arm)
-    _fill(canvas, 1, 1 + arm, 1, 1 + thick)
+    _fill(canvas, 0, thick, 0, arm)
+    _fill(canvas, 0, arm, 0, thick)
     canvas[:, size - q:] |= np.fliplr(canvas[:, :q])
     canvas[size - q:, :] |= np.flipud(canvas[:q, :])
     return canvas
 
 
-def t_shapes_d4(rng):
-    size = int(rng.integers(14, 41))
-    arm = max(3, size // 4)
-    thick = max(1, size // 10)
+def t_shapes_d4(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
+    arm = max(3, size // 3)
     q = size // 2
     quadrant = _canvas(q)
     _fill(quadrant, 0, thick, 0, arm)
-    _fill(quadrant, 0, arm, arm - thick, arm)
+    _fill(quadrant, 0, arm, max(0, arm - thick), arm)
     canvas = _canvas(size)
     canvas[:q, :q] |= quadrant
     canvas[:q, size - q:] |= np.fliplr(quadrant)
@@ -101,15 +98,18 @@ def t_shapes_d4(rng):
     return canvas
 
 
-def plus_alternating_hooks(rng):
-    size = int(rng.integers(9, 41)) | 1
-    thick = max(1, int(rng.integers(1, max(2, size // 8)))) | 1
+def plus_alternating_hooks(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
+    if size % 2 == 0:
+        size -= 1
+    if thick % 2 == 0:
+        thick = max(1, thick - 1)
     canvas = _canvas(size)
     c = size // 2
     half = thick // 2
     _fill(canvas, 0, size, c - half, c + half + 1)
     _fill(canvas, c - half, c + half + 1, 0, size)
-    hook = max(1, size // 6)
+    hook = max(1, size // 2 - thick)
     _fill(canvas, 0, thick, c, c + hook)
     _fill(canvas, size - thick, size, c - hook, c)
     _fill(canvas, c, c + hook, size - thick, size)
@@ -117,15 +117,14 @@ def plus_alternating_hooks(rng):
     return canvas
 
 
-def plus_partial_hooks(rng):
-    size = int(rng.integers(9, 41)) | 1
-    thick = max(1, int(rng.integers(1, max(2, size // 8))))
+def plus_partial_hooks(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
     canvas = _canvas(size)
     c = size // 2
     half = thick // 2
     _fill(canvas, 0, size, c - half, c + half + thick % 2)
     _fill(canvas, c - half, c + half + thick % 2, 0, size)
-    hook = max(1, size // 6)
+    hook = max(1, size // 2 - thick)
     n_hooks = int(rng.integers(1, 4))
     hooks = [
         lambda: _fill(canvas, 0, thick, c, c + hook),
@@ -138,12 +137,11 @@ def plus_partial_hooks(rng):
     return canvas
 
 
-def windmill3(rng):
-    size = int(rng.integers(15, 41))
+def windmill3(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
     canvas = _canvas(size)
     c = size / 2.0
-    arm_len = size * 0.42
-    thick = max(1.0, size / 12.0)
+    arm_len = size * 0.46
     yy, xx = np.mgrid[0:size, 0:size]
     dy = yy - c
     dx = xx - c
@@ -157,32 +155,32 @@ def windmill3(rng):
     return canvas
 
 
-def spiral(rng):
-    size = int(rng.integers(15, 41))
+def spiral(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
     canvas = _canvas(size)
     c = size / 2.0
-    thick = max(1.0, size / 14.0)
     turns = rng.uniform(1.5, 2.5)
     yy, xx = np.mgrid[0:size, 0:size]
     dy = yy - c
     dx = xx - c
     ang = np.arctan2(dy, dx)
     dist = np.sqrt(dy ** 2 + dx ** 2)
-    r_expected = (ang % (2 * np.pi)) / (2 * np.pi) * (size * 0.42 / turns)
+    r_expected = (ang % (2 * np.pi)) / (2 * np.pi) * (size * 0.46 / turns)
     for t in range(int(turns) + 1):
-        canvas |= np.abs(dist - (r_expected + t * size * 0.42 / turns)) <= thick / 2
-    canvas &= dist <= size * 0.46
+        canvas |= np.abs(dist - (r_expected + t * size * 0.46 / turns)) <= max(1, thick) / 2
+    canvas &= dist <= size * 0.48
     return canvas
 
 
-def square_spiral(rng):
-    size = int(rng.integers(13, 41))
-    thick = max(1, size // 12)
+def square_spiral(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
+    thick = max(1, thick // 2)
     canvas = _canvas(size)
     top, bottom, left, right = 0, size, 0, size
     direction = 0
     steps = 0
-    while top < bottom - thick and left < right - thick and steps < size:
+    max_steps = max(2, int(size * 0.35) // max(1, thick))
+    while top < bottom - thick and left < right - thick and steps < max_steps:
         if direction == 0:
             _fill(canvas, top, top + thick, left, right)
             top += thick * 2
@@ -200,9 +198,9 @@ def square_spiral(rng):
     return canvas
 
 
-def tetris(rng):
-    size = int(rng.integers(10, 26))
-    cell = max(1, size // 8)
+def tetris(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
+    cell = max(1, thick)
     shapes = [
         [(0, 0), (0, 1), (1, 0), (1, 1)],
         [(0, 0), (1, 0), (2, 0), (2, 1)],
@@ -211,17 +209,19 @@ def tetris(rng):
         [(0, 0), (1, 0), (1, 1), (2, 1)],
     ]
     shape = shapes[int(rng.integers(0, len(shapes)))]
-    maxr = max(p[0] for p in shape) + 1
-    maxc = max(p[1] for p in shape) + 1
-    canvas = np.zeros((maxr * cell, maxc * cell), dtype=bool)
-    for r, c in shape:
-        _fill(canvas, r * cell, (r + 1) * cell, c * cell, (c + 1) * cell)
+    reps = max(3, size // cell)
+    canvas = _canvas(size)
+    for rep in range(reps):
+        ro = int(rng.integers(0, max(1, size - 3 * cell)))
+        co = int(rng.integers(0, max(1, size - 3 * cell)))
+        for r, c in shape:
+            _fill(canvas, ro + r * cell, ro + (r + 1) * cell, co + c * cell, co + (c + 1) * cell)
     return canvas
 
 
-def hash_grid(rng):
-    size = int(rng.integers(15, 41))
-    thick = max(1, size // 12)
+def hash_grid(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
+    thick = max(1, thick // 2)
     canvas = _canvas(size)
     n = int(rng.integers(2, 4))
     for k in range(1, n + 1):
@@ -231,15 +231,18 @@ def hash_grid(rng):
     return canvas
 
 
-def fylfot_mirror(rng):
-    size = int(rng.integers(9, 41)) | 1
-    thick = max(1, int(rng.integers(1, max(2, size // 8)))) | 1
+def fylfot_mirror(rng, max_size=None):
+    size, thick = sample_size_thick(rng, max_size) if max_size else sample_size_thick(rng)
+    if size % 2 == 0:
+        size -= 1
+    if thick % 2 == 0:
+        thick = max(1, thick - 1)
     canvas = _canvas(size)
     c = size // 2
     half = thick // 2
     _fill(canvas, 0, size, c - half, c + half + 1)
     _fill(canvas, c - half, c + half + 1, 0, size)
-    hook = max(1, size // 6)
+    hook = max(1, size // 2 - thick)
     _fill(canvas, 0, thick, c - hook, c)
     _fill(canvas, 0, thick, c, c + hook)
     _fill(canvas, size - thick, size, c - hook, c)

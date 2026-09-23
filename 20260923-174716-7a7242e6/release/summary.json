@@ -1,0 +1,38 @@
+{
+  "ref": "7a7242e674a5f7b3238e9d5312e00edcb50b100f",
+  "exit_codes": {
+    "configs/scan-v1.yaml": 1
+  },
+  "models": {
+    "fullscan": {
+      "val": {
+        "verdict": "PASS",
+        "failures": [],
+        "precision": 0.9952854897852279,
+        "recall": 0.76,
+        "fp_rate": 0.0009,
+        "threshold": 0.94
+      },
+      "test": {
+        "verdict": "FAIL",
+        "failures": [
+          "fp_rate 0.00150 > 0.001"
+        ],
+        "precision": 0.9921589127025614,
+        "recall": 0.7592,
+        "fp_rate": 0.0015,
+        "threshold": 0.94
+      },
+      "holdout": {
+        "verdict": "FAIL",
+        "failures": [
+          "fp_rate 0.00110 > 0.001"
+        ],
+        "precision": 0.9940891993551854,
+        "recall": 0.74,
+        "fp_rate": 0.0011,
+        "threshold": 0.94
+      }
+    }
+  }
+}

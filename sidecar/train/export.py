@@ -3,6 +3,7 @@ import json
 import subprocess
 from pathlib import Path
 
+import numpy as np
 import onnx
 import onnxruntime as ort
 import torch
@@ -78,6 +79,11 @@ def validate_export(onnx_path):
     return validate(read_session_metadata(session))
 
 
+def _scores(session, name, x, batch=256):
+    # batched: one 12k-sample run of the wide fullscan net needs tens of GB of activations
+    return np.concatenate([session.run([OUTPUT_NAME], {name: x[i:i + batch]})[0][:, 1] for i in range(0, len(x), batch)])
+
+
 def maybe_quantize(onnx_path, threshold, data_dir):
     from onnxruntime.quantization import QuantType, quantize_dynamic
 
@@ -88,8 +94,8 @@ def maybe_quantize(onnx_path, threshold, data_dir):
     sess32 = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
     sess8 = ort.InferenceSession(str(tmp_path), providers=["CPUExecutionProvider"])
     name = sess32.get_inputs()[0].name
-    p32 = sess32.run([OUTPUT_NAME], {name: x})[0][:, 1]
-    p8 = sess8.run([OUTPUT_NAME], {name: x})[0][:, 1]
+    p32 = _scores(sess32, name, x)
+    p8 = _scores(sess8, name, x)
     disagreement = float(((p32 >= threshold) != (p8 >= threshold)).mean())
     if disagreement <= QUANTIZE_MAX_DISAGREEMENT:
         tmp_path.replace(onnx_path)

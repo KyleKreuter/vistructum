@@ -15,6 +15,7 @@ MARGIN = (CANVAS - CROP) // 2
 
 MIN_VISIBLE = 0.9
 MAX_REDRAWS = 24
+EXTRA_GAP = 1
 
 HOLDOUT_ONLY_HARD_FAMILY = "windmill-3"
 
@@ -117,17 +118,37 @@ def _build_symbol_variant(rng, holdout):
     return mask, mirror, diag
 
 
+def _in_crop_top_left(rng, h, w):
+    # anywhere the shape fits fully inside the crop, the way a symbol sits somewhere inside a scan window;
+    # shapes larger than the crop stay roughly centered
+    if h > CROP or w > CROP:
+        return _random_top_left(rng, CANVAS, h, w, bias_center=True, jitter=3)
+    return MARGIN + int(rng.integers(0, CROP - h + 1)), MARGIN + int(rng.integers(0, CROP - w + 1))
+
+
 def _place_shape(rng, canvas_size, mask):
-    h, w = mask.shape
-    for attempt in range(MAX_REDRAWS):
-        jitter = 3 if attempt < MAX_REDRAWS - 1 else 0
-        top, left = _random_top_left(rng, canvas_size, h, w, bias_center=True, jitter=jitter)
+    for _attempt in range(MAX_REDRAWS):
+        top, left = _in_crop_top_left(rng, *mask.shape)
         vis = visible_fraction(mask, top, left, MARGIN, MARGIN, CROP)
         if vis >= MIN_VISIBLE:
             return top, left, vis
-    top, left = _random_top_left(rng, canvas_size, h, w, bias_center=True, jitter=0)
+    top, left = _random_top_left(rng, canvas_size, *mask.shape, bias_center=True, jitter=0)
     vis = visible_fraction(mask, top, left, MARGIN, MARGIN, CROP)
     return top, left, vis
+
+
+def footprint_box(footprint, gap=0):
+    rows, cols = np.nonzero(footprint)
+    if len(rows) == 0:
+        return None
+    return (int(rows.min()) - gap, int(cols.min()) - gap, int(rows.max()) + 1 + gap, int(cols.max()) + 1 + gap)
+
+
+def _box_hits(footprint, top, left, box):
+    h, w = footprint.shape
+    r0, c0 = max(box[0] - top, 0), max(box[1] - left, 0)
+    r1, c1 = min(box[2] - top, h), min(box[3] - left, w)
+    return r1 > r0 and c1 > c0 and bool(footprint[r0:r1, c0:c1].any())
 
 
 def _context_box(rng, blocks, heights, context, top, left, h, w):
@@ -361,7 +382,8 @@ def _sprinkle_scatter(rng, modified, p=0.25, max_n=8):
     return modified
 
 
-def _stamp_plain_build(rng, blocks, heights, holdout):
+def _stamp_plain_build(rng, blocks, heights, holdout, avoid=None):
+    """avoid: a (top, left, bottom, right) box the build must not touch, so it cannot bury the primary shape"""
     _hard, builds = _negative_pool(holdout)
     name = builds[int(rng.integers(0, len(builds)))]
     fn = BUILD_FAMILIES.get(name, village)
@@ -369,7 +391,15 @@ def _stamp_plain_build(rng, blocks, heights, holdout):
     h, w = stamp.mask.shape
     if h >= CANVAS or w >= CANVAS:
         return np.zeros((CANVAS, CANVAS), dtype=bool), None
-    top, left, _ = _place_shape(rng, CANVAS, stamp.mask)
+    if avoid is None:
+        top, left, _ = _place_shape(rng, CANVAS, stamp.mask)
+    else:
+        for _attempt in range(MAX_REDRAWS):
+            top, left = _random_top_left(rng, CANVAS, h, w, bias_center=False, jitter=0)
+            if not _box_hits(stamp.mask, top, left, avoid):
+                break
+        else:
+            return np.zeros((CANVAS, CANVAS), dtype=bool), None
     footprint = _stamp(blocks, heights, stamp.mask, stamp.block, stamp.height_delta, top, left)
     return footprint, f"neg-{name}"
 
@@ -400,9 +430,12 @@ def make_mask_sample(rng, label, holdout=False):
     # the same "several builds in one crop" mixing applies to positives and
     # negatives alike, with the same probabilities, so the NUMBER of shapes
     # merged into `modified` is not itself a label cue.
+    # extra builds keep a gap to the primary shape: a symbol buried inside another modified region is invisible
+    # in the binary mask, so labelling it positive would only teach noise (the fullscan model covers that case)
+    avoid = footprint_box(footprint, gap=EXTRA_GAP)
     n_extra = int(rng.integers(0, 3))
     for _ in range(n_extra):
-        extra_footprint, _extra_subtype = _stamp_plain_build(rng, blocks, heights, holdout)
+        extra_footprint, _extra_subtype = _stamp_plain_build(rng, blocks, heights, holdout, avoid)
         modified |= _apply_dropout(rng, extra_footprint)
 
     modified = _sprinkle_scatter(rng, modified)

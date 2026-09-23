@@ -4,12 +4,15 @@ from vistructum_ml.scene import Scene
 
 from .scenes import (
     CANVAS,
+    EXTRA_GAP,
     _apply_dropout,
+    _box_hits,
     _luminance_from_blocks,
     _stamp_decoys,
     _stamp_hard_negative,
     _stamp_plain_build,
     _stamp_symbol,
+    footprint_box,
 )
 from .terrain import generate_terrain
 
@@ -83,8 +86,10 @@ def make_area(rng, kind, size, n_symbols, holdout=False):
     symbols = _stamp_symbols(rng, blocks, heights, size, n_symbols, holdout)
     modified = np.zeros((size, size), dtype=bool)
     if kind == "mask":
+        symbol_boxes = [footprint_box(s["footprint"], gap=EXTRA_GAP) for s in symbols]
         for footprint in background:
-            if rng.random() < RECENT_SHARE:
+            buried = any(_box_hits(footprint, 0, 0, box) for box in symbol_boxes)
+            if rng.random() < RECENT_SHARE and not buried:
                 modified |= _apply_dropout(rng, footprint)
         for symbol in symbols:
             modified |= _apply_dropout(rng, symbol["footprint"])

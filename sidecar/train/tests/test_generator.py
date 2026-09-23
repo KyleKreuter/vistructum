@@ -193,3 +193,42 @@ def test_end_to_end_tiny_build(tmp_path):
         npz = np.load(out / f"{split}.npz", allow_pickle=True)
         assert npz["x"].shape == (12, 3, 64, 64)
         assert npz["y"].shape == (12,)
+
+
+def _spy_dropout(monkeypatch):
+    from generator import scenes
+
+    calls = []
+    original = scenes._apply_dropout
+
+    def spy(rng, footprint, *args, **kwargs):
+        calls.append(footprint.copy())
+        return original(rng, footprint, *args, **kwargs)
+
+    monkeypatch.setattr(scenes, "_apply_dropout", spy)
+    return calls
+
+
+def test_mask_extra_builds_never_bury_the_symbol(monkeypatch):
+    calls = _spy_dropout(monkeypatch)
+    for i in range(150):
+        calls.clear()
+        make_mask_sample(rng_for(3, "train", i), 1)
+        symbol, extras = calls[0], calls[1:]
+        rows, cols = np.nonzero(symbol)
+        for extra in extras:
+            assert not extra[rows.min() - 1:rows.max() + 2, cols.min() - 1:cols.max() + 2].any()
+
+
+def test_symbols_are_spread_over_the_crop_not_centered(monkeypatch):
+    from generator.scenes import MARGIN
+
+    calls = _spy_dropout(monkeypatch)
+    centers = []
+    for i in range(200):
+        calls.clear()
+        make_mask_sample(rng_for(4, "train", i), 1)
+        rows, _cols = np.nonzero(calls[0])
+        centers.append((rows.min() + rows.max()) / 2 - MARGIN)
+    spread = np.percentile(centers, 90) - np.percentile(centers, 10)
+    assert spread > CROP / 4

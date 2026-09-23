@@ -16,6 +16,7 @@ MARGIN = (CANVAS - CROP) // 2
 MIN_VISIBLE = 0.9
 MAX_REDRAWS = 24
 EXTRA_GAP = 1
+MAX_DECOYS = 6
 
 HOLDOUT_ONLY_HARD_FAMILY = "windmill-3"
 
@@ -342,7 +343,9 @@ def make_fullscan_sample(rng, label, holdout=False):
     blocks, heights, biome = generate_terrain(rng, CANVAS, amplitude=float(rng.uniform(0, amp_max)))
     modified = np.zeros((CANVAS, CANVAS), dtype=bool)
 
-    n_decoys = int(rng.integers(0, 3)) * decoy_mult
+    # scan areas pack several overlapping builds into one window (towns, farms around a plaza); crops need the same
+    # clutter or dense build-up is never seen as negative and becomes the main source of false scan flags
+    n_decoys = int(rng.integers(0, MAX_DECOYS + 1)) * decoy_mult
     _stamp_decoys(rng, blocks, heights, n_decoys)
 
     if label == 1:

@@ -31,8 +31,11 @@ def test_calibrate_maximizes_recall_within_budget():
         {"threshold": 0.9, "min_votes": 1, "false_flags_per_window": 1e-5, "recall": 0.7},
         {"threshold": 0.7, "min_votes": 2, "false_flags_per_window": 2e-5, "recall": 0.8},
     ]
-    best = calibrate(table, ScanGate(max_false_flags_per_window=3e-5, min_recall=0.5, min_windows=1))
+    gate = ScanGate(max_false_flags_per_window=3e-5, min_recall=0.5, min_windows=1)
+    best = calibrate(table, gate, margin=1.0)
     assert (best["threshold"], best["min_votes"]) == (0.7, 2)
+    # the default margin keeps a safety distance to the gate: 2e-5 is too close to 3e-5
+    assert calibrate(table, gate)["threshold"] == 0.9
     assert calibrate(table[:1], ScanGate(3e-5, 0.5, 1)) is None
 
 

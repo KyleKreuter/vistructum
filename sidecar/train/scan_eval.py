@@ -23,6 +23,7 @@ THRESHOLDS = tuple(float(t) for t in np.round(np.concatenate([
 VOTES = (1, 2, 3)
 BATCH = 64
 META_SCAN = "vistructum.scan_calibration"
+CALIBRATION_MARGIN = 0.6
 
 _session = None
 
@@ -115,8 +116,10 @@ def sweep(results):
     return table
 
 
-def calibrate(table, gate):
-    allowed = [row for row in table if row["false_flags_per_window"] <= gate.max_false_flags_per_window]
+def calibrate(table, gate, margin=CALIBRATION_MARGIN):
+    # the gate allows only a handful of false flags per split, so picking right at the limit fails on the next split
+    # by Poisson noise alone; calibrate against a tighter limit
+    allowed = [row for row in table if row["false_flags_per_window"] <= gate.max_false_flags_per_window * margin]
     if not allowed:
         return None
     return max(allowed, key=lambda row: (row["recall"], row["threshold"], -row["min_votes"]))

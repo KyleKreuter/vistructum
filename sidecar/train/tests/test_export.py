@@ -103,7 +103,7 @@ def test_tta_export_averages_all_eight_d4_views(tmp_path):
     model = SymbolNet("fullscan", [8, 16], 0.0).eval()
     onnx_path = tmp_path / "tta.onnx"
     export_mod.export_onnx(model, "fullscan", onnx_path, tta=True)
-    x = np.random.default_rng(0).integers(0, 256, size=(5, 3, GRID, GRID), dtype=np.uint8)
+    x = np.random.default_rng(0).integers(0, 256, size=(5, KINDS["fullscan"].channels, GRID, GRID), dtype=np.uint8)
     onnx_probs = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"]).run(None, {INPUT_NAME: x})[0]
 
     views = [np.rot90(v, k, axes=(2, 3)) for v in (x, x[:, :, :, ::-1]) for k in range(4)]

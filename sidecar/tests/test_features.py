@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from vistructum_ml.contract import FULLSCAN, GRID, HEIGHT_CLIP, MASK, STRIDE
-from vistructum_ml.features import block_boundaries, extract, relative_height, window_origins, windows
+from vistructum_ml.features import block_boundaries, extract, height_steps, relative_height, window_origins, windows
 from vistructum_ml.scene import UNKNOWN, Scene
 
 
@@ -76,6 +76,22 @@ def test_windows_pad_small_areas():
     scene = flat_scene(size=20)
     positions, stack = windows(FULLSCAN.name, extract(FULLSCAN.name, scene))
     assert positions == [(0, 0)]
-    assert stack.shape == (1, 3, GRID, GRID)
+    assert stack.shape == (1, FULLSCAN.channels, GRID, GRID)
     assert (stack[0, 0, 30:, 30:] == HEIGHT_CLIP).all()
     assert (stack[0, 2, 30:, 30:] == 128).all()
+
+
+def test_height_steps_outline_a_raised_same_block_shape():
+    scene = flat_scene(size=20)
+    scene.heights[5:10, 5:10] += 2  # same block as the ground: no block boundary, no luminance change
+    steps = height_steps(scene)
+    assert block_boundaries(scene).sum() == 0
+    assert steps[5, 5:10].all() and steps[4, 5:10].all()  # both sides of the top edge
+    assert steps[7, 7] == 0 and steps[15, 15] == 0  # inside the shape and flat ground stay 0
+
+
+def test_height_steps_ignore_unknown_neighbours():
+    scene = flat_scene(size=10)
+    scene.blocks[:, 5:] = UNKNOWN
+    scene.heights[:, 5:] = 0
+    assert height_steps(scene).sum() == 0

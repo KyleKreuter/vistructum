@@ -2,7 +2,7 @@ import pytest
 import torch
 from model import ExportNet, SymbolNet
 
-from vistructum_ml.contract import GRID, LABELS
+from vistructum_ml.contract import FULLSCAN, GRID, LABELS
 
 
 def test_forward_shape_mask():
@@ -14,7 +14,7 @@ def test_forward_shape_mask():
 
 def test_forward_shape_fullscan():
     model = SymbolNet("fullscan", [8, 16, 32], 0.1)
-    x = torch.randint(0, 256, (3, 3, GRID, GRID), dtype=torch.uint8)
+    x = torch.randint(0, 256, (3, FULLSCAN.channels, GRID, GRID), dtype=torch.uint8)
     out = model(x)
     assert out.shape == (3, len(LABELS))
 
@@ -66,7 +66,7 @@ def test_depths_add_convs_per_stage_and_keep_output_shape():
     deep = SymbolNet("fullscan", [8, 16, 32], 0.0, depths=[1, 2, 3])
     convs = [sum(isinstance(m, torch.nn.Conv2d) for m in net.modules()) for net in (shallow, deep)]
     assert convs == [3, 6]
-    x = torch.zeros(2, 3, 64, 64, dtype=torch.uint8)
+    x = torch.zeros(2, FULLSCAN.channels, 64, 64, dtype=torch.uint8)
     assert deep(x).shape == (2, 2)
     with pytest.raises(ValueError):
         SymbolNet("fullscan", [8, 16], 0.0, depths=[1])

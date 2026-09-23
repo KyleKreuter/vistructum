@@ -14,6 +14,8 @@ from generator.symbol import (
     visible_fraction,
 )
 
+from vistructum_ml.contract import FULLSCAN
+
 
 def test_determinism_fullscan():
     rng1 = rng_for(7, "train", 42)
@@ -115,7 +117,7 @@ def test_generated_positive_samples_meet_visibility_or_are_none():
 
 def test_fullscan_output_format(tmp_path):
     data, stats = build_split("fullscan", 123, "val", 24, workers=1)
-    assert data["x"].shape == (24, 3, 64, 64)
+    assert data["x"].shape == (24, FULLSCAN.channels, 64, 64)
     assert data["x"].dtype == np.uint8
     assert data["y"].shape == (24,)
     assert data["y"].dtype == np.int64
@@ -191,7 +193,7 @@ def test_end_to_end_tiny_build(tmp_path):
     assert set(manifest["splits"]) == {"train", "val", "test", "holdout"}
     for split in ("train", "val", "test", "holdout"):
         npz = np.load(out / f"{split}.npz", allow_pickle=True)
-        assert npz["x"].shape == (12, 3, 64, 64)
+        assert npz["x"].shape == (12, FULLSCAN.channels, 64, 64)
         assert npz["y"].shape == (12,)
 
 

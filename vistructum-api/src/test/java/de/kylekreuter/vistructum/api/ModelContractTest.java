@@ -10,7 +10,7 @@ class ModelContractTest {
     @Test
     void startLabelSet() {
         assertEquals("bf-mask-1", ModelContract.MASK_MODEL_VERSION);
-        assertEquals("bf-scan-1", ModelContract.SCAN_MODEL_VERSION);
+        assertEquals("bf-scan-2", ModelContract.SCAN_MODEL_VERSION);
         assertEquals("fs-1", ModelContract.FEATURE_SPEC);
         assertEquals(2, ModelContract.LABELS.size());
         assertTrue(ModelContract.LABELS.containsAll(java.util.List.of("ok", "hakenkreuz")));

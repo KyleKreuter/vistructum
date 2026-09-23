@@ -25,6 +25,9 @@ def validate(meta):
     kind = meta[META_KIND]
     if kind not in KINDS:
         raise ContractError(f"unknown model kind {kind!r}")
+    if meta[META_VERSION] != KINDS[kind].version:
+        # the version fixes the channel layout: an older model would get inputs it was never trained on
+        raise ContractError(f"{kind} model version {meta[META_VERSION]!r} != {KINDS[kind].version!r}")
     if meta[META_FEATURE_SPEC] != FEATURE_SPEC:
         raise ContractError(f"feature spec {meta[META_FEATURE_SPEC]!r} != {FEATURE_SPEC!r}")
     labels = tuple(json.loads(meta[META_LABELS]))

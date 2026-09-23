@@ -19,8 +19,8 @@ seed: 42
 num_threads: 4
 quantize: true
 tta: true
-scan_negatives: 4000
-scan_positives: 800
+scan_negatives: 2500
+scan_positives: 500
 scan_workers: 4
 gen_train: 120000
 gen_val: 12500

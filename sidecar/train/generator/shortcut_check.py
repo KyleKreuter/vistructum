@@ -28,11 +28,13 @@ def sample_features(x):
     mean_abs_rel = float(np.abs(rel).mean())
     frac_nonzero_rel = float((rel != 0).mean())
     lum_std = float(x[2].astype(np.float32).std())
-    return np.array([on_frac, area, h, w, mean_abs_rel, frac_nonzero_rel, lum_std], dtype=np.float64)
+    steps_frac = float((x[3] > 0).mean())
+    return np.array([on_frac, area, h, w, mean_abs_rel, frac_nonzero_rel, lum_std, steps_frac], dtype=np.float64)
 
 
 FEATURE_NAMES_MASK = ("on_frac", "bbox_area", "bbox_h", "bbox_w")
-FEATURE_NAMES_FULLSCAN = FEATURE_NAMES_MASK + ("mean_abs_rel_height", "frac_rel_height_nonzero", "luminance_std")
+FEATURE_NAMES_FULLSCAN = FEATURE_NAMES_MASK + ("mean_abs_rel_height", "frac_rel_height_nonzero", "luminance_std",
+                                                "height_steps_frac")
 
 
 def feature_matrix(x):

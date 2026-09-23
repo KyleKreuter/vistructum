@@ -98,10 +98,17 @@ def main():
     runs_dir.mkdir(parents=True, exist_ok=True)
     release_dir.mkdir(parents=True, exist_ok=True)
     jobs = []
-    for index, config in enumerate(configs):
-        data_dir = SCRATCH / "data" / Path(config).stem
-        generate(train_dir, read_config(train_dir / config), data_dir, SEED + 1000 * index, env)
-        jobs.append((config, data_dir))
+    datasets = {}
+    for config in configs:
+        cfg = read_config(train_dir / config)
+        # configs that ask for the same data share one generated set, so an A/B of two models costs one generation
+        key = (cfg["kind"],) + tuple(os.environ.get(f"VISTRUCTUM_{split.upper()}_N") or cfg.get(f"gen_{split}")
+                                     for split in SPLITS)
+        if key not in datasets:
+            data_dir = SCRATCH / "data" / Path(config).stem
+            generate(train_dir, cfg, data_dir, SEED + 1000 * len(datasets), env)
+            datasets[key] = data_dir
+        jobs.append((config, datasets[key]))
     threads = max(1, (os.cpu_count() or 4) // min(len(jobs), gpus))
     exit_codes = {}
     for start in range(0, len(jobs), gpus):

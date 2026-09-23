@@ -44,13 +44,28 @@ def block_boundaries(scene):
     return edge.astype(np.uint8)
 
 
+def height_steps(scene):
+    """1 on both sides of every step of at least one block between 4-neighbours: the outline of anything raised or
+    sunk, even when it is built from the ground's own block and so has no block-id boundary and no luminance change"""
+    known = scene.blocks != UNKNOWN
+    heights = scene.heights
+    edge = np.zeros(heights.shape, dtype=bool)
+    vertical = (heights[1:, :] != heights[:-1, :]) & known[1:, :] & known[:-1, :]
+    horizontal = (heights[:, 1:] != heights[:, :-1]) & known[:, 1:] & known[:, :-1]
+    edge[1:, :] |= vertical
+    edge[:-1, :] |= vertical
+    edge[:, 1:] |= horizontal
+    edge[:, :-1] |= horizontal
+    return edge.astype(np.uint8)
+
+
 def fullscan_features(scene):
     luminance = np.where(scene.blocks != UNKNOWN, scene.luminance, LUMINANCE_PAD).astype(np.uint8)
-    return np.stack([relative_height(scene), block_boundaries(scene), luminance])
+    return np.stack([relative_height(scene), block_boundaries(scene), luminance, height_steps(scene)])
 
 
 EXTRACTORS = {MASK.name: mask_features, FULLSCAN.name: fullscan_features}
-PAD_VALUES = {MASK.name: (0,), FULLSCAN.name: (HEIGHT_ZERO, 0, LUMINANCE_PAD)}
+PAD_VALUES = {MASK.name: (0,), FULLSCAN.name: (HEIGHT_ZERO, 0, LUMINANCE_PAD, 0)}
 
 
 def extract(kind, scene):

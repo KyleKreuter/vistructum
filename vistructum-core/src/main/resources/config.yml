@@ -12,7 +12,7 @@ tracking:
 
 model:
   mask-version: bf-mask-1
-  scan-version: bf-scan-1
+  scan-version: bf-scan-2
   feature-spec: fs-1
   sidecar-host: 127.0.0.1
   sidecar-port: 8000

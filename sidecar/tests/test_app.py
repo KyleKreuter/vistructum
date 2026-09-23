@@ -68,7 +68,7 @@ def make_client(monkeypatch, model_dir, ort_threads=None):
 @pytest.fixture
 def both_models_dir(tmp_path):
     build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5)
-    build_onnx_model(tmp_path / "scan.onnx", 3, "fullscan", "bf-scan-1", threshold=0.5)
+    build_onnx_model(tmp_path / "scan.onnx", 4, "fullscan", "bf-scan-2", threshold=0.5)
     return tmp_path
 
 
@@ -109,9 +109,17 @@ def test_invalid_model_is_skipped_not_fatal(monkeypatch, tmp_path):
         assert body["models"] == {"mask": True, "fullscan": False}
 
 
+def test_model_with_outdated_channel_layout_is_skipped(monkeypatch, tmp_path):
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5)
+    build_onnx_model(tmp_path / "scan.onnx", 3, "fullscan", "bf-scan-1", threshold=0.5)
+    client = make_client(monkeypatch, tmp_path)
+    with client:
+        assert client.get("/health").json()["models"] == {"mask": True, "fullscan": False}
+
+
 def test_duplicate_kind_fails_startup(monkeypatch, tmp_path):
     build_onnx_model(tmp_path / "a-mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5)
-    build_onnx_model(tmp_path / "b-mask.onnx", 1, "mask", "bf-mask-2", threshold=0.5)
+    build_onnx_model(tmp_path / "b-mask.onnx", 1, "mask", "bf-mask-1", threshold=0.4)
     client = make_client(monkeypatch, tmp_path)
     with pytest.raises(RuntimeError, match="duplicate"), client:
         pass
@@ -129,7 +137,7 @@ def test_version_reports_metadata_not_hardcoded(monkeypatch, both_models_dir):
         assert body["mask"]["feature_spec"] == "fs-1"
         assert body["mask"]["commit"] == "deadbeef"
         assert body["mask"]["min_votes"] == 1
-        assert body["fullscan"]["model_version"] == "bf-scan-1"
+        assert body["fullscan"]["model_version"] == "bf-scan-2"
 
 
 def test_version_reports_min_votes_from_metadata(monkeypatch, tmp_path):

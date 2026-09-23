@@ -131,14 +131,17 @@ def fit(model, cfg, device, checkpoint_path, resume, log_every=1):
         start_epoch = payload["epoch"] + 1
     for epoch in range(start_epoch, cfg.epochs):
         model.train()
+        train_loss = torch.zeros((), device=device)
         for images, labels in train_loader:
             images = images.to(device)
             if cfg.augment_d4:
                 images = d4_augment(images, generator)
             labels = labels.to(device)
             optimizer.zero_grad()
-            criterion(model(images), labels).backward()
+            loss = criterion(model(images), labels)
+            loss.backward()
             optimizer.step()
+            train_loss += loss.detach()
             if ema is not None:
                 ema.update(model)
         scheduler.step()
@@ -160,7 +163,8 @@ def fit(model, cfg, device, checkpoint_path, resume, log_every=1):
             best_state = state
             best_threshold = threshold if threshold is not None else 0.5
         if (epoch + 1) % log_every == 0 or epoch + 1 == cfg.epochs:
-            print(json.dumps({"epoch": epoch + 1, "val_loss": val_loss, "recall": recall, "threshold": threshold}), flush=True)
+            print(json.dumps({"epoch": epoch + 1, "train_loss": round(train_loss.item() / max(1, len(train_loader)), 5),
+                              "val_loss": val_loss, "recall": recall, "threshold": threshold}), flush=True)
         torch.save(
             {
                 "epoch": epoch,

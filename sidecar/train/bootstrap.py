@@ -1,82 +1,121 @@
+import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 REPO_URL = os.environ.get("VISTRUCTUM_REPO", "https://github.com/KyleKreuter/vistructum.git")
 REPO_REF = os.environ.get("VISTRUCTUM_REF", "__VISTRUCTUM_REF__")
-CONFIG = os.environ.get("VISTRUCTUM_CONFIG", "__VISTRUCTUM_CONFIG__")
-WORK = os.environ.get("VISTRUCTUM_WORK", "/kaggle/working/vistructum")
-TRAIN_N = os.environ.get("VISTRUCTUM_TRAIN_N", "20000")
-VAL_N = os.environ.get("VISTRUCTUM_VAL_N", "10000")
-TEST_N = os.environ.get("VISTRUCTUM_TEST_N", "10000")
-HOLDOUT_N = os.environ.get("VISTRUCTUM_HOLDOUT_N", "10000")
-SEED = os.environ.get("VISTRUCTUM_SEED", "0")
+CONFIGS = os.environ.get("VISTRUCTUM_CONFIGS", "__VISTRUCTUM_CONFIGS__")
+SCRATCH = Path(os.environ.get("VISTRUCTUM_SCRATCH", "/tmp/vistructum"))
+OUTPUT = Path(os.environ.get("VISTRUCTUM_OUTPUT", "/kaggle/working"))
+SIZES = {split: os.environ.get(f"VISTRUCTUM_{split.upper()}_N") for split in ("train", "val", "test", "holdout")}
+SEED = int(os.environ.get("VISTRUCTUM_SEED", "0"))
+DEVICE = os.environ.get("VISTRUCTUM_DEVICE", "cuda")
 
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
-def run(command, cwd=None):
+def run(command, cwd=None, env=None):
     print("+ " + " ".join(command), flush=True)
-    subprocess.run(command, cwd=cwd, check=True)
+    subprocess.run(command, cwd=cwd, env=env, check=True)
+
+
+def checkout(repo_dir):
+    if not (repo_dir / ".git").is_dir():
+        run(["git", "clone", REPO_URL, str(repo_dir)])
+    run(["git", "fetch", "origin", REPO_REF], cwd=repo_dir)
+    run(["git", "checkout", "--detach", REPO_REF], cwd=repo_dir)
+
+
+def install(repo_dir):
+    run([sys.executable, "-m", "pip", "install", "--quiet", "-r", str(repo_dir / "sidecar/train/requirements.txt")])
+    run([sys.executable, "-m", "pip", "install", "--quiet", "--no-deps", "-e", str(repo_dir / "sidecar")])
+
+
+def gpu_count():
+    out = subprocess.run([sys.executable, "-c", "import torch; print(torch.cuda.device_count())"],
+                         capture_output=True, text=True, check=True)
+    return int(out.stdout.strip())
 
 
 def config_kind(path):
     import yaml
 
-    return yaml.safe_load(open(path))["kind"]
+    return yaml.safe_load(path.read_text())["kind"]
+
+
+def generate(train_dir, kind, data_dir, seed, env):
+    command = [sys.executable, "-m", "generator.build", "--kind", kind, "--out", str(data_dir),
+               "--seed", str(seed), "--workers", str(os.cpu_count() or 4)]
+    for split, size in SIZES.items():
+        if size:
+            command += [f"--{split}", size]
+    run(command, cwd=train_dir, env=env)
+
+
+def launch(train_dir, config, data_dir, runs_dir, gpu, threads, env):
+    job_env = dict(env, CUDA_VISIBLE_DEVICES=str(gpu))
+    command = [sys.executable, "run.py", "--config", config, "--runs-dir", str(runs_dir),
+               "--set", f"data_dir={data_dir}", "--set", f"device={DEVICE}", "--set", f"num_threads={threads}"]
+    log = open(runs_dir / f"{Path(config).stem}.log", "w")
+    print(f"+ [gpu {gpu}] " + " ".join(command), flush=True)
+    return subprocess.Popen(command, cwd=train_dir, env=job_env, stdout=log, stderr=subprocess.STDOUT)
+
+
+def collect(runs_dir, release_dir):
+    summary = {}
+    for manifest_path in sorted(runs_dir.glob("*/manifest.json")):
+        manifest = json.loads(manifest_path.read_text())
+        kind = manifest["kind"]
+        shutil.copy(manifest_path.parent / f"{kind}.onnx", release_dir / f"{kind}.onnx")
+        shutil.copy(manifest_path, release_dir / f"{kind}-manifest.json")
+        summary[kind] = {split: {key: report.get(key) for key in ("verdict", "failures")}
+                         | {key: report["metrics"].get(key) for key in ("precision", "recall", "fp_rate", "threshold")}
+                         for split, report in manifest["metrics"]["splits"].items()}
+    return summary
 
 
 def main():
     if not SHA_RE.match(REPO_REF):
         raise SystemExit(f"VISTRUCTUM_REF must be a full 40-char commit sha, got {REPO_REF!r}")
-    work = os.path.abspath(WORK)
-    os.makedirs(work, exist_ok=True)
-    repo_dir = os.path.join(work, "repo")
-    if not os.path.isdir(os.path.join(repo_dir, ".git")):
-        run(["git", "clone", REPO_URL, repo_dir])
-    run(["git", "fetch", "origin", REPO_REF], cwd=repo_dir)
-    run(["git", "checkout", "--detach", REPO_REF], cwd=repo_dir)
-    train_dir = os.path.join(repo_dir, "sidecar", "train")
-    sidecar_dir = os.path.join(repo_dir, "sidecar")
-    run([sys.executable, "-m", "pip", "install", "--quiet", "-r", os.path.join(train_dir, "requirements.txt")])
-    run([sys.executable, "-m", "pip", "install", "--quiet", "-e", sidecar_dir])
-    if _cuda():
-        run([sys.executable, "-m", "pip", "install", "--quiet", "--force-reinstall", "onnxruntime-gpu==1.20.1"])
-    kind = config_kind(os.path.join(train_dir, CONFIG))
-    data_dir = os.path.join(work, "data")
-    run(
-        [
-            sys.executable, "-m", "generator.build",
-            "--kind", kind,
-            "--out", data_dir,
-            "--train", TRAIN_N,
-            "--val", VAL_N,
-            "--test", TEST_N,
-            "--holdout", HOLDOUT_N,
-            "--seed", SEED,
-        ],
-        cwd=train_dir,
-    )
-    run(
-        [
-            sys.executable, "run.py",
-            "--config", CONFIG,
-            "--set", f"data_dir={data_dir}",
-            "--set", "device=cuda",
-            "--runs-dir", os.path.join(work, "runs"),
-        ],
-        cwd=train_dir,
-    )
-
-
-def _cuda():
-    try:
-        import torch
-
-        return torch.cuda.is_available()
-    except ImportError:
-        return False
+    repo_dir = SCRATCH / "repo"
+    SCRATCH.mkdir(parents=True, exist_ok=True)
+    checkout(repo_dir)
+    install(repo_dir)
+    train_dir = repo_dir / "sidecar" / "train"
+    env = dict(os.environ, PYTHONPATH=f"{repo_dir / 'sidecar'}:{train_dir}")
+    configs = [c.strip() for c in CONFIGS.split(",") if c.strip()]
+    gpus = gpu_count() if DEVICE == "cuda" else 1
+    print(json.dumps({"ref": REPO_REF, "configs": configs, "gpus": gpus, "cpus": os.cpu_count()}), flush=True)
+    if gpus == 0:
+        raise SystemExit("no CUDA device visible; select the GPU T4 x2 accelerator")
+    runs_dir = OUTPUT / "runs"
+    release_dir = OUTPUT / "release"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    release_dir.mkdir(parents=True, exist_ok=True)
+    jobs = []
+    for index, config in enumerate(configs):
+        kind = config_kind(train_dir / config)
+        data_dir = SCRATCH / "data" / Path(config).stem
+        generate(train_dir, kind, data_dir, SEED + 1000 * index, env)
+        jobs.append((config, data_dir))
+    threads = max(1, (os.cpu_count() or 4) // min(len(jobs), gpus))
+    exit_codes = {}
+    for start in range(0, len(jobs), gpus):
+        batch = jobs[start:start + gpus]
+        procs = [(config, launch(train_dir, config, data_dir, runs_dir, gpu, threads, env))
+                 for gpu, (config, data_dir) in enumerate(batch)]
+        for config, proc in procs:
+            exit_codes[config] = proc.wait()
+    summary = {"ref": REPO_REF, "exit_codes": exit_codes, "models": collect(runs_dir, release_dir)}
+    (release_dir / "summary.json").write_text(json.dumps(summary, indent=2))
+    print(json.dumps(summary, indent=2), flush=True)
+    for config, code in exit_codes.items():
+        if code != 0:
+            print(f"!! {config} exited {code}, see runs/{Path(config).stem}.log", flush=True)
 
 
 if __name__ == "__main__":

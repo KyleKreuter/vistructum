@@ -132,9 +132,9 @@ def fit(model, cfg, device, checkpoint_path, resume, log_every=1):
     for epoch in range(start_epoch, cfg.epochs):
         model.train()
         for images, labels in train_loader:
+            images = images.to(device)
             if cfg.augment_d4:
                 images = d4_augment(images, generator)
-            images = images.to(device)
             labels = labels.to(device)
             optimizer.zero_grad()
             criterion(model(images), labels).backward()

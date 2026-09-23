@@ -45,3 +45,16 @@ def test_export_net_returns_probabilities():
     assert probs.shape == (5, len(LABELS))
     assert torch.allclose(probs.sum(dim=1), torch.ones(5), atol=1e-5)
     assert (probs >= 0).all() and (probs <= 1).all()
+
+
+def test_d4_augment_is_a_permutation_of_d4_views():
+    from data import d4_augment
+
+    x = torch.randint(0, 255, (64, 3, 64, 64), dtype=torch.uint8)
+    out = d4_augment(x, torch.Generator().manual_seed(0))
+    assert out.shape == x.shape and out.dtype == x.dtype
+    for i in range(len(x)):
+        views = [torch.rot90(x[i], k, dims=(1, 2)) for k in range(4)]
+        views += [torch.flip(v, dims=(2,)) for v in views]
+        assert any(torch.equal(out[i], v) for v in views)
+    assert not torch.equal(out, x)

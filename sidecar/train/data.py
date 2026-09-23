@@ -19,16 +19,17 @@ def make_loader(data_dir, name, batch, shuffle, generator=None):
 
 
 def d4_augment(batch, generator=None):
-    out = batch.clone()
-    n = out.shape[0]
+    n = batch.shape[0]
     ks = torch.randint(0, 4, (n,), generator=generator)
     flips = torch.randint(0, 2, (n,), generator=generator)
-    for i in range(n):
-        img = out[i]
-        k = int(ks[i])
-        if k:
-            img = torch.rot90(img, k, dims=(1, 2))
-        if int(flips[i]):
-            img = torch.flip(img, dims=(2,))
-        out[i] = img
+    out = batch.clone()
+    for k in range(4):
+        for flip in (0, 1):
+            index = torch.nonzero((ks == k) & (flips == flip)).squeeze(1).to(batch.device)
+            if index.numel() == 0 or (k == 0 and not flip):
+                continue
+            group = torch.rot90(batch.index_select(0, index), k, dims=(2, 3))
+            if flip:
+                group = torch.flip(group, dims=(3,))
+            out.index_copy_(0, index, group)
     return out

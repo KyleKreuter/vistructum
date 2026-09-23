@@ -7,6 +7,7 @@ from .contract import (
     META_FEATURE_SPEC,
     META_KIND,
     META_LABELS,
+    META_MIN_VOTES,
     META_THRESHOLD,
     META_VERSION,
     REQUIRED_META,
@@ -32,7 +33,11 @@ def validate(meta):
     threshold = float(meta[META_THRESHOLD])
     if not 0.0 < threshold < 1.0:
         raise ContractError(f"threshold {threshold} outside (0, 1)")
-    return {"kind": kind, "version": meta[META_VERSION], "labels": labels, "threshold": threshold}
+    min_votes = int(meta.get(META_MIN_VOTES, "1"))
+    if min_votes < 1:
+        raise ContractError(f"min_votes {min_votes} < 1")
+    return {"kind": kind, "version": meta[META_VERSION], "labels": labels, "threshold": threshold,
+            "min_votes": min_votes}
 
 
 def read_session_metadata(session):

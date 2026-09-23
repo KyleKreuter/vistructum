@@ -59,3 +59,27 @@ def verdict(metrics, gate):
     if metrics["recall"] < gate.min_recall:
         failures.append(f"recall {metrics['recall']:.4f} < {gate.min_recall}")
     return ("PASS" if not failures else "FAIL"), failures
+
+
+@dataclass(frozen=True)
+class ScanGate:
+    max_false_flags_per_window: float
+    min_recall: float
+    min_windows: int
+
+
+SCAN_GATES = {
+    MASK.name: ScanGate(max_false_flags_per_window=1e-4, min_recall=0.90, min_windows=50000),
+    FULLSCAN.name: ScanGate(max_false_flags_per_window=3e-5, min_recall=0.50, min_windows=150000),
+}
+
+
+def scan_verdict(metrics, gate):
+    failures = []
+    if metrics["windows"] < gate.min_windows:
+        failures.append(f"windows {metrics['windows']} < {gate.min_windows}")
+    if metrics["false_flags_per_window"] > gate.max_false_flags_per_window:
+        failures.append(f"false flags/window {metrics['false_flags_per_window']:.2e} > {gate.max_false_flags_per_window:.0e}")
+    if metrics["recall"] < gate.min_recall:
+        failures.append(f"recall {metrics['recall']:.4f} < {gate.min_recall}")
+    return ("PASS" if not failures else "FAIL"), failures

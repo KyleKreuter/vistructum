@@ -38,6 +38,7 @@ META_THRESHOLD = "vistructum.threshold"
 META_COMMIT = "vistructum.commit"
 META_CONFIG = "vistructum.config"
 META_METRICS = "vistructum.metrics"
+META_MIN_VOTES = "vistructum.min_votes"
 REQUIRED_META = (META_VERSION, META_KIND, META_LABELS, META_FEATURE_SPEC, META_THRESHOLD)
 
 INPUT_NAME = "features"

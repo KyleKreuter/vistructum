@@ -21,10 +21,11 @@ venv/
 dist/
 build/
 
-# Generierte Trainingsdaten (reproduzierbar via dataset.py + Seed)
+# Generierte Trainingsdaten (reproduzierbar via generator + Seed)
 sidecar/train/data/
 sidecar/train/data-*/
 sidecar/train/models-*/
+sidecar/train/runs/
 
 # Laufzeit-State (SQLite, Logs)
 *.db

@@ -1,0 +1,20 @@
+kind: fullscan
+data_dir: runs/data/scan-v1
+out_dir: runs/scan-v1
+widths: [24, 48, 96]
+dropout: 0.15
+epochs: 30
+batch: 256
+optimizer: adamw
+lr: 0.001
+weight_decay: 0.0001
+warmup_epochs: 2
+label_smoothing: 0.05
+focal_gamma: 2.0
+ema_decay: 0.999
+pos_weight: 1.5
+augment_d4: true
+device: cpu
+seed: 42
+num_threads: 4
+quantize: true

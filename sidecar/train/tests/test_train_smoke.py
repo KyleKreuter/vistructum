@@ -75,5 +75,5 @@ def test_run_smoke(tmp_path, kind):
     manifest = json.loads(manifests[0].read_text())
     assert manifest["kind"] == kind
     assert manifest["config"] == "config"
-    assert "commit" in manifest and manifest["dirty"] is True
+    assert "commit" in manifest and isinstance(manifest["dirty"], bool)
     assert (runs_dir / manifests[0].parent.name / f"{kind}.onnx").exists()

@@ -39,6 +39,7 @@ HARD_OK_KINDS = (1, 5, 6, 7, 8)
 HARD_OK_SHARE = 0.0
 MINED_DIRNAME = "mined"
 MINED_OK_SHARE = 0.0
+HORIZON_SHARE = 0.0
 SLOP_SHARE = 0.0
 SLOP_DECOYS_MIN = 1
 SLOP_DECOYS_MAX = 3
@@ -275,6 +276,20 @@ def make_positive(rng, backgrounds):
     return make_standard_positive(rng, backgrounds)
 
 
+def make_horizon_ok(rng, backgrounds):
+    ground, sky = backgrounds
+    if not ground or not sky:
+        return make_background(rng, backgrounds), "ok-horizon"
+    sky_patch, _ = sky[rng.integers(len(sky))]
+    ground_patch, ground_heights = ground[rng.integers(len(ground))]
+    canvas = ground_patch.copy()
+    if ground_heights is not None:
+        canvas = apply_relief(canvas, ground_heights)
+    split = int(rng.integers(8, GRID - 8))
+    canvas[:split] = sky_patch[:split]
+    return canvas, "ok-horizon"
+
+
 def make_ok(rng, backgrounds, mined):
     canvas = make_background(rng, backgrounds)
     value = foreground_value(rng, canvas)
@@ -283,6 +298,8 @@ def make_ok(rng, backgrounds, mined):
         kind = HARD_OK_KINDS[int(rng.integers(len(HARD_OK_KINDS)))]
     if mined and rng.random() < MINED_OK_SHARE:
         return mined[int(rng.integers(len(mined)))].copy(), "ok-mined"
+    if HORIZON_SHARE > 0.0 and rng.random() < HORIZON_SHARE:
+        return make_horizon_ok(rng, backgrounds)
     if kind == 0:
         noise = rng.integers(0, 256, (GRID, GRID)).astype(np.uint8)
         mask = rng.random((GRID, GRID)) < 0.5
@@ -492,6 +509,7 @@ def build_dataset(out_dir, per_class):
         "hard_ok_kinds": [OK_KINDS[i] for i in HARD_OK_KINDS],
         "mined_ok_share": MINED_OK_SHARE,
         "mined_negatives": len(mined),
+        "horizon_share": HORIZON_SHARE,
         "slop_share": SLOP_SHARE,
         "grid": GRID,
         "labels": ["ok", "hakenkreuz"],
@@ -528,6 +546,7 @@ if __name__ == "__main__":
     parser.add_argument("--low-contrast", type=float, default=LOW_CONTRAST_SHARE)
     parser.add_argument("--hard-ok-share", type=float, default=HARD_OK_SHARE)
     parser.add_argument("--mined-ok-share", type=float, default=MINED_OK_SHARE)
+    parser.add_argument("--horizon-share", type=float, default=HORIZON_SHARE)
     parser.add_argument("--slop-share", type=float, default=SLOP_SHARE)
     args = parser.parse_args()
     ADVERSARIAL_FRACTION = args.adversarial_fraction
@@ -541,5 +560,6 @@ if __name__ == "__main__":
     LOW_CONTRAST_SHARE = args.low_contrast
     HARD_OK_SHARE = args.hard_ok_share
     MINED_OK_SHARE = args.mined_ok_share
+    HORIZON_SHARE = args.horizon_share
     SLOP_SHARE = args.slop_share
     print(json.dumps(build_dataset(args.target, args.count)["counts"]))

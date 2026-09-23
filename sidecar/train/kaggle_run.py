@@ -97,6 +97,12 @@ R10_EXPERIMENTS = [
     ("r10b", "data-r10b", "models-r10-b", "60", ["--arch", "v3w"] + ADAMW_MILD),
 ]
 
+R11_EXPERIMENTS = [
+    ("r11a", "data-r11a", "models-r11-a", "60", ["--arch", "v3w", "--no-focal"]),
+    ("r11b", "data-r11b", "models-r11-b", "60", ["--arch", "v3w", "--no-focal"]),
+    ("r11c", "data-r9base", "models-r11-c", "60", ["--arch", "v3w", "--no-focal"]),
+]
+
 SUITES = {
     "exp9": {"experiments": EXPERIMENTS, "data_dirs": ("data", "data-exp-c"),
              "work": "/kaggle/working/exp9", "input": "/kaggle/input/vistructum-exp9-data"},
@@ -120,6 +126,9 @@ SUITES = {
     "r10": {"experiments": R10_EXPERIMENTS,
             "data_dirs": ("data-r9base", "data-r10a", "data-r10b"),
             "work": "/kaggle/working/r10", "input": "/kaggle/input/vistructum-pools"},
+    "r11": {"experiments": R11_EXPERIMENTS,
+            "data_dirs": ("data-r9base", "data-r11a", "data-r11b"),
+            "work": "/kaggle/working/r11", "input": "/kaggle/input/vistructum-pools"},
 }
 
 

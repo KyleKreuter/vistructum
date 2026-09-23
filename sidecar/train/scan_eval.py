@@ -65,13 +65,15 @@ def _touches(cluster, box):
                 or cluster["right"] <= box[1] or box[3] <= cluster["left"])
 
 
-def score_at(results, threshold, min_votes):
+def score_at(results, threshold, min_votes, area_clusters=None):
     windows = false_flags = true_flags = partial_flags = symbols = detected = 0
     subtypes = {}
-    for area in results:
+    if area_clusters is None:
+        area_clusters = [clusters(area["positions"], area["scores"], threshold) for area in results]
+    for area, found_clusters in zip(results, area_clusters):
         windows += len(area["positions"])
         found = set()
-        for cluster in clusters(area["positions"], area["scores"], threshold):
+        for cluster in found_clusters:
             if cluster["votes"] < min_votes:
                 continue
             matched = {j for j, truth in enumerate(area["truth"])
@@ -106,7 +108,11 @@ def score_at(results, threshold, min_votes):
 
 
 def sweep(results):
-    return [score_at(results, t, v) for v in VOTES for t in THRESHOLDS]
+    table = []
+    for threshold in THRESHOLDS:
+        area_clusters = [clusters(area["positions"], area["scores"], threshold) for area in results]
+        table += [score_at(results, threshold, votes, area_clusters) for votes in VOTES]
+    return table
 
 
 def calibrate(table, gate):

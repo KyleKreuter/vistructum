@@ -3,39 +3,37 @@ import numpy as np
 from .contract import GRID
 
 
-def _overlaps(a, b, size):
-    return abs(a[0] - b[0]) < size and abs(a[1] - b[1]) < size
+def _components(points, size):
+    rows = points[:, 0]
+    cols = points[:, 1]
+    adjacent = (np.abs(rows[:, None] - rows[None, :]) < size) & (np.abs(cols[:, None] - cols[None, :]) < size)
+    labels = np.arange(len(points))
+    while True:
+        merged = np.where(adjacent, labels[None, :], len(points)).min(axis=1)
+        if np.array_equal(merged, labels):
+            return labels
+        labels = merged
 
 
 def clusters(positions, scores, threshold, size=GRID):
-    hits = [i for i, score in enumerate(scores) if score >= threshold]
-    parent = {i: i for i in hits}
-
-    def find(i):
-        while parent[i] != i:
-            parent[i] = parent[parent[i]]
-            i = parent[i]
-        return i
-
-    for a_index, a in enumerate(hits):
-        for b in hits[a_index + 1:]:
-            if _overlaps(positions[a], positions[b], size):
-                parent[find(a)] = find(b)
-    groups = {}
-    for i in hits:
-        groups.setdefault(find(i), []).append(i)
+    scores = np.asarray(scores)
+    hits = np.flatnonzero(scores >= threshold)
+    if len(hits) == 0:
+        return []
+    points = np.asarray(positions, dtype=np.int64).reshape(-1, 2)[hits]
+    labels = _components(points, size)
     result = []
-    for members in groups.values():
-        tops = [positions[i][0] for i in members]
-        lefts = [positions[i][1] for i in members]
+    for label in np.unique(labels):
+        members = labels == label
+        member_points = points[members]
         result.append({
-            "top": int(min(tops)),
-            "left": int(min(lefts)),
-            "bottom": int(max(tops) + size),
-            "right": int(max(lefts) + size),
-            "votes": len(members),
-            "score": float(np.max([scores[i] for i in members])),
-            "windows": [tuple(int(v) for v in positions[i]) for i in members],
+            "top": int(member_points[:, 0].min()),
+            "left": int(member_points[:, 1].min()),
+            "bottom": int(member_points[:, 0].max() + size),
+            "right": int(member_points[:, 1].max() + size),
+            "votes": int(members.sum()),
+            "score": float(scores[hits[members]].max()),
+            "windows": [tuple(int(v) for v in point) for point in member_points],
         })
     result.sort(key=lambda c: c["score"], reverse=True)
     return result

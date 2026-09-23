@@ -21,11 +21,9 @@ venv/
 dist/
 build/
 
-# Generierte Trainingsdaten (reproduzierbar via generator + Seed)
-sidecar/train/data/
-sidecar/train/data-*/
-sidecar/train/models-*/
+# Generierte Daten und Laeufe (reproduzierbar via generator + Seed + Commit)
 sidecar/train/runs/
+results/
 
 # ONNX-Modelle sind Build-Artefakte, kein Quellcode
 models/

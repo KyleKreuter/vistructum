@@ -3,13 +3,13 @@ import json
 import subprocess
 from pathlib import Path
 
-import numpy as np
 import onnx
 import onnxruntime as ort
 import torch
 from data import load_split
 from model import ExportNet, SymbolNet
 
+from vistructum_ml import scoring
 from vistructum_ml.contract import (
     FEATURE_SPEC,
     GRID,
@@ -23,6 +23,7 @@ from vistructum_ml.contract import (
     META_LABELS,
     META_METRICS,
     META_THRESHOLD,
+    META_TTA,
     META_VERSION,
     OUTPUT_NAME,
 )
@@ -36,9 +37,10 @@ def git_commit():
     return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip()
 
 
-def export_onnx(model, kind, out_path, opset=OPSET, tta=False):
+def export_onnx(model, kind, out_path, opset=OPSET):
+    """always the single-view graph; tta is an inference-time policy stored in the metadata (vistructum_ml.scoring)"""
     model.eval()
-    wrapper = ExportNet(model, tta).eval()  # export restores the wrapper's mode afterwards; a fresh module is in train mode
+    wrapper = ExportNet(model).eval()  # export restores the wrapper's mode afterwards; a fresh module is in train mode
     spec = KINDS[kind]
     dummy = torch.zeros(1, spec.channels, GRID, GRID, dtype=torch.uint8)
     torch.onnx.export(
@@ -65,6 +67,7 @@ def add_metadata(onnx_path, kind, threshold, commit, cfg_dict, metrics_dict):
         META_COMMIT: commit,
         META_CONFIG: json.dumps(cfg_dict),
         META_METRICS: json.dumps(metrics_dict or {}),
+        META_TTA: "1" if cfg_dict.get("tta") else "0",
     }
     del model.metadata_props[:]
     for key, value in props.items():
@@ -79,12 +82,7 @@ def validate_export(onnx_path):
     return validate(read_session_metadata(session))
 
 
-def _scores(session, name, x, batch=256):
-    # batched: one 12k-sample run of the wide fullscan net needs tens of GB of activations
-    return np.concatenate([session.run([OUTPUT_NAME], {name: x[i:i + batch]})[0][:, 1] for i in range(0, len(x), batch)])
-
-
-def maybe_quantize(onnx_path, threshold, data_dir):
+def maybe_quantize(onnx_path, threshold, data_dir, tta=False):
     from onnxruntime.quantization import QuantType, quantize_dynamic
 
     tmp_path = Path(str(onnx_path) + ".int8.tmp")
@@ -93,9 +91,9 @@ def maybe_quantize(onnx_path, threshold, data_dir):
     x = val_x.numpy()
     sess32 = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
     sess8 = ort.InferenceSession(str(tmp_path), providers=["CPUExecutionProvider"])
-    name = sess32.get_inputs()[0].name
-    p32 = _scores(sess32, name, x)
-    p8 = _scores(sess8, name, x)
+    # the final scores, so with tta the 8-view mean; batched, as one 12k-sample run needs tens of GB of activations
+    p32, _ = scoring.score(sess32, x, tta, batch_size=256)
+    p8, _ = scoring.score(sess8, x, tta, batch_size=256)
     disagreement = float(((p32 >= threshold) != (p8 >= threshold)).mean())
     if disagreement <= QUANTIZE_MAX_DISAGREEMENT:
         tmp_path.replace(onnx_path)
@@ -113,12 +111,12 @@ def export_checkpoint(checkpoint_path, onnx_path, commit=None, quantize=None, op
     threshold = payload["threshold"]
     commit = commit or git_commit()
     quantize = cfg_dict.get("quantize", True) if quantize is None else quantize
-    export_onnx(model, kind, onnx_path, opset, cfg_dict.get("tta", False))
+    export_onnx(model, kind, onnx_path, opset)
     add_metadata(onnx_path, kind, threshold, commit, cfg_dict, payload.get("metrics"))
     validate_export(onnx_path)
     quantize_info = {"applied": False, "disagreement": None}
     if quantize:
-        applied, disagreement = maybe_quantize(onnx_path, threshold, cfg_dict["data_dir"])
+        applied, disagreement = maybe_quantize(onnx_path, threshold, cfg_dict["data_dir"], cfg_dict.get("tta", False))
         quantize_info = {"applied": applied, "disagreement": disagreement}
     return {"onnx_path": str(onnx_path), "kind": kind, "threshold": threshold, "commit": commit, "quantize": quantize_info}
 

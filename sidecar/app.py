@@ -45,6 +45,8 @@ def load_models(model_dir):
             commit=raw_meta.get(META_COMMIT, ""),
             path=str(path),
             min_votes=info["min_votes"],
+            tta=info["tta"],
+            prefilter=info["prefilter"],
         )
     return models
 

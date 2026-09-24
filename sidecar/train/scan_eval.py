@@ -11,8 +11,8 @@ import onnxruntime as ort
 from generator.areas import make_area
 from generator.rng import rng_for
 
-from vistructum_ml import features
-from vistructum_ml.contract import GRID, INPUT_NAME, META_MIN_VOTES, META_THRESHOLD, OUTPUT_NAME, POSITIVE
+from vistructum_ml import features, scoring
+from vistructum_ml.contract import GRID, META_MIN_VOTES, META_PREFILTER, META_THRESHOLD
 from vistructum_ml.detect import clusters
 from vistructum_ml.gates import SCAN_GATES, scan_verdict
 from vistructum_ml.metadata import read_session_metadata, validate
@@ -21,34 +21,49 @@ AREA_SIZE = {"mask": 128, "fullscan": 256}
 THRESHOLDS = tuple(float(t) for t in np.round(np.concatenate([
     np.arange(0.30, 0.90, 0.05), np.arange(0.90, 0.99, 0.01), np.arange(0.99, 0.9999, 0.001)]), 4))
 VOTES = (1, 2, 3)
-BATCH = 64
 META_SCAN = "vistructum.scan_calibration"
+META_PREFILTER_SCAN = "vistructum.prefilter_calibration"
 CALIBRATION_MARGIN = 0.6
+PREFILTERS = tuple(float(p) for p in np.round(np.arange(0.02, 0.99, 0.02), 2))
+PREFILTER_MAX_RECALL_LOSS = 0.0
+# the prefilter is set to this share of the highest safe one: real worlds may score turned symbols lower
+PREFILTER_MARGIN = 0.5
 
 _session = None
+_meta = None
 
 
 def _init(model_path):
-    global _session
+    global _session, _meta
     options = ort.SessionOptions()
     options.intra_op_num_threads = 1
     options.inter_op_num_threads = 1
     _session = ort.InferenceSession(model_path, options, providers=["CPUExecutionProvider"])
+    _meta = validate(read_session_metadata(_session))
 
 
 def _scan(task):
-    kind, seed, split, index, n_symbols, holdout, size = task
+    """full: every window gets the single-view score and, with tta, the 8-view score (for calibrating the cascade);
+    otherwise the sidecar's scoring with the model's own prefilter"""
+    kind, seed, split, index, n_symbols, holdout, size, full = task
     scene, truth, biome = make_area(rng_for(seed, split, index), kind, size, n_symbols, holdout)
     positions, batch = features.windows(kind, features.extract(kind, scene))
-    scores = np.concatenate([_session.run([OUTPUT_NAME], {INPUT_NAME: batch[i:i + BATCH]})[0][:, POSITIVE]
-                             for i in range(0, len(batch), BATCH)])
-    return {"positions": positions, "scores": scores.astype(np.float32), "truth": truth, "biome": biome}
+    area = {"positions": positions, "truth": truth, "biome": biome}
+    if full and _meta["tta"]:
+        area["single"] = scoring.single_view(_session, batch).astype(np.float32)
+        area["scores"] = scoring.all_views(_session, batch).astype(np.float32)
+        area["refined"] = len(batch)
+    else:
+        prefilter = None if full else _meta["prefilter"]
+        scores, area["refined"] = scoring.score(_session, batch, _meta["tta"], prefilter)
+        area["scores"] = scores.astype(np.float32)
+    return area
 
 
-def collect(model_path, kind, seed, split, negatives, positives, workers, holdout=False, size=None):
+def collect(model_path, kind, seed, split, negatives, positives, workers, holdout=False, size=None, full=False):
     size = size or AREA_SIZE[kind]
-    tasks = [(kind, seed, split, i, 0, holdout, size) for i in range(negatives)]
-    tasks += [(kind, seed, split, negatives + i, 1 + i % 3, holdout, size) for i in range(positives)]
+    tasks = [(kind, seed, split, i, 0, holdout, size, full) for i in range(negatives)]
+    tasks += [(kind, seed, split, negatives + i, 1 + i % 3, holdout, size, full) for i in range(positives)]
     with Pool(workers, initializer=_init, initargs=(str(model_path),)) as pool:
         return pool.map(_scan, tasks, chunksize=4)
 
@@ -125,13 +140,55 @@ def calibrate(table, gate, margin=CALIBRATION_MARGIN):
     return max(allowed, key=lambda row: (row["recall"], row["threshold"], -row["min_votes"]))
 
 
-def write_calibration(model_path, row, split, seed):
+def cascade(results, prefilter):
+    """the scores the sidecar would give with this prefilter, from areas collected with full=True"""
+    return [{**area, "scores": np.where(area["single"] >= prefilter, area["scores"], area["single"])}
+            for area in results]
+
+
+def refined_fraction(results, prefilter=None, negatives_only=False):
+    areas = [area for area in results if not (negatives_only and area["truth"])]
+    windows = sum(len(area["positions"]) for area in areas)
+    if prefilter is None:
+        refined = sum(area["refined"] for area in areas)
+    else:
+        refined = sum(int((area["single"] >= prefilter).sum()) for area in areas)
+    return refined / windows if windows else 0.0
+
+
+def calibrate_prefilter(results, row, max_loss=PREFILTER_MAX_RECALL_LOSS, margin=PREFILTER_MARGIN):
+    """margin times the highest prefilter whose cascade keeps the calibrated row's recall within max_loss without
+    adding a false flag. Raising the prefilter only drops flags, so recall falls monotonically and the sweep stops at
+    the first miss"""
+    safe = None
+    for prefilter in PREFILTERS:
+        if prefilter > row["threshold"]:
+            break
+        at = score_at(cascade(results, prefilter), row["threshold"], row["min_votes"])
+        if at["recall"] < row["recall"] - max_loss or at["false_flags"] > row["false_flags"]:
+            break
+        safe = prefilter
+    if safe is None:
+        return None
+    prefilter = round(safe * margin, 4)
+    at = score_at(cascade(results, prefilter), row["threshold"], row["min_votes"])
+    return {"prefilter": prefilter, "highest_safe": safe, "recall": at["recall"], "false_flags": at["false_flags"],
+            "subtype_recall": at["subtype_recall"], "refined_fraction": refined_fraction(results, prefilter),
+            "refined_fraction_negatives": refined_fraction(results, prefilter, negatives_only=True)}
+
+
+def write_calibration(model_path, row, split, seed, prefilter=None):
     model = onnx.load(str(model_path))
     props = {p.key: p.value for p in model.metadata_props}
     props[META_THRESHOLD] = f"{row['threshold']:.4f}"
     props[META_MIN_VOTES] = str(row["min_votes"])
     props[META_SCAN] = json.dumps({"split": split, "seed": seed, "windows": row["windows"],
                                    "false_flags": row["false_flags"], "recall": row["recall"]})
+    props.pop(META_PREFILTER, None)
+    props.pop(META_PREFILTER_SCAN, None)
+    if prefilter is not None:
+        props[META_PREFILTER] = f"{prefilter['prefilter']:.4f}"
+        props[META_PREFILTER_SCAN] = json.dumps({k: prefilter[k] for k in ("recall", "false_flags", "refined_fraction")})
     del model.metadata_props[:]
     for key, value in props.items():
         entry = model.metadata_props.add()
@@ -150,15 +207,19 @@ def run(model_path, split, negatives, positives, seed, workers, holdout=False, w
     kind = info["kind"]
     gate = SCAN_GATES[kind]
     started = time.time()
-    results = collect(model_path, kind, seed, split, negatives, positives, workers, holdout)
+    # calibrating scores every window fully; evaluating runs exactly what the sidecar runs, cascade included
+    results = collect(model_path, kind, seed, split, negatives, positives, workers, holdout, full=write)
     table = sweep(results)
     report = {"kind": kind, "split": split, "seed": seed, "holdout": holdout, "negative_areas": negatives,
-              "positive_areas": positives, "area_size": AREA_SIZE[kind], "seconds": round(time.time() - started, 1)}
+              "positive_areas": positives, "area_size": AREA_SIZE[kind], "seconds": round(time.time() - started, 1),
+              "refined_fraction": refined_fraction(results)}
     if write:
         best = calibrate(table, gate)
         report["calibrated"] = best
+        prefilter = calibrate_prefilter(results, best) if best is not None and info["tta"] else None
+        report["prefilter"] = prefilter
         if best is not None:
-            write_calibration(model_path, best, split, seed)
+            write_calibration(model_path, best, split, seed, prefilter)
     else:
         current = score_at(results, info["threshold"], info["min_votes"])
         verdict, failures = scan_verdict(current, gate)

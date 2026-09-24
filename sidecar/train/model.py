@@ -56,7 +56,8 @@ def d4_views(x):
 
 
 class ExportNet(nn.Module):
-    """softmax scores; with tta the score is the mean over all 8 D4 views of the window (8x the compute)"""
+    """softmax scores; with tta the score is the mean over all 8 D4 views of the window (8x the compute). Export uses
+    the single view only, tta=True is the reference that vistructum_ml.scoring must match"""
 
     def __init__(self, model, tta=False):
         super().__init__()

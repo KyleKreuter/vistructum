@@ -3,4 +3,16 @@ version: '${project.version}'
 main: de.kylekreuter.vistructum.core.VistructumCore
 api-version: '1.21'
 author: Kyle Kreuter
-description: BuildFilter infrastructure against prohibited flat and wall builds.
+description: Detects swastikas built from blocks, from recent building activity and a daily surface scan.
+commands:
+  vistructum:
+    description: Status and manual scans
+    usage: /vistructum [status|scan [world|stop]]
+    permission: vistructum.admin
+permissions:
+  vistructum.staff:
+    description: Receives findings in chat
+    default: op
+  vistructum.admin:
+    description: Uses /vistructum
+    default: op

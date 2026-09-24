@@ -1,33 +1,36 @@
-trigger:
-  standard-n: 40
-  standard-threshold: 0.85
-  small-n: 15
-  small-threshold: 0.95
-  window-minutes: 5
-  density-coverage: 0.35
-  periodicity-peak: 0.6
+sidecar:
+  # SIDECAR_HOST / SIDECAR_PORT in the environment take precedence (docker compose sets them)
+  host: 127.0.0.1
+  port: 8000
+  connect-timeout-seconds: 3
+  request-timeout-seconds: 120
 
+# mask model: recent building activity, checked from above and from both wall directions
 tracking:
   ttl-minutes: 10
+  # changes at most this many blocks apart (in every direction) belong to one build
+  link-distance: 3
+  # a build is checked once nobody changed it for this long
+  quiet-seconds: 20
+  min-blocks: 12
+  max-extent: 256
+  poll-seconds: 5
+
+# fullscan model: the whole surface of the listed worlds, once a day
+scan:
+  enabled: true
+  daily-at: "04:00"
+  worlds:
+    - world
+  chunks-per-tick: 8
+
+alerts:
+  permission: vistructum.staff
+  log-file: findings.jsonl
+  # a finding overlapping one from the last N days is not reported again
+  dedupe-days: 14
 
 model:
   mask-version: bf-mask-1
   scan-version: bf-scan-2
   feature-spec: fs-1
-  sidecar-host: 127.0.0.1
-  sidecar-port: 8000
-
-outbox:
-  path: plugins/vistructum/outbox.db
-  poll-interval-seconds: 2
-
-scan:
-  chunks-per-tick: 4
-  tile-size: 64
-  tile-stride: 48
-  bbox-cap: 256
-
-review:
-  permission: vistructum.staff
-  snapshots-per-player-per-hour: 10
-  max-pending-queue: 500

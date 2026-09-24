@@ -38,9 +38,8 @@ def git_commit():
 
 
 def export_onnx(model, kind, out_path, opset=OPSET):
-    """always the single-view graph; tta is an inference-time policy stored in the metadata (vistructum_ml.scoring)"""
     model.eval()
-    wrapper = ExportNet(model).eval()  # export restores the wrapper's mode afterwards; a fresh module is in train mode
+    wrapper = ExportNet(model).eval()
     spec = KINDS[kind]
     dummy = torch.zeros(1, spec.channels, GRID, GRID, dtype=torch.uint8)
     torch.onnx.export(
@@ -91,7 +90,6 @@ def maybe_quantize(onnx_path, threshold, data_dir, tta=False):
     x = val_x.numpy()
     sess32 = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
     sess8 = ort.InferenceSession(str(tmp_path), providers=["CPUExecutionProvider"])
-    # the final scores, so with tta the 8-view mean; batched, as one 12k-sample run needs tens of GB of activations
     p32, _ = scoring.score(sess32, x, tta, batch_size=256)
     p8, _ = scoring.score(sess8, x, tta, batch_size=256)
     disagreement = float(((p32 >= threshold) != (p8 >= threshold)).mean())

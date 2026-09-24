@@ -28,8 +28,6 @@ def data_manifest_hash(data_dir):
 
 
 def scan_stage(onnx_path, cfg, run_dir, workers=None):
-    """calibrate threshold/min_votes on the calib areas (written into the ONNX), then evaluate on scan and the shifted
-    scan-holdout; returns the reports without their sweeps and writes the full ones next to the model"""
     workers = workers or cfg["scan_workers"]
     scan = {"calib": scan_eval.run(onnx_path, "calib", cfg["scan_negatives"], cfg["scan_positives"], cfg["seed"],
                                    workers, write=True)}

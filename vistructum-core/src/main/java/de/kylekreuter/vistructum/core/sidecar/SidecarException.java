@@ -1,6 +1,5 @@
 package de.kylekreuter.vistructum.core.sidecar;
 
-/** a non-2xx response from the sidecar, carrying the status code and raw response body. */
 public final class SidecarException extends RuntimeException {
 
     private final int status;

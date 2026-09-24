@@ -32,6 +32,11 @@ services:
       ONLINE_MODE: "FALSE"
       SIDECAR_HOST: sidecar
       SIDECAR_PORT: "8000"
+    volumes:
+      - vistructum-state:/data/plugins/vistructum
     depends_on:
       sidecar:
         condition: service_healthy
+
+volumes:
+  vistructum-state:

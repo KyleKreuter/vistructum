@@ -26,7 +26,6 @@ META_PREFILTER_SCAN = "vistructum.prefilter_calibration"
 CALIBRATION_MARGIN = 0.6
 PREFILTERS = tuple(float(p) for p in np.round(np.arange(0.02, 0.99, 0.02), 2))
 PREFILTER_MAX_RECALL_LOSS = 0.0
-# the prefilter is set to this share of the highest safe one: real worlds may score turned symbols lower
 PREFILTER_MARGIN = 0.5
 
 _session = None
@@ -43,8 +42,6 @@ def _init(model_path):
 
 
 def _scan(task):
-    """full: every window gets the single-view score and, with tta, the 8-view score (for calibrating the cascade);
-    otherwise the sidecar's scoring with the model's own prefilter"""
     kind, seed, split, index, n_symbols, holdout, size, full = task
     scene, truth, biome = make_area(rng_for(seed, split, index), kind, size, n_symbols, holdout)
     positions, batch = features.windows(kind, features.extract(kind, scene))
@@ -132,8 +129,6 @@ def sweep(results):
 
 
 def calibrate(table, gate, margin=CALIBRATION_MARGIN):
-    # the gate allows only a handful of false flags per split, so picking right at the limit fails on the next split
-    # by Poisson noise alone; calibrate against a tighter limit
     allowed = [row for row in table if row["false_flags_per_window"] <= gate.max_false_flags_per_window * margin]
     if not allowed:
         return None
@@ -141,7 +136,6 @@ def calibrate(table, gate, margin=CALIBRATION_MARGIN):
 
 
 def cascade(results, prefilter):
-    """the scores the sidecar would give with this prefilter, from areas collected with full=True"""
     return [{**area, "scores": np.where(area["single"] >= prefilter, area["scores"], area["single"])}
             for area in results]
 
@@ -157,9 +151,6 @@ def refined_fraction(results, prefilter=None, negatives_only=False):
 
 
 def calibrate_prefilter(results, row, max_loss=PREFILTER_MAX_RECALL_LOSS, margin=PREFILTER_MARGIN):
-    """margin times the highest prefilter whose cascade keeps the calibrated row's recall within max_loss without
-    adding a false flag. Raising the prefilter only drops flags, so recall falls monotonically and the sweep stops at
-    the first miss"""
     safe = None
     for prefilter in PREFILTERS:
         if prefilter > row["threshold"]:
@@ -207,7 +198,6 @@ def run(model_path, split, negatives, positives, seed, workers, holdout=False, w
     kind = info["kind"]
     gate = SCAN_GATES[kind]
     started = time.time()
-    # calibrating scores every window fully; evaluating runs exactly what the sidecar runs, cascade included
     results = collect(model_path, kind, seed, split, negatives, positives, workers, holdout, full=write)
     table = sweep(results)
     report = {"kind": kind, "split": split, "seed": seed, "holdout": holdout, "negative_areas": negatives,

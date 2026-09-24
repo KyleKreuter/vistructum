@@ -63,8 +63,6 @@ def summarize(out_dir):
 
 
 def run_scan_stage(out_dir):
-    """the kernel skips the CPU-bound scan stage; run it here, from a checkout of the kernel's own commit, so the
-    generator and features match what the model was trained on"""
     summary_path = out_dir / "release" / "summary.json"
     pending = [path.parent for path in sorted(out_dir.glob("runs/*/manifest.json"))
                if json.loads(path.read_text()).get("scan_pending")]

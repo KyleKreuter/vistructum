@@ -19,7 +19,6 @@ class InputNorm(nn.Module):
 
 class SymbolNet(nn.Module):
     def __init__(self, kind, widths, dropout=0.0, depths=None):
-        """depths: 3x3 convs per stage (default 1 each); every stage but the last ends in a 2x max-pool"""
         super().__init__()
         spec = KINDS[kind]
         self.norm = InputNorm(kind)
@@ -49,15 +48,11 @@ class SymbolNet(nn.Module):
 
 
 def d4_views(x):
-    """the 8 rotations/mirrors of a (n, c, h, w) batch, stacked along the batch axis; flips and a transpose only,
-    so the ONNX graph needs no rot90 support"""
     t = x.transpose(2, 3)
     return torch.cat([x, x.flip(3), x.flip(2), x.flip(2).flip(3), t, t.flip(3), t.flip(2), t.flip(2).flip(3)])
 
 
 class ExportNet(nn.Module):
-    """softmax scores; with tta the score is the mean over all 8 D4 views of the window (8x the compute). Export uses
-    the single view only, tta=True is the reference that vistructum_ml.scoring must match"""
 
     def __init__(self, model, tta=False):
         super().__init__()

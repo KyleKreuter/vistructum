@@ -21,7 +21,6 @@ class ModelKind:
 
 
 MASK = ModelKind("mask", "bf-mask-1", 1, (1.0,), (0.0,))
-# channels: relative height, block-id boundaries, luminance, height steps
 FULLSCAN = ModelKind(
     "fullscan",
     "bf-scan-2",
@@ -40,9 +39,7 @@ META_COMMIT = "vistructum.commit"
 META_CONFIG = "vistructum.config"
 META_METRICS = "vistructum.metrics"
 META_MIN_VOTES = "vistructum.min_votes"
-# "1": score = mean over the 8 D4 views, computed at inference time from the single-view graph
 META_TTA = "vistructum.tta"
-# with tta: only windows whose single-view score reaches this get the 8-view score (cascade)
 META_PREFILTER = "vistructum.prefilter"
 REQUIRED_META = (META_VERSION, META_KIND, META_LABELS, META_FEATURE_SPEC, META_THRESHOLD)
 

@@ -34,7 +34,6 @@ def test_calibrate_maximizes_recall_within_budget():
     gate = ScanGate(max_false_flags_per_window=3e-5, min_recall=0.5, min_windows=1)
     best = calibrate(table, gate, margin=1.0)
     assert (best["threshold"], best["min_votes"]) == (0.7, 2)
-    # the default margin keeps a safety distance to the gate: 2e-5 is too close to 3e-5
     assert calibrate(table, gate)["threshold"] == 0.9
     assert calibrate(table[:1], ScanGate(3e-5, 0.5, 1)) is None
 
@@ -50,7 +49,6 @@ def test_cascade_keeps_single_view_scores_below_the_prefilter():
 
 
 def test_calibrate_prefilter_stops_before_losing_a_symbol():
-    # the symbol's single view scores only 0.4 (a turned symbol); its 8-view score clears the threshold
     results = [full_area([(0, 0), (0, 24)], [0.4, 0.05], [0.95, 0.1], [(10, 10, 40, 40)]),
                full_area([(0, 0)], [0.1], [0.2])]
     row = score_at(results, 0.9, 1)

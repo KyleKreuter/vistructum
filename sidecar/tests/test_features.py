@@ -83,11 +83,11 @@ def test_windows_pad_small_areas():
 
 def test_height_steps_outline_a_raised_same_block_shape():
     scene = flat_scene(size=20)
-    scene.heights[5:10, 5:10] += 2  # same block as the ground: no block boundary, no luminance change
+    scene.heights[5:10, 5:10] += 2
     steps = height_steps(scene)
     assert block_boundaries(scene).sum() == 0
-    assert steps[5, 5:10].all() and steps[4, 5:10].all()  # both sides of the top edge
-    assert steps[7, 7] == 0 and steps[15, 15] == 0  # inside the shape and flat ground stay 0
+    assert steps[5, 5:10].all() and steps[4, 5:10].all()
+    assert steps[7, 7] == 0 and steps[15, 15] == 0
 
 
 def test_height_steps_ignore_unknown_neighbours():

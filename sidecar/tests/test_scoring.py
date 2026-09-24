@@ -18,7 +18,6 @@ from vistructum_ml.metadata import ContractError, validate
 
 
 class FakeSession:
-    """scores a window by the value of its top-left pixel, so a window's views score differently"""
 
     def __init__(self):
         self.rows = 0
@@ -43,7 +42,6 @@ def test_d4_views_matches_the_training_order():
     assert np.array_equal(views[0], x)
     assert np.array_equal(views[1], x[..., ::-1])
     assert np.array_equal(views[4], x.transpose(0, 1, 3, 2))
-    # all 8 views of an asymmetric window are distinct
     assert len({v[0].tobytes() for v in views}) == 8
 
 
@@ -51,7 +49,6 @@ def test_all_views_is_the_mean_over_the_eight_views():
     session = FakeSession()
     x = windows([80, 0, 40])
     scores = scoring.all_views(session, x, batch_size=16)
-    # only the identity and the transpose keep the top-left pixel in place, so 2 of the 8 views score it
     assert np.allclose(scores, np.array([80, 0, 40]) / 100.0 * 2 / 8)
     assert session.rows == 24
 

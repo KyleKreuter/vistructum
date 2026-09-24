@@ -10,12 +10,24 @@ from pathlib import Path
 import numpy as np
 import onnxruntime as ort
 from fastapi import FastAPI, HTTPException, Response, status
+from onnxruntime.capi import onnxruntime_pybind11_state as ort_errors
 
 from service import InferRequest, InferResponse, LoadedModel, build_scene, run_inference
 from vistructum_ml import metadata as vmeta
 from vistructum_ml.contract import KINDS, META_COMMIT, META_FEATURE_SPEC
 
 logger = logging.getLogger("vistructum.sidecar")
+
+MODEL_LOAD_ERRORS = (
+    vmeta.ContractError,
+    ort_errors.Fail,
+    ort_errors.InvalidArgument,
+    ort_errors.InvalidGraph,
+    ort_errors.InvalidProtobuf,
+    ort_errors.NoSuchFile,
+    ort_errors.NotImplemented,
+    ort_errors.RuntimeException,
+)
 
 
 def load_models(model_dir):
@@ -29,7 +41,7 @@ def load_models(model_dir):
             session = ort.InferenceSession(str(path), sess_options=options, providers=["CPUExecutionProvider"])
             raw_meta = vmeta.read_session_metadata(session)
             info = vmeta.validate(raw_meta)
-        except Exception as exc:  # noqa: BLE001
+        except MODEL_LOAD_ERRORS as exc:
             logger.error("skipping invalid model %s: %s", path, exc)
             continue
         kind = info["kind"]
@@ -52,8 +64,6 @@ def load_models(model_dir):
 
 
 class Capture:
-    """stores every inferred scene with its request context and result, so real worlds can be measured (terrain
-    statistics, false flags on servers without symbols); off unless CAPTURE_DIR is set, stops at CAPTURE_MAX files"""
 
     def __init__(self, directory, limit):
         self.directory = Path(directory)

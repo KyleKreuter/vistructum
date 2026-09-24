@@ -25,12 +25,10 @@ def load_session(model_path):
 
 
 def predict(session, meta, x, batch=BATCH):
-    # the sidecar's scoring; before the scan stage has set a prefilter a tta model scores every window with 8 views
     return scoring.score(session, x, meta["tta"], meta["prefilter"], batch)[0]
 
 
 def latency_per_window(session, x, batch, runs=LATENCY_RUNS):
-    """single view; an 8-view score costs about 8x this"""
     name = session.get_inputs()[0].name
     sample = x[:batch]
     if len(sample) < batch:

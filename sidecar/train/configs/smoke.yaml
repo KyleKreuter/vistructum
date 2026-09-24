@@ -1,0 +1,23 @@
+kind: mask
+data_dir: runs/data/smoke
+out_dir: runs/smoke
+widths: [4, 8]
+dropout: 0.0
+epochs: 1
+batch: 8
+optimizer: adam
+lr: 0.001
+weight_decay: 0.0
+warmup_epochs: 0
+label_smoothing: 0.0
+focal_gamma: 0.0
+ema_decay: 0.0
+pos_weight: 1.0
+augment_d4: false
+device: cpu
+seed: 0
+num_threads: 1
+quantize: false
+scan_negatives: 8
+scan_positives: 4
+scan_workers: 2

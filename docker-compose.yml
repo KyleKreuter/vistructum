@@ -1,8 +1,22 @@
 services:
   sidecar:
     build: ./sidecar
+    hostname: sidecar
     ports:
-      - "${SIDECAR_PORT:-8000}:8000"
+      - "127.0.0.1:${SIDECAR_PORT:-8000}:8000"
+    volumes:
+      - ./models:/models:ro
+      - ./captures:/captures
+    environment:
+      ORT_THREADS: "${ORT_THREADS:-1}"
+      CAPTURE_DIR: "${CAPTURE_DIR:-}"
+      CAPTURE_MAX: "${CAPTURE_MAX:-20000}"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
 
   server:
     build:
@@ -16,5 +30,8 @@ services:
       VERSION: "1.21.4"
       MEMORY: 2G
       ONLINE_MODE: "FALSE"
+      SIDECAR_HOST: sidecar
+      SIDECAR_PORT: "8000"
     depends_on:
-      - sidecar
+      sidecar:
+        condition: service_healthy

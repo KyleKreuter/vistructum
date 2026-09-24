@@ -1,0 +1,196 @@
+from dataclasses import dataclass
+
+import numpy as np
+
+
+@dataclass(frozen=True)
+class MapColor:
+    name: str
+    rgb: tuple
+
+
+def _luminance(rgb):
+    r, g, b = rgb
+    return round(0.299 * r + 0.587 * g + 0.114 * b)
+
+
+MAP_COLOR_RGB = {
+    "GRASS": (127, 178, 56),
+    "SAND": (247, 233, 163),
+    "WOOL": (199, 199, 199),
+    "ICE": (160, 160, 255),
+    "METAL": (167, 167, 167),
+    "PLANT": (0, 124, 0),
+    "SNOW": (255, 255, 255),
+    "CLAY": (164, 168, 184),
+    "DIRT": (151, 109, 77),
+    "STONE": (112, 112, 112),
+    "WATER": (64, 64, 255),
+    "WOOD": (143, 119, 72),
+    "QUARTZ": (255, 252, 245),
+    "COLOR_ORANGE": (216, 127, 51),
+    "COLOR_MAGENTA": (178, 76, 216),
+    "COLOR_LIGHT_BLUE": (102, 153, 216),
+    "COLOR_YELLOW": (229, 229, 51),
+    "COLOR_LIGHT_GREEN": (127, 204, 25),
+    "COLOR_PINK": (242, 127, 165),
+    "COLOR_GRAY": (76, 76, 76),
+    "COLOR_LIGHT_GRAY": (153, 153, 153),
+    "COLOR_CYAN": (76, 127, 153),
+    "COLOR_PURPLE": (127, 63, 178),
+    "COLOR_BLUE": (51, 76, 178),
+    "COLOR_BROWN": (102, 76, 51),
+    "COLOR_GREEN": (102, 127, 51),
+    "COLOR_RED": (153, 51, 51),
+    "COLOR_BLACK": (25, 25, 25),
+    "GOLD": (250, 238, 77),
+    "DIAMOND": (92, 219, 213),
+    "LAPIS": (74, 128, 255),
+    "EMERALD": (0, 217, 58),
+    "PODZOL": (129, 86, 49),
+    "NETHER": (112, 2, 0),
+    "TERRACOTTA_WHITE": (209, 177, 161),
+    "TERRACOTTA_ORANGE": (159, 82, 36),
+    "TERRACOTTA_RED": (142, 60, 46),
+    "TERRACOTTA_YELLOW": (186, 133, 36),
+    "TERRACOTTA_LIGHT_GRAY": (135, 107, 98),
+    "TERRACOTTA_CYAN": (87, 91, 91),
+    "TERRACOTTA_GREEN": (76, 83, 42),
+    "TERRACOTTA_BLUE": (74, 59, 91),
+    "TERRACOTTA_BROWN": (76, 50, 35),
+    "DEEPSLATE": (100, 100, 100),
+    "SLIME": (111, 171, 52),
+}
+
+MAP_COLORS = {name: MapColor(name, rgb) for name, rgb in MAP_COLOR_RGB.items()}
+MAP_COLOR_LUMINANCE = {name: _luminance(rgb) for name, rgb in MAP_COLOR_RGB.items()}
+
+BLOCK_MAP_COLOR = {
+    "grass_block": "GRASS",
+    "dirt": "DIRT",
+    "coarse_dirt": "DIRT",
+    "dirt_path": "DIRT",
+    "farmland": "DIRT",
+    "mud": "DIRT",
+    "podzol": "PODZOL",
+    "stone": "STONE",
+    "cobblestone": "STONE",
+    "andesite": "STONE",
+    "polished_andesite": "STONE",
+    "stone_bricks": "STONE",
+    "mossy_stone_bricks": "STONE",
+    "gravel": "STONE",
+    "deepslate": "DEEPSLATE",
+    "cobbled_deepslate": "DEEPSLATE",
+    "basalt": "DEEPSLATE",
+    "sand": "SAND",
+    "sandstone": "SAND",
+    "end_stone": "SAND",
+    "red_sand": "COLOR_ORANGE",
+    "water": "WATER",
+    "snow": "SNOW",
+    "snow_block": "SNOW",
+    "ice": "ICE",
+    "packed_ice": "ICE",
+    "oak_leaves": "PLANT",
+    "tall_grass": "PLANT",
+    "wheat": "PLANT",
+    "spruce_leaves": "COLOR_GREEN",
+    "oak_planks": "WOOD",
+    "oak_log": "WOOD",
+    "spruce_planks": "COLOR_BROWN",
+    "spruce_log": "COLOR_BROWN",
+    "bricks": "COLOR_RED",
+    "white_wool": "WOOL",
+    "orange_wool": "COLOR_ORANGE",
+    "magenta_wool": "COLOR_MAGENTA",
+    "light_blue_wool": "COLOR_LIGHT_BLUE",
+    "yellow_wool": "COLOR_YELLOW",
+    "lime_wool": "COLOR_LIGHT_GREEN",
+    "pink_wool": "COLOR_PINK",
+    "gray_wool": "COLOR_GRAY",
+    "light_gray_wool": "COLOR_LIGHT_GRAY",
+    "cyan_wool": "COLOR_CYAN",
+    "purple_wool": "COLOR_PURPLE",
+    "blue_wool": "COLOR_BLUE",
+    "brown_wool": "COLOR_BROWN",
+    "green_wool": "COLOR_GREEN",
+    "red_wool": "COLOR_RED",
+    "black_wool": "COLOR_BLACK",
+    "white_concrete": "WOOL",
+    "orange_concrete": "COLOR_ORANGE",
+    "red_concrete": "COLOR_RED",
+    "black_concrete": "COLOR_BLACK",
+    "blue_concrete": "COLOR_BLUE",
+    "glass": "COLOR_LIGHT_GRAY",
+    "quartz_block": "QUARTZ",
+    "smooth_quartz": "QUARTZ",
+    "sea_lantern": "QUARTZ",
+    "netherrack": "NETHER",
+    "nether_bricks": "NETHER",
+    "crimson_nylium": "NETHER",
+    "gold_block": "GOLD",
+    "diamond_block": "DIAMOND",
+    "warped_nylium": "DIAMOND",
+    "lapis_block": "LAPIS",
+    "emerald_block": "EMERALD",
+    "iron_block": "METAL",
+    "terracotta": "TERRACOTTA_ORANGE",
+    "white_terracotta": "TERRACOTTA_WHITE",
+    "orange_terracotta": "TERRACOTTA_ORANGE",
+    "red_terracotta": "TERRACOTTA_RED",
+    "yellow_terracotta": "TERRACOTTA_YELLOW",
+    "light_gray_terracotta": "TERRACOTTA_LIGHT_GRAY",
+    "cyan_terracotta": "TERRACOTTA_CYAN",
+    "green_terracotta": "TERRACOTTA_GREEN",
+    "blue_terracotta": "TERRACOTTA_BLUE",
+    "brown_terracotta": "TERRACOTTA_BROWN",
+    "poppy": "COLOR_RED",
+    "dandelion": "COLOR_YELLOW",
+    "clay": "CLAY",
+    "prismarine": "COLOR_CYAN",
+    "obsidian": "COLOR_BLACK",
+    "mycelium": "COLOR_PURPLE",
+    "slime_block": "SLIME",
+}
+
+BLOCK_NAMES = tuple(sorted(BLOCK_MAP_COLOR))
+BLOCK_ID = {name: i for i, name in enumerate(BLOCK_NAMES)}
+ID_LUMINANCE = np.array([MAP_COLOR_LUMINANCE[BLOCK_MAP_COLOR[n]] for n in BLOCK_NAMES], dtype=np.uint8)
+ID_MAP_COLOR = np.array([BLOCK_MAP_COLOR[n] for n in BLOCK_NAMES])
+
+TERRAIN_BLOCKS = {
+    "plains": {"surface": "grass_block", "sub": "dirt", "decor": ("tall_grass", "dandelion", "poppy"), "path": "dirt_path"},
+    "forest": {"surface": "grass_block", "sub": "dirt", "decor": ("tall_grass", "oak_leaves"), "canopy": "oak_leaves", "trunk": "oak_log"},
+    "desert": {"surface": "sand", "sub": "sandstone", "decor": ()},
+    "snowy": {"surface": "snow_block", "sub": "dirt", "decor": (), "ice": "ice"},
+    "beach": {"surface": "sand", "sub": "sandstone", "water": "water", "decor": ()},
+    "mountains": {"surface": "stone", "sub": "deepslate", "decor": (), "snowcap": "snow_block"},
+    "swamp": {"surface": "grass_block", "sub": "mud", "water": "water", "decor": ("tall_grass",)},
+    "badlands": {"surface": "red_sand", "sub": "terracotta", "bands": (
+        "terracotta", "orange_terracotta", "red_terracotta", "yellow_terracotta",
+        "white_terracotta", "light_gray_terracotta", "cyan_terracotta", "brown_terracotta",
+    ), "decor": ()},
+}
+
+BIOMES = tuple(TERRAIN_BLOCKS)
+
+BUILD_BLOCKS = (
+    "cobblestone", "stone_bricks", "oak_planks", "bricks", "white_wool", "light_gray_wool",
+    "orange_wool", "red_wool", "blue_wool", "green_wool", "black_wool", "yellow_wool",
+    "white_concrete", "orange_concrete", "red_concrete", "black_concrete", "blue_concrete",
+    "quartz_block", "smooth_quartz", "glass", "gold_block", "diamond_block", "emerald_block",
+    "iron_block", "sandstone", "andesite", "polished_andesite", "mossy_stone_bricks",
+    "spruce_planks", "nether_bricks", "obsidian", "prismarine", "sea_lantern",
+)
+
+ROOF_BLOCKS = ("bricks", "red_wool", "red_concrete", "oak_planks", "spruce_planks", "nether_bricks", "andesite")
+PATH_BLOCKS = ("dirt_path", "gravel", "stone", "cobblestone", "sandstone")
+
+
+def block_id(name):
+    return BLOCK_ID[name]
+
+
+def luminance_of_id(ids):
+    return ID_LUMINANCE[ids]

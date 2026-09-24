@@ -232,9 +232,6 @@ BUILD_FAMILIES = {
     "pixelart": pixelart,
 }
 
-DENSE_BUILD_FAMILIES = ("house", "farm", "plaza", "platform", "pool", "tower")
-
-
 def village(rng):
     w = int(rng.integers(40, 70))
     h = int(rng.integers(40, 70))

@@ -54,27 +54,6 @@ def rotate45(mask):
     return out
 
 
-def jitter_mask(mask, rng, remove_frac=0.03, add_frac=0.01, shift_prob=0.0):
-    out = mask.copy()
-    if remove_frac > 0:
-        on = np.argwhere(out)
-        n = int(len(on) * remove_frac)
-        if n and len(on):
-            idx = rng.choice(len(on), size=min(n, len(on)), replace=False)
-            for i in idx:
-                r, c = on[i]
-                out[r, c] = False
-    if add_frac > 0:
-        off = np.argwhere(~out)
-        n = int(off.shape[0] * add_frac * (mask.sum() / mask.size))
-        if n and len(off):
-            idx = rng.choice(len(off), size=min(n, len(off)), replace=False)
-            for i in idx:
-                r, c = off[i]
-                out[r, c] = True
-    return out
-
-
 def visible_fraction(footprint, top, left, crop_top, crop_left, crop_size):
     rows, cols = np.nonzero(footprint)
     if len(rows) == 0:

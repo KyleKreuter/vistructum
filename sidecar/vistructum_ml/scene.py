@@ -27,7 +27,3 @@ class Scene:
     @property
     def shape(self):
         return self.blocks.shape
-
-    def crop(self, top, left, size):
-        cut = (slice(top, top + size), slice(left, left + size))
-        return Scene(self.blocks[cut], self.heights[cut], self.luminance[cut], self.modified[cut])

@@ -1,12 +1,4 @@
-from dataclasses import dataclass
-
 import numpy as np
-
-
-@dataclass(frozen=True)
-class MapColor:
-    name: str
-    rgb: tuple
 
 
 def _luminance(rgb):
@@ -62,7 +54,6 @@ MAP_COLOR_RGB = {
     "SLIME": (111, 171, 52),
 }
 
-MAP_COLORS = {name: MapColor(name, rgb) for name, rgb in MAP_COLOR_RGB.items()}
 MAP_COLOR_LUMINANCE = {name: _luminance(rgb) for name, rgb in MAP_COLOR_RGB.items()}
 
 BLOCK_MAP_COLOR = {
@@ -157,7 +148,6 @@ BLOCK_MAP_COLOR = {
 BLOCK_NAMES = tuple(sorted(BLOCK_MAP_COLOR))
 BLOCK_ID = {name: i for i, name in enumerate(BLOCK_NAMES)}
 ID_LUMINANCE = np.array([MAP_COLOR_LUMINANCE[BLOCK_MAP_COLOR[n]] for n in BLOCK_NAMES], dtype=np.uint8)
-ID_MAP_COLOR = np.array([BLOCK_MAP_COLOR[n] for n in BLOCK_NAMES])
 
 TERRAIN_BLOCKS = {
     "plains": {"surface": "grass_block", "sub": "dirt", "decor": ("tall_grass", "dandelion", "poppy"), "path": "dirt_path"},
@@ -190,7 +180,3 @@ PATH_BLOCKS = ("dirt_path", "gravel", "stone", "cobblestone", "sandstone")
 
 def block_id(name):
     return BLOCK_ID[name]
-
-
-def luminance_of_id(ids):
-    return ID_LUMINANCE[ids]

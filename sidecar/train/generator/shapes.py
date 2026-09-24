@@ -211,7 +211,7 @@ def tetris(rng, max_size=None):
     shape = shapes[int(rng.integers(0, len(shapes)))]
     reps = max(3, size // cell)
     canvas = _canvas(size)
-    for rep in range(reps):
+    for _ in range(reps):
         ro = int(rng.integers(0, max(1, size - 3 * cell)))
         co = int(rng.integers(0, max(1, size - 3 * cell)))
         for r, c in shape:

@@ -1,5 +1,6 @@
 package de.kylekreuter.vistructum.core.tracking;
 
+import de.kylekreuter.vistructum.core.scene.BlockPos;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
@@ -14,33 +15,31 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import java.util.Objects;
 import java.util.function.LongSupplier;
 
-/** Feeds every block placement/break, by every player, into a {@link ModificationTracker}. */
 public final class BlockChangeListener implements Listener {
 
-    private final ModificationTracker tracker;
+    private final BlockChangeStore store;
     private final LongSupplier clock;
 
-    public BlockChangeListener(ModificationTracker tracker) {
-        this(tracker, System::currentTimeMillis);
-    }
-
-    public BlockChangeListener(ModificationTracker tracker, LongSupplier clock) {
-        this.tracker = Objects.requireNonNull(tracker, "tracker");
+    public BlockChangeListener(BlockChangeStore store, LongSupplier clock) {
+        this.store = Objects.requireNonNull(store, "store");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
-        record(event.getBlock(), event.getPlayer());
+        if (!(event instanceof BlockMultiPlaceEvent)) {
+            record(event.getBlock(), event.getPlayer());
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMultiPlace(BlockMultiPlaceEvent event) {
-        var player = event.getPlayer().getUniqueId();
         long now = clock.getAsLong();
         for (BlockState state : event.getReplacedBlockStates()) {
-            Location loc = state.getLocation();
-            tracker.record(loc.getWorld().getUID(), loc.getBlockX(), loc.getBlockY(), loc.getBlockZ(), player, now);
+            Location location = state.getLocation();
+            store.record(location.getWorld().getName(),
+                    new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ()),
+                    event.getPlayer().getUniqueId(), now);
         }
     }
 
@@ -50,7 +49,7 @@ public final class BlockChangeListener implements Listener {
     }
 
     private void record(Block block, Player player) {
-        tracker.record(block.getWorld().getUID(), block.getX(), block.getY(), block.getZ(),
+        store.record(block.getWorld().getName(), new BlockPos(block.getX(), block.getY(), block.getZ()),
                 player.getUniqueId(), clock.getAsLong());
     }
 }

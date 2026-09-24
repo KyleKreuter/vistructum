@@ -46,7 +46,7 @@ class SidecarClientTest {
                  "max_score":0.91,"flagged":true,"elapsed_ms":12.5,
                  "detections":[{"top":1,"left":2,"bottom":9,"right":10,"score":0.91,"votes":3}]}"""));
 
-        InferResult result = client.infer("fullscan", tinyScene()).get(2, TimeUnit.SECONDS);
+        InferResult result = client.infer("fullscan", tinyScene(), null).get(2, TimeUnit.SECONDS);
 
         assertEquals("fullscan", result.kind());
         assertEquals("bf-bin-1", result.modelVersion());
@@ -65,7 +65,7 @@ class SidecarClientTest {
         String body = "{\"detail\":\"model for kind 'fullscan' not loaded\"}";
         server.createContext("/infer", exchange -> respond(exchange, 503, body));
 
-        CompletableFuture<InferResult> future = client.infer("fullscan", tinyScene());
+        CompletableFuture<InferResult> future = client.infer("fullscan", tinyScene(), null);
 
         SidecarException exception = assertSidecarException(future);
         assertEquals(503, exception.status());
@@ -77,7 +77,7 @@ class SidecarClientTest {
         String body = "{\"detail\":\"'blocks' has 3 int16 values, expected 4\"}";
         server.createContext("/infer", exchange -> respond(exchange, 422, body));
 
-        CompletableFuture<InferResult> future = client.infer("fullscan", tinyScene());
+        CompletableFuture<InferResult> future = client.infer("fullscan", tinyScene(), null);
 
         SidecarException exception = assertSidecarException(future);
         assertEquals(422, exception.status());

@@ -1,22 +1,20 @@
+database:
+  file: vistructum.db
+
 sidecar:
-  # SIDECAR_HOST / SIDECAR_PORT in the environment take precedence (docker compose sets them)
   host: 127.0.0.1
   port: 8000
   connect-timeout-seconds: 3
   request-timeout-seconds: 120
 
-# mask model: recent building activity, checked from above and from both wall directions
 tracking:
   ttl-minutes: 10
-  # changes at most this many blocks apart (in every direction) belong to one build
   link-distance: 3
-  # a build is checked once nobody changed it for this long
   quiet-seconds: 20
   min-blocks: 12
   max-extent: 256
   poll-seconds: 5
 
-# fullscan model: the whole surface of the listed worlds, once a day
 scan:
   enabled: true
   daily-at: "04:00"
@@ -25,12 +23,4 @@ scan:
   chunks-per-tick: 8
 
 alerts:
-  permission: vistructum.staff
-  log-file: findings.jsonl
-  # a finding overlapping one from the last N days is not reported again
   dedupe-days: 14
-
-model:
-  mask-version: bf-mask-1
-  scan-version: bf-scan-2
-  feature-spec: fs-1

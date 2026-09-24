@@ -9,13 +9,6 @@ import org.bukkit.block.data.Waterlogged;
 
 import java.util.Map;
 
-/**
- * Reads the top-down surface of a rectangle from chunk snapshots; safe off the main thread.
- *
- * <p>The surface is the MOTION_BLOCKING one the models were trained on: the highest block that blocks movement or
- * holds a fluid, so leaves and water count while grass, flowers, torches and thin snow do not. Columns in chunks
- * without a snapshot are {@link SurfaceScene#UNKNOWN}.
- */
 public final class SurfaceSampler {
 
     private final int minY;
@@ -24,7 +17,6 @@ public final class SurfaceSampler {
         this.minY = minY;
     }
 
-    /** @param snapshots keyed by {@link #chunkKey(int, int)} */
     public SurfaceScene sample(Map<Long, ChunkSnapshot> snapshots, int originX, int originZ, int width, int height) {
         int count = width * height;
         short[] blocks = new short[count];

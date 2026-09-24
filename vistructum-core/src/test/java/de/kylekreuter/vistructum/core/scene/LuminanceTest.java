@@ -30,7 +30,6 @@ class LuminanceTest {
 
     @Test
     void roundsHalfToEven() {
-        // 0.299*0 + 0.587*12 + 0.114*4 == 7.5 exactly in double arithmetic; the nearest even integer is 8.
         assertEquals(8, Luminance.of(0, 12, 4));
     }
 

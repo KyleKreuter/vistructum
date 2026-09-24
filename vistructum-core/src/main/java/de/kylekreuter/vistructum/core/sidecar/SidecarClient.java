@@ -12,10 +12,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Non-blocking HTTP client for the vistructum sidecar. Every call returns immediately; the request runs on the
- * {@link HttpClient}'s own executor, never on the calling thread, so it is safe to call from the server main thread.
- */
 public final class SidecarClient implements AutoCloseable {
 
     private final HttpClient httpClient;
@@ -31,11 +27,6 @@ public final class SidecarClient implements AutoCloseable {
         this.requestTimeout = requestTimeout;
     }
 
-    public CompletableFuture<InferResult> infer(String kind, SurfaceScene scene) {
-        return infer(kind, scene, null);
-    }
-
-    /** @param context where the scene comes from (world, origin, axis); the sidecar only stores it with captures */
     public CompletableFuture<InferResult> infer(String kind, SurfaceScene scene, JsonObject context) {
         JsonObject body = SceneCodec.encode(kind, scene);
         if (context != null) {

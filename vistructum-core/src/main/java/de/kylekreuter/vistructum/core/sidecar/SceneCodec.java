@@ -7,13 +7,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Base64;
 
-/** encodes a {@link SurfaceScene} into the {@code /infer} request body the sidecar expects. */
 public final class SceneCodec {
 
     private SceneCodec() {
     }
 
-    /** builds the JSON body, always carrying all four arrays regardless of what {@code kind} needs. */
     public static JsonObject encode(String kind, SurfaceScene scene) {
         JsonObject json = new JsonObject();
         json.addProperty("kind", kind);

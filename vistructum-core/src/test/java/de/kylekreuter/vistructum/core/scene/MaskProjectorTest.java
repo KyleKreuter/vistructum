@@ -1,5 +1,7 @@
 package de.kylekreuter.vistructum.core.scene;
 
+import de.kylekreuter.vistructum.api.BlockBox;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -20,7 +22,6 @@ class MaskProjectorTest {
 
     @Test
     void flatGroundPlusIsOnlyLinesFromTheSide() {
-        // a plus shape built flat at y=64, arms along x and z crossing at (10,64,10)
         List<BlockPos> plus = List.of(
                 new BlockPos(8, 64, 10), new BlockPos(9, 64, 10), new BlockPos(10, 64, 10),
                 new BlockPos(11, 64, 10), new BlockPos(12, 64, 10),
@@ -44,7 +45,6 @@ class MaskProjectorTest {
 
     @Test
     void verticalWallPlusIsFullyVisibleFromTheFront() {
-        // a plus shape built on a wall at z=5, arms along x and y crossing at (10,70,5)
         List<BlockPos> plus = List.of(
                 new BlockPos(8, 70, 5), new BlockPos(9, 70, 5), new BlockPos(10, 70, 5),
                 new BlockPos(11, 70, 5), new BlockPos(12, 70, 5),
@@ -56,7 +56,6 @@ class MaskProjectorTest {
         assertTrue(rowsWithModifiedCell(z).size() > 1, "the wall view should show the cross over several rows");
         assertTrue(colsWithModifiedCell(z).size() > 1, "the wall view should show the cross over several columns");
 
-        // rows run from the highest y down: the top of the vertical arm (y=72, the cluster's max y) is row 0
         int margin = z.margin();
         int topRow = margin;
         int centerCol = margin + (10 - 8);
@@ -85,16 +84,16 @@ class MaskProjectorTest {
 
         Projection y = byAxis(projections, Axis.Y);
         int margin = y.margin();
-        WorldBox fromY = y.toWorld(margin, margin, margin + 1, margin + 1);
-        assertEquals(new WorldBox(5, 10, 7, 5, 10, 7), fromY);
+        BlockBox fromY = y.toWorld(margin, margin, margin + 1, margin + 1);
+        assertEquals(new BlockBox(5, 10, 7, 5, 10, 7), fromY);
 
         Projection z = byAxis(projections, Axis.Z);
-        WorldBox fromZ = z.toWorld(margin, margin, margin + 1, margin + 1);
-        assertEquals(new WorldBox(5, 10, 7, 5, 10, 7), fromZ);
+        BlockBox fromZ = z.toWorld(margin, margin, margin + 1, margin + 1);
+        assertEquals(new BlockBox(5, 10, 7, 5, 10, 7), fromZ);
 
         Projection x = byAxis(projections, Axis.X);
-        WorldBox fromX = x.toWorld(margin, margin, margin + 1, margin + 1);
-        assertEquals(new WorldBox(5, 10, 7, 5, 10, 7), fromX);
+        BlockBox fromX = x.toWorld(margin, margin, margin + 1, margin + 1);
+        assertEquals(new BlockBox(5, 10, 7, 5, 10, 7), fromX);
     }
 
     @Test

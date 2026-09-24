@@ -4,7 +4,6 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
-/** parsed {@code InferResponse} from the sidecar's {@code /infer} endpoint. */
 public record InferResult(
         String kind,
         @SerializedName("model_version") String modelVersion,

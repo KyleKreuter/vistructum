@@ -1,52 +1,58 @@
 package de.kylekreuter.vistructum.core.mask;
 
 import com.google.gson.JsonObject;
-import de.kylekreuter.vistructum.core.alert.DetectionReporter;
-import de.kylekreuter.vistructum.core.alert.Finding;
+import de.kylekreuter.vistructum.api.Source;
+import de.kylekreuter.vistructum.core.MainThread;
+import de.kylekreuter.vistructum.core.alert.FindingDraft;
+import de.kylekreuter.vistructum.core.alert.FindingReporter;
+import de.kylekreuter.vistructum.core.alert.Preview;
 import de.kylekreuter.vistructum.core.scene.MaskProjector;
 import de.kylekreuter.vistructum.core.scene.Projection;
+import de.kylekreuter.vistructum.core.scene.SurfaceScene;
 import de.kylekreuter.vistructum.core.sidecar.Detection;
+import de.kylekreuter.vistructum.core.sidecar.InferResult;
 import de.kylekreuter.vistructum.core.sidecar.SidecarClient;
+import de.kylekreuter.vistructum.core.tracking.BlockChangeStore;
 import de.kylekreuter.vistructum.core.tracking.Cluster;
-import de.kylekreuter.vistructum.core.tracking.ModificationTracker;
+import de.kylekreuter.vistructum.core.tracking.ClusterSettings;
 import org.bukkit.Bukkit;
-import org.bukkit.World;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.time.Instant;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.time.Clock;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Logger;
 
-/**
- * Checks each quiet cluster of recent building activity with the mask model, once per projection axis, so symbols
- * built on the ground and on walls are both seen.
- */
 public final class MaskMonitor {
 
-    private static final String KIND = "mask";
     private static final long WARN_INTERVAL_MILLIS = 60_000;
 
-    private final Plugin plugin;
-    private final ModificationTracker tracker;
+    private final MainThread mainThread;
+    private final BlockChangeStore changes;
+    private final ClusterSettings settings;
     private final MaskProjector projector;
     private final SidecarClient client;
-    private final DetectionReporter reporter;
+    private final FindingReporter reporter;
+    private final Clock clock;
+    private final Logger logger;
     private final AtomicLong lastWarning = new AtomicLong();
-    private final AtomicInteger checked = new AtomicInteger();
     private BukkitTask task;
 
-    public MaskMonitor(Plugin plugin, ModificationTracker tracker, MaskProjector projector, SidecarClient client,
-                       DetectionReporter reporter) {
-        this.plugin = plugin;
-        this.tracker = tracker;
-        this.projector = projector;
-        this.client = client;
-        this.reporter = reporter;
+    public MaskMonitor(MainThread mainThread, BlockChangeStore changes, ClusterSettings settings, MaskProjector projector,
+                       SidecarClient client, FindingReporter reporter, Clock clock) {
+        this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
+        this.changes = Objects.requireNonNull(changes, "changes");
+        this.settings = Objects.requireNonNull(settings, "settings");
+        this.projector = Objects.requireNonNull(projector, "projector");
+        this.client = Objects.requireNonNull(client, "client");
+        this.reporter = Objects.requireNonNull(reporter, "reporter");
+        this.clock = Objects.requireNonNull(clock, "clock");
+        this.logger = mainThread.plugin().getLogger();
     }
 
     public void start(long periodTicks) {
-        task = Bukkit.getScheduler().runTaskTimer(plugin, this::poll, periodTicks, periodTicks);
+        task = Bukkit.getScheduler().runTaskTimer(mainThread.plugin(), this::poll, periodTicks, periodTicks);
     }
 
     public void stop() {
@@ -55,40 +61,41 @@ public final class MaskMonitor {
         }
     }
 
-    public int checkedProjections() {
-        return checked.get();
+    private void poll() {
+        changes.takeReady(settings, clock.millis())
+                .thenAccept(clusters -> clusters.stream().filter(cluster -> !cluster.oversized()).forEach(this::check))
+                .exceptionally(this::warn);
     }
 
-    void poll() {
-        for (Cluster cluster : tracker.pollReady(System.currentTimeMillis())) {
-            World world = Bukkit.getWorld(cluster.world());
-            if (cluster.oversized() || world == null) {
-                continue;
-            }
-            for (Projection projection : projector.project(cluster.positions())) {
-                client.infer(KIND, projection.scene(), context(world, cluster, projection))
-                        .whenComplete((result, error) -> {
-                            checked.incrementAndGet();
-                            if (error != null) {
-                                warn(error);
-                            } else if (result.flagged()) {
-                                onMainThread(() -> result.detections().forEach(d -> report(world, cluster, projection, d)));
-                            }
-                        });
-            }
+    private void check(Cluster cluster) {
+        for (Projection projection : projector.project(cluster.positions())) {
+            client.infer(Source.MASK.modelKind(), projection.scene(), context(cluster, projection))
+                    .thenCompose(result -> reporter.reportAll(drafts(cluster, projection, result)))
+                    .exceptionally(this::warn);
         }
     }
 
-    private void report(World world, Cluster cluster, Projection projection, Detection detection) {
-        reporter.report(new Finding(KIND, world.getName(),
-                projection.toWorld(detection.top(), detection.left(), detection.bottom(), detection.right()),
-                detection.score(), detection.votes(), cluster.players(), "Achse " + projection.axis(), Instant.now()));
+    private static List<FindingDraft> drafts(Cluster cluster, Projection projection, InferResult result) {
+        if (!result.flagged()) {
+            return List.of();
+        }
+        SurfaceScene scene = projection.scene();
+        return result.detections().stream().map(d -> draft(cluster, projection, scene, result, d)).toList();
     }
 
-    private static JsonObject context(World world, Cluster cluster, Projection projection) {
+    private static FindingDraft draft(Cluster cluster, Projection projection, SurfaceScene scene, InferResult result,
+                                      Detection detection) {
+        return new FindingDraft(Source.MASK, cluster.world(),
+                projection.toWorld(detection.top(), detection.left(), detection.bottom(), detection.right()),
+                detection.score(), detection.votes(), cluster.players(), "Achse " + projection.axis(),
+                result.modelVersion(), Preview.ofMask(scene.modified(), scene.width(), scene.height(), detection.top(),
+                detection.left(), detection.bottom(), detection.right()));
+    }
+
+    private static JsonObject context(Cluster cluster, Projection projection) {
         JsonObject context = new JsonObject();
-        context.addProperty("source", KIND);
-        context.addProperty("world", world.getName());
+        context.addProperty("source", Source.MASK.modelKind());
+        context.addProperty("world", cluster.world());
         context.addProperty("axis", projection.axis().name());
         context.addProperty("min_x", cluster.min().x());
         context.addProperty("min_y", cluster.min().y());
@@ -97,17 +104,12 @@ public final class MaskMonitor {
         return context;
     }
 
-    private void onMainThread(Runnable action) {
-        if (plugin.isEnabled()) {
-            Bukkit.getScheduler().runTask(plugin, action);
-        }
-    }
-
-    private void warn(Throwable error) {
+    private <T> T warn(Throwable error) {
         long now = System.currentTimeMillis();
         long last = lastWarning.get();
         if (now - last > WARN_INTERVAL_MILLIS && lastWarning.compareAndSet(last, now)) {
-            plugin.getLogger().warning("mask check failed (sidecar unreachable?): " + error);
+            logger.warning("mask check failed: " + error);
         }
+        return null;
     }
 }

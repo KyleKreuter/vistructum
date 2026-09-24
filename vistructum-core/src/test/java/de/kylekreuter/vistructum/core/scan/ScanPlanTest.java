@@ -19,7 +19,6 @@ class ScanPlanTest {
         int stride = ModelContract.WINDOW_STRIDE;
         for (int[] chunk : chunks) {
             for (int bx = chunk[0] << 4; bx < (chunk[0] << 4) + 16; bx++) {
-                // every window origin on the global grid that covers this block must be a window of some tile
                 for (int ox = Math.floorDiv(bx - grid + 1 + stride - 1, stride) * stride; ox <= bx; ox += stride) {
                     int origin = ox;
                     assertTrue(tiles.stream().anyMatch(t -> origin >= t.originX()
@@ -47,7 +46,7 @@ class ScanPlanTest {
                 chunks.add(new int[]{x, z});
             }
         }
-        // blocks 64..127 on both axes: windows starting 24..120 -> tile 0 only
+
         assertEquals(List.of(new ScanPlan.Tile(0, 0)), ScanPlan.tiles(chunks));
     }
 }

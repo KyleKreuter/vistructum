@@ -20,6 +20,7 @@
         <maven.compiler.release>21</maven.compiler.release>
         <paper-api.version>1.21.4-R0.1-SNAPSHOT</paper-api.version>
         <junit.version>5.11.4</junit.version>
+        <sqlite-jdbc.version>3.53.4.0</sqlite-jdbc.version>
         <shade.version>3.6.0</shade.version>
     </properties>
 
@@ -36,6 +37,12 @@
                 <groupId>io.papermc.paper</groupId>
                 <artifactId>paper-api</artifactId>
                 <version>${paper-api.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.xerial</groupId>
+                <artifactId>sqlite-jdbc</artifactId>
+                <version>${sqlite-jdbc.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>

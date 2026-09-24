@@ -2,24 +2,6 @@ package de.kylekreuter.vistructum.core.scene;
 
 import java.util.Objects;
 
-/**
- * A rectangle of the world as the sidecar sees it, row-major with {@code index = row * width + col}.
- *
- * <p>For a top-down view a row is a z coordinate and a column an x coordinate, with row 0 at the smallest z and
- * column 0 at the smallest x. Side projections of the modification mask use the same layout with rows running
- * from the highest y down.
- *
- * <ul>
- *   <li>{@code blocks}: any id that is equal exactly when two blocks are the same material, {@link #UNKNOWN} where
- *       the column is not loaded or not sampled; only equality matters to the models</li>
- *   <li>{@code heights}: y of the surface block (the MOTION_BLOCKING surface: leaves and fluids count, grass,
- *       flowers and snow layers do not)</li>
- *   <li>{@code luminance}: {@code rint(0.299 r + 0.587 g + 0.114 b)} of the surface block's base map colour, 0..255</li>
- *   <li>{@code modified}: 1 where a player changed a block recently, else 0</li>
- * </ul>
- *
- * The sidecar accepts 1..512 per side. Arrays are owned by the scene; callers must not modify them afterwards.
- */
 public record SurfaceScene(int width, int height, short[] blocks, short[] heights, byte[] luminance, byte[] modified) {
 
     public static final short UNKNOWN = -1;
@@ -36,7 +18,6 @@ public record SurfaceScene(int width, int height, short[] blocks, short[] height
         check("modified", Objects.requireNonNull(modified).length, count);
     }
 
-    /** a scene that only carries a modification mask, as the mask model needs */
     public static SurfaceScene maskOnly(int width, int height, byte[] modified) {
         int count = width * height;
         short[] unknown = new short[count];

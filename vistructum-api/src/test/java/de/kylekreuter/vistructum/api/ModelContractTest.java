@@ -2,6 +2,8 @@ package de.kylekreuter.vistructum.api;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -13,7 +15,7 @@ class ModelContractTest {
         assertEquals("bf-scan-2", ModelContract.SCAN_MODEL_VERSION);
         assertEquals("fs-1", ModelContract.FEATURE_SPEC);
         assertEquals(2, ModelContract.LABELS.size());
-        assertTrue(ModelContract.LABELS.containsAll(java.util.List.of("ok", "hakenkreuz")));
+        assertTrue(ModelContract.LABELS.containsAll(List.of("ok", "hakenkreuz")));
         assertEquals(64, ModelContract.GRID_SIZE);
         assertEquals(24, ModelContract.WINDOW_STRIDE);
     }

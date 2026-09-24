@@ -45,8 +45,6 @@ def block_boundaries(scene):
 
 
 def height_steps(scene):
-    """1 on both sides of every step of at least one block between 4-neighbours: the outline of anything raised or
-    sunk, even when it is built from the ground's own block and so has no block-id boundary and no luminance change"""
     known = scene.blocks != UNKNOWN
     heights = scene.heights
     edge = np.zeros(heights.shape, dtype=bool)

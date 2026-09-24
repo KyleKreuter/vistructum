@@ -52,7 +52,6 @@ class InferRequest(BaseModel):
     heights: str | None = None
     luminance: str | None = None
     modified: str | None = None
-    # free-form origin of the scene (world, x, z, axis, ...); only stored with captures, never used for inference
     context: dict | None = None
 
 
@@ -75,7 +74,6 @@ class InferResponse(BaseModel):
     detections: list[Detection]
     elapsed_ms: float
     min_votes: int
-    # windows that got the 8-view score (all of them with tta and no prefilter, none without tta)
     refined: int = 0
 
 

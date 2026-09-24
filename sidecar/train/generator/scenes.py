@@ -120,8 +120,6 @@ def _build_symbol_variant(rng, holdout):
 
 
 def _in_crop_top_left(rng, h, w):
-    # anywhere the shape fits fully inside the crop, the way a symbol sits somewhere inside a scan window;
-    # shapes larger than the crop stay roughly centered
     if h > CROP or w > CROP:
         return _random_top_left(rng, CANVAS, h, w, bias_center=True, jitter=3)
     return MARGIN + int(rng.integers(0, CROP - h + 1)), MARGIN + int(rng.integers(0, CROP - w + 1))
@@ -343,8 +341,6 @@ def make_fullscan_sample(rng, label, holdout=False):
     blocks, heights, biome = generate_terrain(rng, CANVAS, amplitude=float(rng.uniform(0, amp_max)))
     modified = np.zeros((CANVAS, CANVAS), dtype=bool)
 
-    # scan areas pack several overlapping builds into one window (towns, farms around a plaza); crops need the same
-    # clutter or dense build-up is never seen as negative and becomes the main source of false scan flags
     n_decoys = int(rng.integers(0, MAX_DECOYS + 1)) * decoy_mult
     _stamp_decoys(rng, blocks, heights, n_decoys)
 
@@ -386,7 +382,6 @@ def _sprinkle_scatter(rng, modified, p=0.25, max_n=8):
 
 
 def _stamp_plain_build(rng, blocks, heights, holdout, avoid=None):
-    """avoid: a (top, left, bottom, right) box the build must not touch, so it cannot bury the primary shape"""
     _hard, builds = _negative_pool(holdout)
     name = builds[int(rng.integers(0, len(builds)))]
     fn = BUILD_FAMILIES.get(name, village)
@@ -430,11 +425,6 @@ def make_mask_sample(rng, label, holdout=False):
 
     modified = _apply_dropout(rng, footprint)
 
-    # the same "several builds in one crop" mixing applies to positives and
-    # negatives alike, with the same probabilities, so the NUMBER of shapes
-    # merged into `modified` is not itself a label cue.
-    # extra builds keep a gap to the primary shape: a symbol buried inside another modified region is invisible
-    # in the binary mask, so labelling it positive would only teach noise (the fullscan model covers that case)
     avoid = footprint_box(footprint, gap=EXTRA_GAP)
     n_extra = int(rng.integers(0, 3))
     for _ in range(n_extra):

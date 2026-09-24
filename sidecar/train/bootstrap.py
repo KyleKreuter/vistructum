@@ -14,7 +14,6 @@ OUTPUT = Path(os.environ.get("VISTRUCTUM_OUTPUT", "/kaggle/working"))
 SPLITS = ("train", "val", "test", "holdout")
 SEED = int(os.environ.get("VISTRUCTUM_SEED", "0"))
 DEVICE = os.environ.get("VISTRUCTUM_DEVICE", "cuda")
-# the scan stage is CPU-only; by default it runs locally (kaggle_watch.py --scan) so the GPUs are not held idle
 SCAN_ON_KERNEL = os.environ.get("VISTRUCTUM_SCAN", "0") == "1"
 
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -75,7 +74,6 @@ def collect(runs_dir, release_dir):
     for manifest_path in sorted(runs_dir.glob("*/manifest.json")):
         manifest = json.loads(manifest_path.read_text())
         kind, name = manifest["kind"], manifest["config"]
-        # named by config, not kind: two configs of one kind (an A/B) must not overwrite each other
         shutil.copy(manifest_path.parent / f"{kind}.onnx", release_dir / f"{name}.onnx")
         shutil.copy(manifest_path, release_dir / f"{name}-manifest.json")
         summary[name] = {split: {key: report.get(key) for key in ("verdict", "failures")}
@@ -106,7 +104,6 @@ def main():
     datasets = {}
     for config in configs:
         cfg = read_config(train_dir / config)
-        # configs that ask for the same data share one generated set, so an A/B of two models costs one generation
         key = (cfg["kind"],) + tuple(os.environ.get(f"VISTRUCTUM_{split.upper()}_N") or cfg.get(f"gen_{split}")
                                      for split in SPLITS)
         if key not in datasets:

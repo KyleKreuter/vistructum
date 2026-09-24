@@ -170,7 +170,6 @@ def test_run_inference_overlapping_hits_flagged_when_min_votes_two():
 
 
 def test_java_golden_request_decodes_to_the_same_scene():
-    # vistructum-core's SceneCodecGoldenTest writes this body from a 5x3 scene; both sides must agree on the bytes
     import json
     from pathlib import Path
 

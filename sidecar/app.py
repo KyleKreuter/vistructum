@@ -29,7 +29,7 @@ def load_models(model_dir):
             session = ort.InferenceSession(str(path), sess_options=options, providers=["CPUExecutionProvider"])
             raw_meta = vmeta.read_session_metadata(session)
             info = vmeta.validate(raw_meta)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error("skipping invalid model %s: %s", path, exc)
             continue
         kind = info["kind"]
@@ -52,8 +52,6 @@ def load_models(model_dir):
 
 
 class Capture:
-    """stores every inferred scene with its request context and result, so real worlds can be measured (terrain
-    statistics, false flags on servers without symbols); off unless CAPTURE_DIR is set, stops at CAPTURE_MAX files"""
 
     def __init__(self, directory, limit):
         self.directory = Path(directory)

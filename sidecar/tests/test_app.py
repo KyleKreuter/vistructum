@@ -168,7 +168,6 @@ def test_infer_mask_flagged_true_for_heavily_modified_area(monkeypatch, both_mod
 
 
 def test_infer_cascade_refines_only_windows_above_the_prefilter(monkeypatch, tmp_path):
-    # the tiny model scores a window softmax([1 - mean, mean]): 0.731 when fully modified, 0.269 when untouched
     build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.6,
                      extra_meta={"vistructum.tta": "1", "vistructum.prefilter": "0.5"})
     client = make_client(monkeypatch, tmp_path)

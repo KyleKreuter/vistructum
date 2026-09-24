@@ -69,7 +69,6 @@ def test_export_checkpoint_with_quantization_stays_valid(tmp_path, kind):
     ckpt_path, _ = build_checkpoint(tmp_path, kind)
     onnx_path = tmp_path / f"{kind}.onnx"
     result = export_mod.export_checkpoint(ckpt_path, onnx_path, commit="1" * 40, quantize=True)
-    # an untrained net scores every window ~0.5, so its int8 decisions flip at random; check the keep/drop rule instead
     disagreement = result["quantize"]["disagreement"]
     assert disagreement is not None
     assert result["quantize"]["applied"] == (disagreement <= export_mod.QUANTIZE_MAX_DISAGREEMENT)
@@ -89,13 +88,12 @@ def test_quantized_decisions_agree_on_random_inputs(tmp_path, kind):
 
     rng = np.random.default_rng(3)
     channels = KINDS[kind].channels
-    high = 2 if kind == "mask" else 256  # the mask is binary; 0..255 would be far outside what the model ever sees
+    high = 2 if kind == "mask" else 256
     x = rng.integers(0, high, size=(500, channels, GRID, GRID), dtype=np.uint8)
     sess32 = ort.InferenceSession(str(fp32_path), providers=["CPUExecutionProvider"])
     sess8 = ort.InferenceSession(str(int8_path), providers=["CPUExecutionProvider"])
     p32 = sess32.run(None, {INPUT_NAME: x})[0]
     p8 = sess8.run(None, {INPUT_NAME: x})[0]
-    # compare scores, not argmax: untrained scores sit within ~1e-4 of 0.5, where any rounding flips the decision
     assert np.abs(p32 - p8).max() < 0.02
 
 
@@ -114,7 +112,6 @@ def test_tta_scoring_averages_all_eight_d4_views(tmp_path):
         reference = ExportNet(model, tta=True)(torch.from_numpy(x)).numpy()
     assert np.abs(scores - expected[:, 1]).max() < 1e-4
     assert np.abs(scores - reference[:, 1]).max() < 1e-4
-    # a mirrored or rotated window gets the same score, whatever the orientation of the symbol in the world
     turned = np.ascontiguousarray(np.rot90(x, 1, axes=(2, 3)))
     assert np.abs(scoring.all_views(session, turned) - scores).max() < 1e-4
 
@@ -129,6 +126,5 @@ def test_export_writes_tta_policy_into_metadata(tmp_path):
     session = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
     meta = validate(read_session_metadata(session))
     assert meta["tta"] is True and meta["prefilter"] is None
-    # the graph itself stays single-view: one score per input row
     x = np.zeros((3, KINDS["fullscan"].channels, GRID, GRID), dtype=np.uint8)
     assert session.run(None, {INPUT_NAME: x})[0].shape == (3, 2)

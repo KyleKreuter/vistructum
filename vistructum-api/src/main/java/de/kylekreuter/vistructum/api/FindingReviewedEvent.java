@@ -5,13 +5,13 @@ import org.bukkit.event.HandlerList;
 
 import java.util.Objects;
 
-public final class SuspiciousBuildEvent extends Event {
+public final class FindingReviewedEvent extends Event {
 
     private static final HandlerList HANDLERS = new HandlerList();
 
     private final Finding finding;
 
-    public SuspiciousBuildEvent(Finding finding) {
+    public FindingReviewedEvent(Finding finding) {
         this.finding = Objects.requireNonNull(finding, "finding");
     }
 

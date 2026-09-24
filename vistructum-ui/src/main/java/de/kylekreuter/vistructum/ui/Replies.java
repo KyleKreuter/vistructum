@@ -2,9 +2,7 @@ package de.kylekreuter.vistructum.ui;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
-import org.bukkit.plugin.Plugin;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -13,20 +11,17 @@ import java.util.function.Consumer;
 
 public final class Replies {
 
-    private final Plugin plugin;
-
-    public Replies(Plugin plugin) {
-        this.plugin = Objects.requireNonNull(plugin, "plugin");
+    private Replies() {
     }
 
-    public <T> void when(CommandSender sender, CompletableFuture<T> future, Consumer<T> then) {
-        future.whenComplete((value, error) -> onMainThread(() -> {
+    public static <T> void when(CommandSender sender, CompletableFuture<T> future, Consumer<T> then) {
+        future.whenComplete((value, error) -> {
             if (error != null) {
-                error(sender, "Fehler: " + cause(error).getMessage());
+                error(sender, "Fehler: " + message(error));
             } else {
                 then.accept(value);
             }
-        }));
+        });
     }
 
     public static void info(CommandSender sender, String text) {
@@ -37,18 +32,8 @@ public final class Replies {
         sender.sendMessage(ChatViews.prefix().append(Component.text(text, NamedTextColor.RED)));
     }
 
-    private void onMainThread(Runnable action) {
-        if (!plugin.isEnabled()) {
-            return;
-        }
-        if (Bukkit.isPrimaryThread()) {
-            action.run();
-        } else {
-            Bukkit.getScheduler().runTask(plugin, action);
-        }
-    }
-
-    private static Throwable cause(Throwable error) {
-        return error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
+    private static String message(Throwable error) {
+        Throwable cause = error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
+        return Objects.requireNonNullElse(cause.getMessage(), cause.getClass().getSimpleName());
     }
 }

@@ -42,4 +42,10 @@ class ChatViewsTest {
         assertEquals("Scan #7 world: plant Kacheln", ChatViews.describe(planning));
         assertEquals("Scan #7 world: Kachel 4/10, 2 Funde, 1 Fehler", ChatViews.describe(running));
     }
+
+    @Test
+    void finishedScanNamesItsOutcome() {
+        ScanJob cancelled = new ScanJob(3, "nether", ScanCause.MANUAL, ScanStatus.CANCELLED, 8, 2, 1, 0, Instant.EPOCH);
+        assertEquals("Scan #3 nether abgebrochen: 1 Funde, 0 Fehler", ChatViews.finished(cancelled));
+    }
 }

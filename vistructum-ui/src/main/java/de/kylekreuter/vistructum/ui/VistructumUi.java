@@ -1,6 +1,6 @@
 package de.kylekreuter.vistructum.ui;
 
-import de.kylekreuter.vistructum.api.VistructumApi;
+import de.kylekreuter.vistructum.api.Vistructum;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -14,14 +14,15 @@ public final class VistructumUi extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        VistructumApi api = getServer().getServicesManager().load(VistructumApi.class);
-        if (api == null) {
-            getLogger().severe("the Vistructum API is not registered, disabling");
+        Vistructum vistructum;
+        try {
+            vistructum = Vistructum.get();
+        } catch (IllegalStateException e) {
+            getLogger().severe(e.getMessage() + ", disabling");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
-        Replies replies = new Replies(this);
-        VisCommand command = new VisCommand(api, replies, STAFF_PERMISSION, ADMIN_PERMISSION, Clock.systemDefaultZone());
+        VisCommand command = new VisCommand(vistructum, STAFF_PERMISSION, ADMIN_PERMISSION, Clock.systemDefaultZone());
         PluginCommand vis = Objects.requireNonNull(getCommand("vis"));
         vis.setExecutor(command);
         vis.setTabCompleter(command);

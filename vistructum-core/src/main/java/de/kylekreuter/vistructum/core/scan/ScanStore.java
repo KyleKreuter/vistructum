@@ -102,7 +102,7 @@ public final class ScanStore {
         });
     }
 
-    public CompletableFuture<Void> completeTile(long jobId, ScanPlan.Tile tile, int findings, boolean failed) {
+    public CompletableFuture<ScanJob> completeTile(long jobId, ScanPlan.Tile tile, int findings, boolean failed) {
         return database.transaction(connection -> {
             try (PreparedStatement update = connection.prepareStatement(
                     "UPDATE scan_tiles SET done = 1 WHERE job_id = ? AND origin_x = ? AND origin_z = ? AND done = 0")) {
@@ -110,7 +110,7 @@ public final class ScanStore {
                 update.setInt(2, tile.originX());
                 update.setInt(3, tile.originZ());
                 if (update.executeUpdate() == 0) {
-                    return null;
+                    return byId(connection, jobId);
                 }
             }
             try (PreparedStatement update = connection.prepareStatement(
@@ -121,7 +121,7 @@ public final class ScanStore {
                 update.setLong(3, jobId);
                 update.executeUpdate();
             }
-            return null;
+            return byId(connection, jobId);
         });
     }
 
@@ -142,17 +142,22 @@ public final class ScanStore {
         });
     }
 
-    public CompletableFuture<Integer> cancelAll(Instant now) {
+    public CompletableFuture<List<ScanJob>> cancelAll(Instant now) {
         return database.transaction(connection -> {
-            int cancelled;
+            List<ScanJob> active = list(connection,
+                    "SELECT " + COLUMNS + " FROM scan_jobs WHERE " + ACTIVE + " ORDER BY id", Binder.NONE);
             try (PreparedStatement update = connection.prepareStatement(
                     "UPDATE scan_jobs SET status = 'CANCELLED', finished_at = ? WHERE " + ACTIVE)) {
                 update.setLong(1, now.toEpochMilli());
-                cancelled = update.executeUpdate();
+                update.executeUpdate();
             }
             try (Statement delete = connection.createStatement()) {
                 delete.executeUpdate("DELETE FROM scan_tiles WHERE job_id NOT IN (SELECT id FROM scan_jobs WHERE "
                         + ACTIVE + ")");
+            }
+            List<ScanJob> cancelled = new ArrayList<>(active.size());
+            for (ScanJob job : active) {
+                cancelled.add(byId(connection, job.id()));
             }
             return cancelled;
         });

@@ -55,8 +55,8 @@ class ScanStoreTest {
         assertEquals(2, planned.tilesTotal());
 
         ScanPlan.Tile first = store.nextTile(job.id()).get().orElseThrow();
-        store.completeTile(job.id(), first, 2, false).get();
-        store.completeTile(job.id(), first, 2, false).get();
+        assertEquals(1, store.completeTile(job.id(), first, 2, false).get().tilesDone());
+        assertEquals(1, store.completeTile(job.id(), first, 2, false).get().tilesDone());
         database.close();
 
         database = TestDatabase.open(directory);
@@ -79,7 +79,9 @@ class ScanStoreTest {
     void cancelEndsEveryActiveJob() throws Exception {
         store.enqueue("world", ScanCause.MANUAL, NOW).get();
         store.enqueue("nether", ScanCause.DAILY, NOW).get();
-        assertEquals(2, store.cancelAll(NOW).get());
+        List<ScanJob> cancelled = store.cancelAll(NOW).get();
+        assertEquals(2, cancelled.size());
+        assertTrue(cancelled.stream().allMatch(job -> job.status() == ScanStatus.CANCELLED));
         assertTrue(store.active().get().isEmpty());
     }
 

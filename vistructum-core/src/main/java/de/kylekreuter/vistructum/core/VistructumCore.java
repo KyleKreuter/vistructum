@@ -1,7 +1,7 @@
 package de.kylekreuter.vistructum.core;
 
 import de.kylekreuter.vistructum.api.ModelContract;
-import de.kylekreuter.vistructum.api.VistructumApi;
+import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
 import de.kylekreuter.vistructum.core.mask.MaskMonitor;
@@ -78,7 +78,7 @@ public final class VistructumCore extends JavaPlugin {
             schedule.start();
         }
 
-        getServer().getServicesManager().register(VistructumApi.class,
+        getServer().getServicesManager().register(Vistructum.class,
                 new VistructumService(mainThread, changes, findings, scans, scanner, client, clock), this,
                 ServicePriority.Normal);
     }

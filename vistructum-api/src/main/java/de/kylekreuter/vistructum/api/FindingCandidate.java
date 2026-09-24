@@ -1,17 +1,13 @@
-package de.kylekreuter.vistructum.core.alert;
-
-import de.kylekreuter.vistructum.api.BlockBox;
-import de.kylekreuter.vistructum.api.Preview;
-import de.kylekreuter.vistructum.api.Source;
+package de.kylekreuter.vistructum.api;
 
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-public record FindingDraft(Source source, String world, BlockBox box, double score, int votes, Set<UUID> players,
+public record FindingCandidate(Source source, String world, BlockBox box, double score, int votes, Set<UUID> players,
                            String detail, String modelVersion, Preview preview) {
 
-    public FindingDraft {
+    public FindingCandidate {
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(world, "world");
         Objects.requireNonNull(box, "box");

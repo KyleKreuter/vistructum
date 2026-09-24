@@ -2,13 +2,16 @@ package de.kylekreuter.vistructum.core.scan;
 
 import com.google.gson.JsonObject;
 import de.kylekreuter.vistructum.api.BlockBox;
+import de.kylekreuter.vistructum.api.FindingCandidate;
 import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.ScanCause;
+import de.kylekreuter.vistructum.api.ScanFinishedEvent;
 import de.kylekreuter.vistructum.api.ScanJob;
+import de.kylekreuter.vistructum.api.ScanProgressEvent;
+import de.kylekreuter.vistructum.api.ScanStartedEvent;
 import de.kylekreuter.vistructum.api.ScanStatus;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.core.MainThread;
-import de.kylekreuter.vistructum.core.alert.FindingDraft;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
 import de.kylekreuter.vistructum.core.alert.PreviewCrop;
 import de.kylekreuter.vistructum.core.scene.SurfaceScene;
@@ -90,9 +93,12 @@ public final class WorldScanner {
         });
     }
 
-    public CompletableFuture<Integer> cancel() {
+    public CompletableFuture<List<ScanJob>> cancel() {
         reset();
-        return scans.cancelAll(clock.instant());
+        return scans.cancelAll(clock.instant()).thenCompose(cancelled -> mainThread.supply(() -> {
+            cancelled.forEach(cancelledJob -> Bukkit.getPluginManager().callEvent(new ScanFinishedEvent(cancelledJob)));
+            return cancelled;
+        }));
     }
 
     public void close() {
@@ -161,6 +167,7 @@ public final class WorldScanner {
             job = planned;
             logger.info("fullscan #" + planned.id() + " of " + planned.world() + ": " + chunkCount + " chunks in "
                     + planned.tilesTotal() + " tiles");
+            Bukkit.getPluginManager().callEvent(new ScanStartedEvent(planned));
         });
     }
 
@@ -207,16 +214,18 @@ public final class WorldScanner {
                 .supplyAsync(() -> surface.sample(taken, current.originX(), current.originZ(), ScanPlan.TILE_SIZE,
                         ScanPlan.TILE_SIZE), sampler)
                 .thenCompose(scene -> client.infer(Source.FULLSCAN.modelKind(), scene, context(running, current))
-                        .thenCompose(result -> reporter.reportAll(drafts(running.world(), current, scene, result))));
-        CompletableFuture<Void> completed = reported.handle((count, error) -> {
+                        .thenCompose(result -> reporter.reportAll(candidates(running.world(), current, scene, result))));
+        CompletableFuture<ScanJob> completed = reported.handle((count, error) -> {
             if (error != null) {
                 logger.warning("fullscan #" + running.id() + " tile " + current + " failed: " + error);
             }
             return scans.completeTile(running.id(), current, count == null ? 0 : count, error != null);
         }).thenCompose(stored -> stored);
-        await(completed, done -> {
+        await(completed, progressed -> {
             tile = null;
             snapshots = null;
+            job = progressed;
+            Bukkit.getPluginManager().callEvent(new ScanProgressEvent(progressed));
         });
     }
 
@@ -225,6 +234,7 @@ public final class WorldScanner {
             logger.info("fullscan #" + finished.id() + " of " + finished.world() + " " + finished.status() + ": "
                     + finished.findings() + " findings, " + finished.failures() + " failed tiles");
             reset();
+            Bukkit.getPluginManager().callEvent(new ScanFinishedEvent(finished));
         });
     }
 
@@ -266,20 +276,20 @@ public final class WorldScanner {
         }
     }
 
-    private static List<FindingDraft> drafts(String worldName, ScanPlan.Tile tile, SurfaceScene scene,
+    private static List<FindingCandidate> candidates(String worldName, ScanPlan.Tile tile, SurfaceScene scene,
                                              InferResult result) {
         if (!result.flagged()) {
             return List.of();
         }
-        List<FindingDraft> drafts = new ArrayList<>();
+        List<FindingCandidate> candidates = new ArrayList<>();
         for (Detection detection : result.detections()) {
-            surfaceBox(tile, scene, detection).ifPresent(box -> drafts.add(new FindingDraft(Source.FULLSCAN, worldName,
+            surfaceBox(tile, scene, detection).ifPresent(box -> candidates.add(new FindingCandidate(Source.FULLSCAN, worldName,
                     box, detection.score(), detection.votes(), Set.of(),
                     "Kachel " + tile.originX() + "," + tile.originZ(), result.modelVersion(),
                     PreviewCrop.ofLuminance(scene.luminance(), scene.width(), scene.height(), detection.top(),
                             detection.left(), detection.bottom(), detection.right()))));
         }
-        return drafts;
+        return candidates;
     }
 
     private static Optional<BlockBox> surfaceBox(ScanPlan.Tile tile, SurfaceScene scene, Detection detection) {

@@ -105,6 +105,17 @@ public final class ChatViews {
                 + job.findings() + " Funde, " + job.failures() + " Fehler";
     }
 
+    public static String finished(ScanJob job) {
+        String outcome = switch (job.status()) {
+            case DONE -> "fertig";
+            case CANCELLED -> "abgebrochen";
+            case FAILED -> "fehlgeschlagen";
+            case QUEUED, RUNNING -> "läuft";
+        };
+        return "Scan #" + job.id() + " " + job.world() + " " + outcome + ": " + job.findings() + " Funde, "
+                + job.failures() + " Fehler";
+    }
+
     public static Component prefix() {
         return Component.text("[Vistructum] ", NamedTextColor.RED);
     }

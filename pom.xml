@@ -13,6 +13,7 @@
     <modules>
         <module>vistructum-api</module>
         <module>vistructum-core</module>
+        <module>vistructum-ui</module>
     </modules>
 
     <properties>

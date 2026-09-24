@@ -5,6 +5,7 @@ import org.bukkit.plugin.Plugin;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 
 public final class MainThread {
@@ -42,7 +43,34 @@ public final class MainThread {
         return result;
     }
 
+    public <T> CompletableFuture<T> handOff(CompletableFuture<T> source) {
+        CompletableFuture<T> result = new CompletableFuture<>();
+        source.whenComplete((value, error) -> {
+            Runnable complete = () -> {
+                if (error != null) {
+                    result.completeExceptionally(unwrap(error));
+                } else {
+                    result.complete(value);
+                }
+            };
+            if (Bukkit.isPrimaryThread() || !plugin.isEnabled()) {
+                complete.run();
+                return;
+            }
+            try {
+                Bukkit.getScheduler().runTask(plugin, complete);
+            } catch (IllegalStateException e) {
+                complete.run();
+            }
+        });
+        return result;
+    }
+
     public Plugin plugin() {
         return plugin;
+    }
+
+    private static Throwable unwrap(Throwable error) {
+        return error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
     }
 }

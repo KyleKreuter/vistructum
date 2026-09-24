@@ -3,21 +3,6 @@ version: '${project.version}'
 main: de.kylekreuter.vistructum.core.VistructumCore
 api-version: '1.21'
 author: Kyle Kreuter
-description: Detects swastikas built from blocks, from recent building activity and a daily surface scan.
+description: Detects swastikas built from blocks and publishes findings through the Vistructum API.
 libraries:
   - org.xerial:sqlite-jdbc:${sqlite-jdbc.version}
-commands:
-  vis:
-    description: Findings, reviews and scans
-    usage: /vis [status|review|show|tp|confirm|falsealarm|scan]
-    aliases: [vistructum]
-    permission: vistructum.staff
-permissions:
-  vistructum.staff:
-    description: Receives findings in chat, lists, views and reviews them
-    default: op
-  vistructum.admin:
-    description: Starts and stops surface scans
-    default: op
-    children:
-      vistructum.staff: true

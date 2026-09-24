@@ -1,11 +1,12 @@
 package de.kylekreuter.vistructum.core.mask;
 
 import com.google.gson.JsonObject;
+import de.kylekreuter.vistructum.api.FindingCandidate;
+import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.core.MainThread;
-import de.kylekreuter.vistructum.core.alert.FindingDraft;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
-import de.kylekreuter.vistructum.core.alert.Preview;
+import de.kylekreuter.vistructum.core.alert.PreviewCrop;
 import de.kylekreuter.vistructum.core.scene.MaskProjector;
 import de.kylekreuter.vistructum.core.scene.Projection;
 import de.kylekreuter.vistructum.core.scene.SurfaceScene;
@@ -70,25 +71,25 @@ public final class MaskMonitor {
     private void check(Cluster cluster) {
         for (Projection projection : projector.project(cluster.positions())) {
             client.infer(Source.MASK.modelKind(), projection.scene(), context(cluster, projection))
-                    .thenCompose(result -> reporter.reportAll(drafts(cluster, projection, result)))
+                    .thenCompose(result -> reporter.reportAll(candidates(cluster, projection, result)))
                     .exceptionally(this::warn);
         }
     }
 
-    private static List<FindingDraft> drafts(Cluster cluster, Projection projection, InferResult result) {
+    private static List<FindingCandidate> candidates(Cluster cluster, Projection projection, InferResult result) {
         if (!result.flagged()) {
             return List.of();
         }
         SurfaceScene scene = projection.scene();
-        return result.detections().stream().map(d -> draft(cluster, projection, scene, result, d)).toList();
+        return result.detections().stream().map(d -> candidate(cluster, projection, scene, result, d)).toList();
     }
 
-    private static FindingDraft draft(Cluster cluster, Projection projection, SurfaceScene scene, InferResult result,
+    private static FindingCandidate candidate(Cluster cluster, Projection projection, SurfaceScene scene, InferResult result,
                                       Detection detection) {
-        return new FindingDraft(Source.MASK, cluster.world(),
+        return new FindingCandidate(Source.MASK, cluster.world(),
                 projection.toWorld(detection.top(), detection.left(), detection.bottom(), detection.right()),
                 detection.score(), detection.votes(), cluster.players(), "Achse " + projection.axis(),
-                result.modelVersion(), Preview.ofMask(scene.modified(), scene.width(), scene.height(), detection.top(),
+                result.modelVersion(), PreviewCrop.ofMask(scene.modified(), scene.width(), scene.height(), detection.top(),
                 detection.left(), detection.bottom(), detection.right()));
     }
 

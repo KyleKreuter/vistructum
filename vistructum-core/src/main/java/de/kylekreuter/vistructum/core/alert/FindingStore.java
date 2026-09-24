@@ -2,6 +2,9 @@ package de.kylekreuter.vistructum.core.alert;
 
 import de.kylekreuter.vistructum.api.BlockBox;
 import de.kylekreuter.vistructum.api.Finding;
+import de.kylekreuter.vistructum.api.FindingCandidate;
+import de.kylekreuter.vistructum.api.FindingQuery;
+import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Review;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.api.Verdict;
@@ -45,12 +48,12 @@ public final class FindingStore {
         this.database = Objects.requireNonNull(database, "database");
     }
 
-    public CompletableFuture<Optional<Finding>> insertUnlessDuplicate(FindingDraft draft, Instant now, Duration dedupe) {
+    public CompletableFuture<Optional<Finding>> insertUnlessDuplicate(FindingCandidate candidate, Instant now, Duration dedupe) {
         return database.transaction(connection -> {
-            if (overlapsRecent(connection, draft, now.minus(dedupe))) {
+            if (overlapsRecent(connection, candidate, now.minus(dedupe))) {
                 return Optional.empty();
             }
-            long id = insert(connection, draft, now);
+            long id = insert(connection, candidate, now);
             return select(connection, id);
         });
     }
@@ -59,19 +62,46 @@ public final class FindingStore {
         return database.transaction(connection -> select(connection, id));
     }
 
-    public CompletableFuture<List<Finding>> open(int limit) {
-        return database.transaction(connection -> list(connection,
-                "SELECT " + COLUMNS + " FROM findings WHERE verdict IS NULL ORDER BY created_at DESC, id DESC LIMIT ?",
-                statement -> statement.setInt(1, limit)));
+    public CompletableFuture<Boolean> isDuplicate(FindingCandidate candidate, Instant now, Duration dedupe) {
+        return database.transaction(connection -> overlapsRecent(connection, candidate, now.minus(dedupe)));
     }
 
-    public CompletableFuture<List<Finding>> since(Instant since, int limit) {
-        return database.transaction(connection -> list(connection,
-                "SELECT " + COLUMNS + " FROM findings WHERE created_at >= ? ORDER BY created_at DESC, id DESC LIMIT ?",
-                statement -> {
-                    statement.setLong(1, since.toEpochMilli());
-                    statement.setInt(2, limit);
-                }));
+    public CompletableFuture<FindingSlice> query(FindingQuery query) {
+        StringBuilder sql = new StringBuilder("SELECT " + COLUMNS + " FROM findings WHERE 1 = 1");
+        List<Object> arguments = new ArrayList<>();
+        query.world().ifPresent(world -> {
+            sql.append(" AND world = ?");
+            arguments.add(world);
+        });
+        query.source().ifPresent(source -> {
+            sql.append(" AND source = ?");
+            arguments.add(source.name());
+        });
+        switch (query.state()) {
+            case OPEN -> sql.append(" AND verdict IS NULL");
+            case REVIEWED -> sql.append(" AND verdict IS NOT NULL");
+            case ANY -> {
+            }
+        }
+        query.since().ifPresent(since -> {
+            sql.append(" AND created_at >= ?");
+            arguments.add(since.toEpochMilli());
+        });
+        query.beforeId().ifPresent(id -> {
+            sql.append(" AND id < ?");
+            arguments.add(id);
+        });
+        sql.append(" ORDER BY id DESC LIMIT ?");
+        arguments.add(query.limit() + 1);
+        return database.transaction(connection -> {
+            List<Finding> rows = list(connection, sql.toString(), statement -> {
+                for (int i = 0; i < arguments.size(); i++) {
+                    statement.setObject(i + 1, arguments.get(i));
+                }
+            });
+            boolean more = rows.size() > query.limit();
+            return new FindingSlice(more ? rows.subList(0, query.limit()) : rows, more);
+        });
     }
 
     public CompletableFuture<Integer> countOpen() {
@@ -111,10 +141,10 @@ public final class FindingStore {
         });
     }
 
-    private static boolean overlapsRecent(Connection connection, FindingDraft draft, Instant cutoff) throws SQLException {
-        BlockBox box = draft.box();
+    private static boolean overlapsRecent(Connection connection, FindingCandidate candidate, Instant cutoff) throws SQLException {
+        BlockBox box = candidate.box();
         try (PreparedStatement select = connection.prepareStatement(OVERLAPPING)) {
-            select.setString(1, draft.world());
+            select.setString(1, candidate.world());
             select.setLong(2, cutoff.toEpochMilli());
             select.setInt(3, box.maxX());
             select.setInt(4, box.minX());
@@ -128,25 +158,25 @@ public final class FindingStore {
         }
     }
 
-    private static long insert(Connection connection, FindingDraft draft, Instant now) throws SQLException {
-        BlockBox box = draft.box();
+    private static long insert(Connection connection, FindingCandidate candidate, Instant now) throws SQLException {
+        BlockBox box = candidate.box();
         try (PreparedStatement insert = connection.prepareStatement(INSERT, Statement.RETURN_GENERATED_KEYS)) {
-            insert.setString(1, draft.source().name());
-            insert.setString(2, draft.world());
+            insert.setString(1, candidate.source().name());
+            insert.setString(2, candidate.world());
             insert.setInt(3, box.minX());
             insert.setInt(4, box.minY());
             insert.setInt(5, box.minZ());
             insert.setInt(6, box.maxX());
             insert.setInt(7, box.maxY());
             insert.setInt(8, box.maxZ());
-            insert.setDouble(9, draft.score());
-            insert.setInt(10, draft.votes());
-            insert.setString(11, draft.players().stream().map(UUID::toString).sorted().collect(Collectors.joining(",")));
-            insert.setString(12, draft.detail());
-            insert.setString(13, draft.modelVersion());
-            insert.setInt(14, draft.preview().width());
-            insert.setInt(15, draft.preview().height());
-            insert.setBytes(16, draft.preview().pixels());
+            insert.setDouble(9, candidate.score());
+            insert.setInt(10, candidate.votes());
+            insert.setString(11, candidate.players().stream().map(UUID::toString).sorted().collect(Collectors.joining(",")));
+            insert.setString(12, candidate.detail());
+            insert.setString(13, candidate.modelVersion());
+            insert.setInt(14, candidate.preview().width());
+            insert.setInt(15, candidate.preview().height());
+            insert.setBytes(16, candidate.preview().pixels());
             insert.setLong(17, now.toEpochMilli());
             insert.executeUpdate();
             try (ResultSet keys = insert.getGeneratedKeys()) {

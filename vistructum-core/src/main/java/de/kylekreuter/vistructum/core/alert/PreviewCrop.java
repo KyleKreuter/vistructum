@@ -1,17 +1,13 @@
 package de.kylekreuter.vistructum.core.alert;
 
-import java.util.Objects;
+import de.kylekreuter.vistructum.api.Preview;
 
-public record Preview(int width, int height, byte[] pixels) {
+public final class PreviewCrop {
 
     public static final int EMPTY = 235;
     public static final int BUILT = 40;
 
-    public Preview {
-        Objects.requireNonNull(pixels, "pixels");
-        if (width < 1 || height < 1 || pixels.length != width * height) {
-            throw new IllegalArgumentException("preview " + width + "x" + height + " with " + pixels.length + " pixels");
-        }
+    private PreviewCrop() {
     }
 
     public static Preview ofLuminance(byte[] luminance, int sceneWidth, int sceneHeight, int top, int left, int bottom,
@@ -22,10 +18,6 @@ public record Preview(int width, int height, byte[] pixels) {
     public static Preview ofMask(byte[] modified, int sceneWidth, int sceneHeight, int top, int left, int bottom,
                                  int right) {
         return crop(modified, sceneWidth, sceneHeight, top, left, bottom, right, true);
-    }
-
-    public int grey(int row, int col) {
-        return pixels[row * width + col] & 0xff;
     }
 
     private static Preview crop(byte[] source, int sceneWidth, int sceneHeight, int top, int left, int bottom, int right,

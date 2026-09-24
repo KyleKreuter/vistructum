@@ -1,7 +1,7 @@
 package de.kylekreuter.vistructum.core;
 
 import de.kylekreuter.vistructum.api.ModelContract;
-import de.kylekreuter.vistructum.api.VistructumApi;
+import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
 import de.kylekreuter.vistructum.core.mask.MaskMonitor;
@@ -14,7 +14,6 @@ import de.kylekreuter.vistructum.core.store.Database;
 import de.kylekreuter.vistructum.core.tracking.BlockChangeListener;
 import de.kylekreuter.vistructum.core.tracking.BlockChangeStore;
 import de.kylekreuter.vistructum.core.tracking.ClusterSettings;
-import de.kylekreuter.vistructum.core.ui.VisCommand;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -29,9 +28,6 @@ import java.util.Objects;
 import java.util.logging.Level;
 
 public final class VistructumCore extends JavaPlugin {
-
-    private static final String STAFF_PERMISSION = "vistructum.staff";
-    private static final String ADMIN_PERMISSION = "vistructum.admin";
 
     private Database database;
     private SidecarClient client;
@@ -64,7 +60,7 @@ public final class VistructumCore extends JavaPlugin {
                 Duration.ofSeconds(config.getLong("sidecar.request-timeout-seconds")));
         checkModels();
 
-        FindingReporter reporter = new FindingReporter(mainThread, findings, getLogger(), STAFF_PERMISSION,
+        FindingReporter reporter = new FindingReporter(mainThread, findings, getLogger(),
                 Duration.ofDays(config.getLong("alerts.dedupe-days")), clock);
 
         getServer().getPluginManager().registerEvents(new BlockChangeListener(changes, clock::millis), this);
@@ -82,13 +78,9 @@ public final class VistructumCore extends JavaPlugin {
             schedule.start();
         }
 
-        VisCommand command = new VisCommand(mainThread, changes, findings, scans, scanner, client, STAFF_PERMISSION,
-                ADMIN_PERMISSION, clock);
-        Objects.requireNonNull(getCommand("vis")).setExecutor(command);
-        Objects.requireNonNull(getCommand("vis")).setTabCompleter(command);
-
-        getServer().getServicesManager().register(VistructumApi.class,
-                new VistructumService(mainThread, findings, scanner, clock), this, ServicePriority.Normal);
+        getServer().getServicesManager().register(Vistructum.class,
+                new VistructumService(mainThread, changes, findings, scans, scanner, client, clock), this,
+                ServicePriority.Normal);
     }
 
     @Override

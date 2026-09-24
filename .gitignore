@@ -25,9 +25,6 @@ build/
 sidecar/train/runs/
 results/
 
-# ONNX-Modelle sind Build-Artefakte, kein Quellcode
-models/
-
 # Laufzeit-State (SQLite, Logs)
 *.db
 *.sqlite*

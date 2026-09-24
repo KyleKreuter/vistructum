@@ -81,3 +81,26 @@ def test_run_smoke(tmp_path, kind):
     assert "commit" in manifest and isinstance(manifest["dirty"], bool)
     assert (runs_dir / manifests[0].parent.name / f"{kind}.onnx").exists()
     assert set(manifest["scan"]) == {"calib", "scan", "scan-holdout"}
+
+
+def test_skip_scan_then_scan_stage_completes_the_manifest(tmp_path):
+    data_dir = tmp_path / "data"
+    make_dataset(data_dir, "mask")
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, "mask", data_dir)
+    runs_dir = tmp_path / "runs"
+    env = dict(os.environ, PYTHONPATH=str(SIDECAR_DIR))
+    common = {"cwd": TRAIN_DIR, "capture_output": True, "text": True, "env": env, "timeout": 60}
+    result = subprocess.run([sys.executable, "run.py", "--config", str(config_path), "--runs-dir", str(runs_dir),
+                             "--allow-dirty", "--skip-scan"], check=False, **common)
+    assert result.returncode == 0, result.stdout + result.stderr
+    run_dir = next(runs_dir.glob("*/manifest.json")).parent
+    manifest = json.loads((run_dir / "manifest.json").read_text())
+    assert manifest["scan_pending"] is True and manifest["scan"] == {}
+
+    result = subprocess.run([sys.executable, "scan_stage.py", str(run_dir), "--workers", "1"], check=False, **common)
+    assert result.returncode in (0, 1), result.stdout + result.stderr
+    manifest = json.loads((run_dir / "manifest.json").read_text())
+    assert manifest["scan_pending"] is False
+    assert set(manifest["scan"]) == {"calib", "scan", "scan-holdout"}
+    assert (run_dir / "calib.json").exists()

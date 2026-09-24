@@ -14,6 +14,8 @@ OUTPUT = Path(os.environ.get("VISTRUCTUM_OUTPUT", "/kaggle/working"))
 SPLITS = ("train", "val", "test", "holdout")
 SEED = int(os.environ.get("VISTRUCTUM_SEED", "0"))
 DEVICE = os.environ.get("VISTRUCTUM_DEVICE", "cuda")
+# the scan stage is CPU-only; by default it runs locally (kaggle_watch.py --scan) so the GPUs are not held idle
+SCAN_ON_KERNEL = os.environ.get("VISTRUCTUM_SCAN", "0") == "1"
 
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
@@ -61,6 +63,8 @@ def launch(train_dir, config, data_dir, runs_dir, gpu, threads, env):
     job_env = dict(env, CUDA_VISIBLE_DEVICES=str(gpu))
     command = [sys.executable, "run.py", "--config", config, "--runs-dir", str(runs_dir),
                "--set", f"data_dir={data_dir}", "--set", f"device={DEVICE}", "--set", f"num_threads={threads}", "--set", f"scan_workers={threads}"]
+    if not SCAN_ON_KERNEL:
+        command.append("--skip-scan")
     print(f"+ [gpu {gpu}] " + " ".join(command), flush=True)
     with open(runs_dir / f"{Path(config).stem}.log", "w") as log:
         return subprocess.Popen(command, cwd=train_dir, env=job_env, stdout=log, stderr=subprocess.STDOUT)
@@ -70,10 +74,11 @@ def collect(runs_dir, release_dir):
     summary = {}
     for manifest_path in sorted(runs_dir.glob("*/manifest.json")):
         manifest = json.loads(manifest_path.read_text())
-        kind = manifest["kind"]
-        shutil.copy(manifest_path.parent / f"{kind}.onnx", release_dir / f"{kind}.onnx")
-        shutil.copy(manifest_path, release_dir / f"{kind}-manifest.json")
-        summary[kind] = {split: {key: report.get(key) for key in ("verdict", "failures")}
+        kind, name = manifest["kind"], manifest["config"]
+        # named by config, not kind: two configs of one kind (an A/B) must not overwrite each other
+        shutil.copy(manifest_path.parent / f"{kind}.onnx", release_dir / f"{name}.onnx")
+        shutil.copy(manifest_path, release_dir / f"{name}-manifest.json")
+        summary[name] = {split: {key: report.get(key) for key in ("verdict", "failures")}
                          | {key: report["metrics"].get(key) for key in ("precision", "recall", "fp_rate", "threshold")}
                          for split, report in manifest["metrics"]["splits"].items()}
     return summary

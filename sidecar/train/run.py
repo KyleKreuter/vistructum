@@ -27,6 +27,20 @@ def data_manifest_hash(data_dir):
     return hashlib.sha256(manifest_path.read_bytes()).hexdigest()
 
 
+def scan_stage(onnx_path, cfg, run_dir, workers=None):
+    """calibrate threshold/min_votes on the calib areas (written into the ONNX), then evaluate on scan and the shifted
+    scan-holdout; returns the reports without their sweeps and writes the full ones next to the model"""
+    workers = workers or cfg["scan_workers"]
+    scan = {"calib": scan_eval.run(onnx_path, "calib", cfg["scan_negatives"], cfg["scan_positives"], cfg["seed"],
+                                   workers, write=True)}
+    for scan_name, holdout in (("scan", False), ("scan-holdout", True)):
+        scan[scan_name] = scan_eval.run(onnx_path, "scan", cfg["scan_negatives"], cfg["scan_positives"],
+                                        cfg["seed"] + holdout, workers, holdout=holdout)
+    for scan_name, entry in scan.items():
+        (Path(run_dir) / f"{scan_name}.json").write_text(json.dumps(entry, indent=2))
+    return {key: {k: v for k, v in entry.items() if k != "sweep"} for key, entry in scan.items()}
+
+
 def main():
     parser = argparse.ArgumentParser()
     add_config_args(parser)
@@ -35,6 +49,8 @@ def main():
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--splits", nargs="+", default=["val", "test", "holdout"])
     parser.add_argument("--no-gate", action="store_true", help="write the report but do not fail on a test verdict FAIL")
+    parser.add_argument("--skip-scan", action="store_true",
+                        help="leave the CPU-bound scan stage for scan_stage.py, e.g. to free the Kaggle GPUs sooner")
     args = parser.parse_args()
     cfg = load_config(args.config, args.set)
     sha, dirty = git_info()
@@ -55,15 +71,8 @@ def main():
     session, meta = evaluate_mod.load_session(onnx_path)
     report = evaluate_mod.build_report(session, meta, cfg.data_dir, args.splits)
     report["model_bytes"] = onnx_path.stat().st_size
-    scan = {}
-    if cfg.scan_negatives > 0:
-        scan["calib"] = scan_eval.run(onnx_path, "calib", cfg.scan_negatives, cfg.scan_positives, cfg.seed,
-                                      cfg.scan_workers, write=True)
-        for scan_name, holdout in (("scan", False), ("scan-holdout", True)):
-            scan[scan_name] = scan_eval.run(onnx_path, "scan", cfg.scan_negatives, cfg.scan_positives,
-                                       cfg.seed + holdout, cfg.scan_workers, holdout=holdout)
-        for scan_name, entry in scan.items():
-            (run_dir / f"{scan_name}.json").write_text(json.dumps(entry, indent=2))
+    scan_wanted = cfg.scan_negatives > 0
+    scan = scan_stage(onnx_path, asdict(cfg), run_dir) if scan_wanted and not args.skip_scan else {}
 
     manifest = {
         "config": name,
@@ -74,10 +83,13 @@ def main():
         "data_manifest_sha256": data_manifest_hash(cfg.data_dir),
         "export": export_result,
         "metrics": report,
-        "scan": {key: {k: v for k, v in entry.items() if k != "sweep"} for key, entry in scan.items()},
+        "scan": scan,
+        "scan_pending": scan_wanted and not scan,
     }
     (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
     print(json.dumps(manifest, indent=2))
+    if manifest["scan_pending"]:
+        return
     verdict = scan["scan"]["verdict"] if scan else report["splits"].get("test", {}).get("verdict")
     if not args.no_gate and verdict == "FAIL":
         raise SystemExit(1)

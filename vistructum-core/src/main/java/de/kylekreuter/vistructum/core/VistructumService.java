@@ -162,12 +162,12 @@ public final class VistructumService implements Vistructum {
 
         @Override
         public CompletableFuture<List<ScanJob>> active() {
-            return mainThread.handOff(scanStore.active());
+            return mainThread.handOff(scanStore.active().thenApply(List::copyOf));
         }
 
         @Override
         public CompletableFuture<List<ScanJob>> cancelAll() {
-            return mainThread.handOff(mainThread.supply(scanner::cancel).thenCompose(cancelled -> cancelled));
+            return mainThread.handOff(mainThread.supply(scanner::cancel).thenCompose(cancelled -> cancelled).thenApply(List::copyOf));
         }
     }
 }

@@ -167,3 +167,19 @@ def test_run_inference_overlapping_hits_flagged_when_min_votes_two():
     assert result["flagged"] is True
     assert len(result["detections"]) == 1
     assert result["detections"][0]["votes"] >= 2
+
+
+def test_java_golden_request_decodes_to_the_same_scene():
+    # vistructum-core's SceneCodecGoldenTest writes this body from a 5x3 scene; both sides must agree on the bytes
+    import json
+    from pathlib import Path
+
+    from service import InferRequest, build_scene
+
+    golden = Path(__file__).resolve().parents[2] / "vistructum-core/src/test/resources/infer-request-golden.json"
+    scene = build_scene(InferRequest(**json.loads(golden.read_text())))
+    index = np.arange(15).reshape(3, 5)
+    assert (scene.blocks == index - 3).all() and scene.blocks[0, 2] == -1
+    assert (scene.heights == (index - 7) * 100).all()
+    assert (scene.luminance == (index * 17) % 256).all()
+    assert sorted(np.flatnonzero(scene.modified)) == [2, 5, 11]

@@ -32,9 +32,18 @@ public final class SidecarClient implements AutoCloseable {
     }
 
     public CompletableFuture<InferResult> infer(String kind, SurfaceScene scene) {
+        return infer(kind, scene, null);
+    }
+
+    /** @param context where the scene comes from (world, origin, axis); the sidecar only stores it with captures */
+    public CompletableFuture<InferResult> infer(String kind, SurfaceScene scene, JsonObject context) {
+        JsonObject body = SceneCodec.encode(kind, scene);
+        if (context != null) {
+            body.add("context", context);
+        }
         HttpRequest request = requestBuilder("/infer")
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(SceneCodec.encode(kind, scene))))
+                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(body)))
                 .build();
         return send(request).thenApply(response -> {
             if (response.statusCode() / 100 != 2) {

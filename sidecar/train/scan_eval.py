@@ -25,7 +25,9 @@ META_SCAN = "vistructum.scan_calibration"
 META_PREFILTER_SCAN = "vistructum.prefilter_calibration"
 CALIBRATION_MARGIN = 0.6
 PREFILTERS = tuple(float(p) for p in np.round(np.arange(0.02, 0.99, 0.02), 2))
-PREFILTER_MAX_RECALL_LOSS = 0.005
+PREFILTER_MAX_RECALL_LOSS = 0.0
+# the prefilter is set to this share of the highest safe one: real worlds may score turned symbols lower
+PREFILTER_MARGIN = 0.5
 
 _session = None
 _meta = None
@@ -154,20 +156,25 @@ def refined_fraction(results, prefilter=None, negatives_only=False):
     return refined / windows if windows else 0.0
 
 
-def calibrate_prefilter(results, row, max_loss=PREFILTER_MAX_RECALL_LOSS):
-    """the highest prefilter whose cascade keeps the calibrated row's recall within max_loss without adding a false
-    flag. Raising the prefilter only drops flags, so recall falls monotonically and the sweep stops at the first miss"""
-    best = None
+def calibrate_prefilter(results, row, max_loss=PREFILTER_MAX_RECALL_LOSS, margin=PREFILTER_MARGIN):
+    """margin times the highest prefilter whose cascade keeps the calibrated row's recall within max_loss without
+    adding a false flag. Raising the prefilter only drops flags, so recall falls monotonically and the sweep stops at
+    the first miss"""
+    safe = None
     for prefilter in PREFILTERS:
         if prefilter > row["threshold"]:
             break
         at = score_at(cascade(results, prefilter), row["threshold"], row["min_votes"])
         if at["recall"] < row["recall"] - max_loss or at["false_flags"] > row["false_flags"]:
             break
-        best = {"prefilter": prefilter, "recall": at["recall"], "false_flags": at["false_flags"],
-                "subtype_recall": at["subtype_recall"], "refined_fraction": refined_fraction(results, prefilter),
-                "refined_fraction_negatives": refined_fraction(results, prefilter, negatives_only=True)}
-    return best
+        safe = prefilter
+    if safe is None:
+        return None
+    prefilter = round(safe * margin, 4)
+    at = score_at(cascade(results, prefilter), row["threshold"], row["min_votes"])
+    return {"prefilter": prefilter, "highest_safe": safe, "recall": at["recall"], "false_flags": at["false_flags"],
+            "subtype_recall": at["subtype_recall"], "refined_fraction": refined_fraction(results, prefilter),
+            "refined_fraction_negatives": refined_fraction(results, prefilter, negatives_only=True)}
 
 
 def write_calibration(model_path, row, split, seed, prefilter=None):

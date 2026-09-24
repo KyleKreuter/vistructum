@@ -55,10 +55,12 @@ def test_calibrate_prefilter_stops_before_losing_a_symbol():
                full_area([(0, 0)], [0.1], [0.2])]
     row = score_at(results, 0.9, 1)
     assert row["recall"] == 1.0
-    best = calibrate_prefilter(results, row)
+    best = calibrate_prefilter(results, row, margin=1.0)
     assert best["prefilter"] == 0.4 and best["recall"] == 1.0
     assert best["refined_fraction"] == 1 / 3 and best["refined_fraction_negatives"] == 0.0
     assert refined_fraction(results) == 1.0
+    halved = calibrate_prefilter(results, row)
+    assert (halved["prefilter"], halved["highest_safe"]) == (0.2, 0.4)
 
 
 def test_calibrate_prefilter_is_none_when_even_the_lowest_loses_recall():

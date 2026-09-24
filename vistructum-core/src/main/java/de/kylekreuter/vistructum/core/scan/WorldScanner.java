@@ -9,6 +9,7 @@ import de.kylekreuter.vistructum.core.sidecar.Detection;
 import de.kylekreuter.vistructum.core.sidecar.InferResult;
 import de.kylekreuter.vistructum.core.sidecar.SidecarClient;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.ChunkSnapshot;
 import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
@@ -20,6 +21,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,7 +54,7 @@ public final class WorldScanner {
     private BukkitTask task;
     private World world;
     private Deque<int[]> regions;
-    private final List<int[]> chunks = new ArrayList<>();
+    private final Set<Long> chunks = new LinkedHashSet<>();
     private Deque<ScanPlan.Tile> tiles;
     private int tileCount;
     private ScanPlan.Tile tile;
@@ -136,6 +138,10 @@ public final class WorldScanner {
             }
         }
         chunks.clear();
+        // chunks generated since the last save are not in the region files yet
+        for (Chunk chunk : world.getLoadedChunks()) {
+            chunks.add(SurfaceSampler.chunkKey(chunk.getX(), chunk.getZ()));
+        }
         tiles = null;
         tile = null;
         findings = 0;
@@ -147,7 +153,9 @@ public final class WorldScanner {
     private void findChunks() {
         int[] region = regions.poll();
         if (region == null) {
-            tiles = new ArrayDeque<>(ScanPlan.tiles(chunks));
+            List<int[]> coords = new ArrayList<>(chunks.size());
+            chunks.forEach(key -> coords.add(new int[]{(int) (key >> 32), (int) (long) key}));
+            tiles = new ArrayDeque<>(ScanPlan.tiles(coords));
             tileCount = tiles.size();
             plugin.getLogger().info("fullscan of " + world.getName() + ": " + chunks.size() + " chunks in " + tileCount + " tiles");
             return;
@@ -155,7 +163,7 @@ public final class WorldScanner {
         for (int cx = region[0] << 5; cx < (region[0] + 1) << 5; cx++) {
             for (int cz = region[1] << 5; cz < (region[1] + 1) << 5; cz++) {
                 if (world.isChunkGenerated(cx, cz)) {
-                    chunks.add(new int[]{cx, cz});
+                    chunks.add(SurfaceSampler.chunkKey(cx, cz));
                 }
             }
         }

@@ -293,3 +293,28 @@ def test_infer_overlapping_windows_flagged_when_min_votes_two(monkeypatch, tmp_p
         assert body["flagged"] is True
         assert len(body["detections"]) == 1
         assert body["detections"][0]["votes"] >= 2
+
+
+def test_capture_stores_scene_context_and_result_up_to_the_limit(monkeypatch, both_models_dir, tmp_path):
+    capture_dir = tmp_path / "captures"
+    monkeypatch.setenv("CAPTURE_DIR", str(capture_dir))
+    monkeypatch.setenv("CAPTURE_MAX", "2")
+    client = make_client(monkeypatch, both_models_dir)
+    body = {"kind": "mask", "width": 3, "height": 2, "modified": b64_uint8([1, 0, 0, 0, 1, 0]),
+            "context": {"world": "world", "x": 10, "z": -4, "axis": "Y"}}
+    with client:
+        for _ in range(3):
+            assert client.post("/infer", json=body).status_code == 200
+    files = sorted(capture_dir.glob("*.npz"))
+    assert len(files) == 2
+    saved = np.load(files[0])
+    assert saved["modified"].tolist() == [[True, False, False], [False, True, False]]
+    assert json.loads(str(saved["context"]))["x"] == 10
+    assert json.loads(str(saved["result"]))["kind"] == "mask"
+
+
+def test_capture_is_off_without_capture_dir(monkeypatch, both_models_dir, tmp_path):
+    monkeypatch.delenv("CAPTURE_DIR", raising=False)
+    client = make_client(monkeypatch, both_models_dir)
+    with client:
+        assert client.app.state.capture is None

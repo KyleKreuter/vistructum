@@ -6,8 +6,11 @@ services:
       - "127.0.0.1:${SIDECAR_PORT:-8000}:8000"
     volumes:
       - ./models:/models:ro
+      - ./captures:/captures
     environment:
       ORT_THREADS: "${ORT_THREADS:-1}"
+      CAPTURE_DIR: "${CAPTURE_DIR:-}"
+      CAPTURE_MAX: "${CAPTURE_MAX:-20000}"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
       interval: 10s

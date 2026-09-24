@@ -1,8 +1,13 @@
+import json
 import logging
 import os
+import threading
+import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import numpy as np
 import onnxruntime as ort
 from fastapi import FastAPI, HTTPException, Response, status
 
@@ -44,10 +49,39 @@ def load_models(model_dir):
     return models
 
 
+class Capture:
+    """stores every inferred scene with its request context and result, so real worlds can be measured (terrain
+    statistics, false flags on servers without symbols); off unless CAPTURE_DIR is set, stops at CAPTURE_MAX files"""
+
+    def __init__(self, directory, limit):
+        self.directory = Path(directory)
+        self.directory.mkdir(parents=True, exist_ok=True)
+        self.limit = limit
+        self.count = sum(1 for _ in self.directory.glob("*.npz"))
+        self.lock = threading.Lock()
+
+    def save(self, payload, scene, result):
+        with self.lock:
+            if self.count >= self.limit:
+                return
+            self.count += 1
+        name = f"{time.strftime('%Y%m%d-%H%M%S')}-{payload.kind}-{uuid.uuid4().hex[:8]}.npz"
+        np.savez_compressed(self.directory / name, blocks=scene.blocks.astype(np.int16),
+                            heights=scene.heights.astype(np.int16), luminance=scene.luminance,
+                            modified=scene.modified, kind=payload.kind,
+                            context=json.dumps(payload.context or {}), result=json.dumps(result))
+
+
+def load_capture():
+    directory = os.environ.get("CAPTURE_DIR")
+    return Capture(directory, int(os.environ.get("CAPTURE_MAX", "20000"))) if directory else None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     model_dir = os.environ.get("MODEL_DIR", "/models")
     app.state.models = load_models(model_dir)
+    app.state.capture = load_capture()
     yield
     app.state.models = {}
 
@@ -83,4 +117,11 @@ def infer(payload: InferRequest):
         scene = build_scene(payload)
     except ValueError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
-    return run_inference(model, scene)
+    result = run_inference(model, scene)
+    capture = getattr(app.state, "capture", None)
+    if capture is not None:
+        try:
+            capture.save(payload, scene, result)
+        except OSError as exc:
+            logger.warning("capture failed: %s", exc)
+    return result

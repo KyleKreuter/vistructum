@@ -49,6 +49,8 @@ class InferRequest(BaseModel):
     heights: str | None = None
     luminance: str | None = None
     modified: str | None = None
+    # free-form origin of the scene (world, x, z, axis, ...); only stored with captures, never used for inference
+    context: dict | None = None
 
 
 class Detection(BaseModel):

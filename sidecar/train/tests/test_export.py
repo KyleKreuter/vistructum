@@ -3,8 +3,9 @@ import numpy as np
 import onnxruntime as ort
 import pytest
 import torch
-from model import SymbolNet
+from model import ExportNet, SymbolNet
 
+from vistructum_ml import scoring
 from vistructum_ml.contract import GRID, INPUT_NAME, KINDS
 from vistructum_ml.metadata import read_session_metadata, validate
 
@@ -98,19 +99,36 @@ def test_quantized_decisions_agree_on_random_inputs(tmp_path, kind):
     assert np.abs(p32 - p8).max() < 0.02
 
 
-def test_tta_export_averages_all_eight_d4_views(tmp_path):
+def test_tta_scoring_averages_all_eight_d4_views(tmp_path):
     torch.manual_seed(1)
     model = SymbolNet("fullscan", [8, 16], 0.0).eval()
-    onnx_path = tmp_path / "tta.onnx"
-    export_mod.export_onnx(model, "fullscan", onnx_path, tta=True)
+    onnx_path = tmp_path / "plain.onnx"
+    export_mod.export_onnx(model, "fullscan", onnx_path)
+    session = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
     x = np.random.default_rng(0).integers(0, 256, size=(5, KINDS["fullscan"].channels, GRID, GRID), dtype=np.uint8)
-    onnx_probs = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"]).run(None, {INPUT_NAME: x})[0]
+    scores = scoring.all_views(session, x, batch_size=16)
 
     views = [np.rot90(v, k, axes=(2, 3)) for v in (x, x[:, :, :, ::-1]) for k in range(4)]
     with torch.no_grad():
         expected = np.mean([torch.softmax(model(torch.from_numpy(v.copy())), dim=1).numpy() for v in views], axis=0)
-    assert np.abs(onnx_probs - expected).max() < 1e-4
+        reference = ExportNet(model, tta=True)(torch.from_numpy(x)).numpy()
+    assert np.abs(scores - expected[:, 1]).max() < 1e-4
+    assert np.abs(scores - reference[:, 1]).max() < 1e-4
     # a mirrored or rotated window gets the same score, whatever the orientation of the symbol in the world
     turned = np.ascontiguousarray(np.rot90(x, 1, axes=(2, 3)))
-    turned_probs = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"]).run(None, {INPUT_NAME: turned})[0]
-    assert np.abs(turned_probs - onnx_probs).max() < 1e-4
+    assert np.abs(scoring.all_views(session, turned) - scores).max() < 1e-4
+
+
+def test_export_writes_tta_policy_into_metadata(tmp_path):
+    ckpt_path, _ = build_checkpoint(tmp_path, "fullscan")
+    payload = torch.load(ckpt_path, weights_only=False)
+    payload["cfg"]["tta"] = True
+    torch.save(payload, ckpt_path)
+    onnx_path = tmp_path / "fullscan.onnx"
+    export_mod.export_checkpoint(ckpt_path, onnx_path, commit="abc", quantize=False)
+    session = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
+    meta = validate(read_session_metadata(session))
+    assert meta["tta"] is True and meta["prefilter"] is None
+    # the graph itself stays single-view: one score per input row
+    x = np.zeros((3, KINDS["fullscan"].channels, GRID, GRID), dtype=np.uint8)
+    assert session.run(None, {INPUT_NAME: x})[0].shape == (3, 2)

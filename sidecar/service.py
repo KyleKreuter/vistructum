@@ -5,11 +5,10 @@ from dataclasses import dataclass
 import numpy as np
 from pydantic import BaseModel, Field
 
-from vistructum_ml import detect, features
-from vistructum_ml.contract import FULLSCAN, INPUT_NAME, MASK, OUTPUT_NAME, POSITIVE
+from vistructum_ml import detect, features, scoring
+from vistructum_ml.contract import FULLSCAN, MASK
 from vistructum_ml.scene import Scene
 
-BATCH_SIZE = 64
 MAX_DETECTIONS = 20
 
 REQUIRED_FIELDS = {
@@ -29,6 +28,8 @@ class LoadedModel:
     commit: str
     path: str
     min_votes: int
+    tta: bool = False
+    prefilter: float | None = None
 
     def version_info(self):
         return {
@@ -38,6 +39,8 @@ class LoadedModel:
             "feature_spec": self.feature_spec,
             "commit": self.commit,
             "min_votes": self.min_votes,
+            "tta": self.tta,
+            "prefilter": self.prefilter,
         }
 
 
@@ -72,6 +75,8 @@ class InferResponse(BaseModel):
     detections: list[Detection]
     elapsed_ms: float
     min_votes: int
+    # windows that got the 8-view score (all of them with tta and no prefilter, none without tta)
+    refined: int = 0
 
 
 def decode_int16(data_b64, count, name):
@@ -110,21 +115,11 @@ def build_scene(payload):
     return Scene(blocks, heights, luminance, modified.reshape(shape).astype(bool))
 
 
-def run_batches(session, batch):
-    n = batch.shape[0]
-    scores = np.empty(n, dtype=np.float64)
-    for i in range(0, n, BATCH_SIZE):
-        chunk = batch[i:i + BATCH_SIZE]
-        outputs = session.run([OUTPUT_NAME], {INPUT_NAME: chunk})
-        scores[i:i + chunk.shape[0]] = outputs[0][:, POSITIVE]
-    return scores
-
-
 def run_inference(model, scene):
     start = time.perf_counter()
     feats = features.extract(model.kind, scene)
     positions, batch = features.windows(model.kind, feats)
-    scores = run_batches(model.session, batch)
+    scores, refined = scoring.score(model.session, batch, model.tta, model.prefilter)
     max_score = float(scores.max()) if scores.size else 0.0
     flagged_clusters = detect.flagged(positions, scores, model.threshold, model.min_votes)
     detections = [
@@ -142,4 +137,5 @@ def run_inference(model, scene):
         "detections": detections,
         "elapsed_ms": elapsed_ms,
         "min_votes": model.min_votes,
+        "refined": refined,
     }

@@ -9,6 +9,7 @@ import onnxruntime as ort
 from generator.scenes import POS_BASE_MODES
 from generator.shapes import HARD_NEGATIVE_FAMILIES
 
+from vistructum_ml import scoring
 from vistructum_ml.contract import OUTPUT_NAME
 from vistructum_ml.gates import GATES, metrics_at, verdict
 from vistructum_ml.metadata import read_session_metadata, validate
@@ -23,17 +24,13 @@ def load_session(model_path):
     return session, meta
 
 
-def predict(session, x, batch=BATCH):
-    name = session.get_inputs()[0].name
-    scores = np.empty(len(x), dtype=np.float64)
-    for i in range(0, len(x), batch):
-        chunk = x[i:i + batch]
-        probs = session.run([OUTPUT_NAME], {name: chunk})[0]
-        scores[i:i + len(chunk)] = probs[:, 1]
-    return scores
+def predict(session, meta, x, batch=BATCH):
+    # the sidecar's scoring; before the scan stage has set a prefilter a tta model scores every window with 8 views
+    return scoring.score(session, x, meta["tta"], meta["prefilter"], batch)[0]
 
 
 def latency_per_window(session, x, batch, runs=LATENCY_RUNS):
+    """single view; an 8-view score costs about 8x this"""
     name = session.get_inputs()[0].name
     sample = x[:batch]
     if len(sample) < batch:
@@ -88,7 +85,7 @@ def subtype_breakdown(scores, y, subtype, threshold):
 def evaluate_split(session, meta, data_dir, split):
     raw = np.load(Path(data_dir) / f"{split}.npz")
     x, y = raw["x"], raw["y"]
-    scores = predict(session, x)
+    scores = predict(session, meta, x)
     metrics = metrics_at(scores, y, meta["threshold"])
     gate = GATES[meta["kind"]]
     status, failures = verdict(metrics, gate)

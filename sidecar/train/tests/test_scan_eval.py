@@ -1,7 +1,7 @@
 import numpy as np
 from generator.areas import make_area
 from generator.rng import rng_for
-from scan_eval import calibrate, score_at
+from scan_eval import calibrate, calibrate_prefilter, cascade, refined_fraction, score_at
 
 from vistructum_ml.gates import ScanGate
 
@@ -37,6 +37,33 @@ def test_calibrate_maximizes_recall_within_budget():
     # the default margin keeps a safety distance to the gate: 2e-5 is too close to 3e-5
     assert calibrate(table, gate)["threshold"] == 0.9
     assert calibrate(table[:1], ScanGate(3e-5, 0.5, 1)) is None
+
+
+def full_area(positions, single, scores, boxes=()):
+    return area(positions, scores, boxes) | {"single": np.array(single, dtype=np.float32), "refined": len(positions)}
+
+
+def test_cascade_keeps_single_view_scores_below_the_prefilter():
+    results = [full_area([(0, 0), (0, 24)], [0.4, 0.05], [0.95, 0.1])]
+    assert cascade(results, 0.3)[0]["scores"].tolist() == [np.float32(0.95), np.float32(0.05)]
+    assert cascade(results, 0.5)[0]["scores"].tolist() == [np.float32(0.4), np.float32(0.05)]
+
+
+def test_calibrate_prefilter_stops_before_losing_a_symbol():
+    # the symbol's single view scores only 0.4 (a turned symbol); its 8-view score clears the threshold
+    results = [full_area([(0, 0), (0, 24)], [0.4, 0.05], [0.95, 0.1], [(10, 10, 40, 40)]),
+               full_area([(0, 0)], [0.1], [0.2])]
+    row = score_at(results, 0.9, 1)
+    assert row["recall"] == 1.0
+    best = calibrate_prefilter(results, row)
+    assert best["prefilter"] == 0.4 and best["recall"] == 1.0
+    assert best["refined_fraction"] == 1 / 3 and best["refined_fraction_negatives"] == 0.0
+    assert refined_fraction(results) == 1.0
+
+
+def test_calibrate_prefilter_is_none_when_even_the_lowest_loses_recall():
+    results = [full_area([(0, 0)], [0.01], [0.95], [(10, 10, 40, 40)])]
+    assert calibrate_prefilter(results, score_at(results, 0.9, 1)) is None
 
 
 def test_areas_place_disjoint_symbols_with_truth_boxes():

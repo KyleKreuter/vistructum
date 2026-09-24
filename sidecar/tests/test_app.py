@@ -20,7 +20,8 @@ def b64_uint8(values):
 
 
 def build_onnx_model(path, channels, kind, version, threshold=0.5, feature_spec="fs-1",
-                      labels=("ok", "hakenkreuz"), commit="deadbeef", drop_key=None, min_votes=None):
+                      labels=("ok", "hakenkreuz"), commit="deadbeef", drop_key=None, min_votes=None,
+                      extra_meta=None):
     features_in = helper.make_tensor_value_info("features", TensorProto.UINT8, ["N", channels, GRID, GRID])
     scores_out = helper.make_tensor_value_info("scores", TensorProto.FLOAT, ["N", 2])
     cast = helper.make_node("Cast", ["features"], ["feat_f"], to=TensorProto.FLOAT)
@@ -50,6 +51,7 @@ def build_onnx_model(path, channels, kind, version, threshold=0.5, feature_spec=
     }
     if min_votes is not None:
         meta["vistructum.min_votes"] = str(min_votes)
+    meta |= extra_meta or {}
     if drop_key:
         del meta[drop_key]
     helper.set_model_props(model, meta)
@@ -163,6 +165,20 @@ def test_infer_mask_flagged_true_for_heavily_modified_area(monkeypatch, both_mod
         assert body["max_score"] > body["threshold"]
         assert len(body["detections"]) == 1
         assert "elapsed_ms" in body
+
+
+def test_infer_cascade_refines_only_windows_above_the_prefilter(monkeypatch, tmp_path):
+    # the tiny model scores a window softmax([1 - mean, mean]): 0.731 when fully modified, 0.269 when untouched
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.6,
+                     extra_meta={"vistructum.tta": "1", "vistructum.prefilter": "0.5"})
+    client = make_client(monkeypatch, tmp_path)
+    with client:
+        version = client.get("/version").json()["mask"]
+        assert version["tta"] is True and version["prefilter"] == 0.5
+        for fill, refined, flagged in ((1, 1, True), (0, 0, False)):
+            modified = b64_uint8(np.full(64 * 64, fill, dtype=np.uint8))
+            body = client.post("/infer", json={"kind": "mask", "width": 64, "height": 64, "modified": modified}).json()
+            assert (body["refined"], body["flagged"]) == (refined, flagged)
 
 
 def test_infer_mask_flagged_false_for_untouched_area(monkeypatch, both_models_dir):

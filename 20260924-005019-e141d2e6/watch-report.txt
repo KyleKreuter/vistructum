@@ -1,0 +1,4 @@
+ref e141d2e649716cb164b4f3b98571281234a1c28e  exit codes {'configs/scan-v1.yaml': 0, 'configs/scan-v2.yaml': 0}
+fullscan calib         calibrated t=0.96 votes=1 recall=0.7337337337337337 false_flags=3/243000 
+fullscan scan          PASS       t=0.96 votes=1 recall=0.7447447447447447 false_flags=5/243000 
+fullscan scan-holdout  FAIL       t=0.96 votes=1 recall=0.6876876876876877 false_flags=9/243000 ['false flags/window 3.70e-05 > 3e-05']

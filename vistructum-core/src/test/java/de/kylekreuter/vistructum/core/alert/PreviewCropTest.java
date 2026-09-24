@@ -1,14 +1,15 @@
 package de.kylekreuter.vistructum.core.alert;
 
+import de.kylekreuter.vistructum.api.Preview;
 import org.junit.jupiter.api.Test;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import javax.imageio.ImageIO;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class PreviewTest {
+class PreviewCropTest {
 
     @Test
     void maskCropMapsBuiltAndEmptyCells() {
@@ -16,16 +17,16 @@ class PreviewTest {
                 0, 0, 0,
                 0, 1, 1,
                 0, 1, 0};
-        Preview preview = Preview.ofMask(modified, 3, 3, 1, 1, 3, 3);
+        Preview preview = PreviewCrop.ofMask(modified, 3, 3, 1, 1, 3, 3);
         assertEquals(2, preview.width());
         assertEquals(2, preview.height());
-        assertEquals(Preview.BUILT, preview.grey(0, 0));
-        assertEquals(Preview.EMPTY, preview.grey(1, 1));
+        assertEquals(PreviewCrop.BUILT, preview.grey(0, 0));
+        assertEquals(PreviewCrop.EMPTY, preview.grey(1, 1));
     }
 
     @Test
     void cropIsClippedToTheScene() {
-        Preview preview = Preview.ofLuminance(new byte[]{10, 20, 30, 40}, 2, 2, -5, -5, 10, 10);
+        Preview preview = PreviewCrop.ofLuminance(new byte[]{10, 20, 30, 40}, 2, 2, -5, -5, 10, 10);
         assertEquals(2, preview.width());
         assertEquals(2, preview.height());
         assertEquals(40, preview.grey(1, 1));

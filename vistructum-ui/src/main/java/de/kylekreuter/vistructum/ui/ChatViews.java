@@ -1,11 +1,12 @@
-package de.kylekreuter.vistructum.core.ui;
+package de.kylekreuter.vistructum.ui;
 
 import de.kylekreuter.vistructum.api.BlockBox;
 import de.kylekreuter.vistructum.api.Finding;
+import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Review;
+import de.kylekreuter.vistructum.api.ScanJob;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.api.Verdict;
-import de.kylekreuter.vistructum.core.alert.Preview;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -95,6 +96,13 @@ public final class ChatViews {
             rows.add(line.build());
         }
         return rows;
+    }
+
+    public static String describe(ScanJob job) {
+        return job.tilesTotal() == 0
+                ? "Scan #" + job.id() + " " + job.world() + ": plant Kacheln"
+                : "Scan #" + job.id() + " " + job.world() + ": Kachel " + job.tilesDone() + "/" + job.tilesTotal() + ", "
+                + job.findings() + " Funde, " + job.failures() + " Fehler";
     }
 
     public static Component prefix() {

@@ -2,11 +2,15 @@ package de.kylekreuter.vistructum.core.scan;
 
 import com.google.gson.JsonObject;
 import de.kylekreuter.vistructum.api.BlockBox;
+import de.kylekreuter.vistructum.api.Preview;
+import de.kylekreuter.vistructum.api.ScanCause;
+import de.kylekreuter.vistructum.api.ScanJob;
+import de.kylekreuter.vistructum.api.ScanStatus;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.core.MainThread;
 import de.kylekreuter.vistructum.core.alert.FindingDraft;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
-import de.kylekreuter.vistructum.core.alert.Preview;
+import de.kylekreuter.vistructum.core.alert.PreviewCrop;
 import de.kylekreuter.vistructum.core.scene.SurfaceScene;
 import de.kylekreuter.vistructum.core.sidecar.Detection;
 import de.kylekreuter.vistructum.core.sidecar.InferResult;
@@ -272,7 +276,7 @@ public final class WorldScanner {
             surfaceBox(tile, scene, detection).ifPresent(box -> drafts.add(new FindingDraft(Source.FULLSCAN, worldName,
                     box, detection.score(), detection.votes(), Set.of(),
                     "Kachel " + tile.originX() + "," + tile.originZ(), result.modelVersion(),
-                    Preview.ofLuminance(scene.luminance(), scene.width(), scene.height(), detection.top(),
+                    PreviewCrop.ofLuminance(scene.luminance(), scene.width(), scene.height(), detection.top(),
                             detection.left(), detection.bottom(), detection.right()))));
         }
         return drafts;

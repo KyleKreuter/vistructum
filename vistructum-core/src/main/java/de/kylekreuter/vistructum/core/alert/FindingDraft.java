@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.core.alert;
 
 import de.kylekreuter.vistructum.api.BlockBox;
+import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Source;
 
 import java.util.Objects;

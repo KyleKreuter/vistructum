@@ -1,5 +1,8 @@
 package de.kylekreuter.vistructum.core.scan;
 
+import de.kylekreuter.vistructum.api.ScanCause;
+import de.kylekreuter.vistructum.api.ScanJob;
+import de.kylekreuter.vistructum.api.ScanStatus;
 import de.kylekreuter.vistructum.core.store.Database;
 import de.kylekreuter.vistructum.core.store.TestDatabase;
 import org.junit.jupiter.api.AfterEach;

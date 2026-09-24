@@ -1,11 +1,12 @@
 package de.kylekreuter.vistructum.core.mask;
 
 import com.google.gson.JsonObject;
+import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.core.MainThread;
 import de.kylekreuter.vistructum.core.alert.FindingDraft;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
-import de.kylekreuter.vistructum.core.alert.Preview;
+import de.kylekreuter.vistructum.core.alert.PreviewCrop;
 import de.kylekreuter.vistructum.core.scene.MaskProjector;
 import de.kylekreuter.vistructum.core.scene.Projection;
 import de.kylekreuter.vistructum.core.scene.SurfaceScene;
@@ -88,7 +89,7 @@ public final class MaskMonitor {
         return new FindingDraft(Source.MASK, cluster.world(),
                 projection.toWorld(detection.top(), detection.left(), detection.bottom(), detection.right()),
                 detection.score(), detection.votes(), cluster.players(), "Achse " + projection.axis(),
-                result.modelVersion(), Preview.ofMask(scene.modified(), scene.width(), scene.height(), detection.top(),
+                result.modelVersion(), PreviewCrop.ofMask(scene.modified(), scene.width(), scene.height(), detection.top(),
                 detection.left(), detection.bottom(), detection.right()));
     }
 

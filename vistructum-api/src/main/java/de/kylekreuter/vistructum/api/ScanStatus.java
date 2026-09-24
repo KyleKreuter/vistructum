@@ -1,4 +1,4 @@
-package de.kylekreuter.vistructum.core.scan;
+package de.kylekreuter.vistructum.api;
 
 public enum ScanStatus {
 

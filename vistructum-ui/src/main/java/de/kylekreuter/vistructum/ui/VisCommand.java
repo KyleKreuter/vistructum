@@ -1,14 +1,9 @@
-package de.kylekreuter.vistructum.core.ui;
+package de.kylekreuter.vistructum.ui;
 
+import de.kylekreuter.vistructum.api.SidecarStatus;
 import de.kylekreuter.vistructum.api.Verdict;
-import de.kylekreuter.vistructum.core.MainThread;
-import de.kylekreuter.vistructum.core.alert.FindingStore;
-import de.kylekreuter.vistructum.core.scan.ScanCause;
-import de.kylekreuter.vistructum.core.scan.ScanJob;
-import de.kylekreuter.vistructum.core.scan.ScanStore;
-import de.kylekreuter.vistructum.core.scan.WorldScanner;
-import de.kylekreuter.vistructum.core.sidecar.SidecarClient;
-import de.kylekreuter.vistructum.core.tracking.BlockChangeStore;
+import de.kylekreuter.vistructum.api.VistructumApi;
+import de.kylekreuter.vistructum.api.VistructumStatus;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -24,8 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.OptionalLong;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+
+import static de.kylekreuter.vistructum.ui.Replies.error;
+import static de.kylekreuter.vistructum.ui.Replies.info;
 
 public final class VisCommand implements TabExecutor {
 
@@ -33,25 +30,15 @@ public final class VisCommand implements TabExecutor {
     private static final int MAX_REVIEW_LIMIT = 50;
     private static final List<String> STAFF_SUBCOMMANDS = List.of("status", "review", "show", "tp", "confirm", "falsealarm");
 
-    private final MainThread mainThread;
-    private final BlockChangeStore changes;
-    private final FindingStore findings;
-    private final ScanStore scans;
-    private final WorldScanner scanner;
-    private final SidecarClient client;
+    private final VistructumApi api;
+    private final Replies replies;
     private final String staffPermission;
     private final String adminPermission;
     private final Clock clock;
 
-    public VisCommand(MainThread mainThread, BlockChangeStore changes, FindingStore findings, ScanStore scans,
-                      WorldScanner scanner, SidecarClient client, String staffPermission, String adminPermission,
-                      Clock clock) {
-        this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
-        this.changes = Objects.requireNonNull(changes, "changes");
-        this.findings = Objects.requireNonNull(findings, "findings");
-        this.scans = Objects.requireNonNull(scans, "scans");
-        this.scanner = Objects.requireNonNull(scanner, "scanner");
-        this.client = Objects.requireNonNull(client, "client");
+    public VisCommand(VistructumApi api, Replies replies, String staffPermission, String adminPermission, Clock clock) {
+        this.api = Objects.requireNonNull(api, "api");
+        this.replies = Objects.requireNonNull(replies, "replies");
         this.staffPermission = Objects.requireNonNull(staffPermission, "staffPermission");
         this.adminPermission = Objects.requireNonNull(adminPermission, "adminPermission");
         this.clock = Objects.requireNonNull(clock, "clock");
@@ -98,17 +85,22 @@ public final class VisCommand implements TabExecutor {
     }
 
     private void status(CommandSender sender) {
-        reply(sender, changes.count(), count -> info(sender, count + " Blockänderungen im Beobachtungsfenster"));
-        reply(sender, findings.countOpen(), count -> info(sender, count + " offene Funde, Liste: /vis review"));
-        reply(sender, scans.active(), jobs -> {
-            if (jobs.isEmpty()) {
-                info(sender, "Kein Scan aktiv");
-            }
-            jobs.forEach(job -> info(sender, describe(job)));
-        });
-        client.health().whenComplete((health, error) -> mainThread.run(() -> info(sender, error != null
-                ? "Sidecar nicht erreichbar: " + error.getMessage()
-                : "Sidecar " + health.status() + ", Modelle " + health.models())));
+        replies.when(sender, api.status(), status -> statusLines(status).forEach(line -> info(sender, line)));
+    }
+
+    private static List<String> statusLines(VistructumStatus status) {
+        List<String> lines = new ArrayList<>();
+        SidecarStatus sidecar = status.sidecar();
+        lines.add(sidecar.reachable()
+                ? "Sidecar " + sidecar.status() + ", Modelle " + sidecar.models()
+                : "Sidecar nicht erreichbar: " + sidecar.error().orElse("unbekannter Fehler"));
+        lines.add(status.trackedChanges() + " Blockänderungen im Beobachtungsfenster");
+        lines.add(status.openFindings() + " offene Funde, Liste: /vis review");
+        if (status.activeScans().isEmpty()) {
+            lines.add("Kein Scan aktiv");
+        }
+        status.activeScans().forEach(job -> lines.add(ChatViews.describe(job)));
+        return lines;
     }
 
     private void review(CommandSender sender, String[] args) {
@@ -121,7 +113,7 @@ public final class VisCommand implements TabExecutor {
             }
             limit = (int) Math.min(MAX_REVIEW_LIMIT, parsed.getAsLong());
         }
-        reply(sender, findings.open(limit), open -> {
+        replies.when(sender, api.openFindings(limit), open -> {
             if (open.isEmpty()) {
                 info(sender, "Keine offenen Funde.");
                 return;
@@ -132,7 +124,7 @@ public final class VisCommand implements TabExecutor {
     }
 
     private void show(CommandSender sender, long id) {
-        reply(sender, findings.find(id).thenCombine(findings.preview(id), (finding, preview) ->
+        replies.when(sender, api.finding(id).thenCombine(api.preview(id), (finding, preview) ->
                 finding.flatMap(f -> preview.map(p -> ChatViews.details(f, p)))), details -> details.ifPresentOrElse(
                 lines -> lines.forEach(sender::sendMessage), () -> error(sender, "Fund #" + id + " gibt es nicht.")));
     }
@@ -142,7 +134,7 @@ public final class VisCommand implements TabExecutor {
             error(sender, "Nur Spieler können teleportieren.");
             return;
         }
-        reply(sender, findings.find(id), found -> found.ifPresentOrElse(finding -> {
+        replies.when(sender, api.finding(id), found -> found.ifPresentOrElse(finding -> {
             World world = Bukkit.getWorld(finding.world());
             if (world == null) {
                 error(sender, "Welt " + finding.world() + " ist nicht geladen.");
@@ -154,14 +146,14 @@ public final class VisCommand implements TabExecutor {
     }
 
     private void judge(CommandSender sender, long id, Verdict verdict) {
-        reply(sender, findings.review(id, verdict, sender.getName(), clock.instant()), found -> found.ifPresentOrElse(
+        replies.when(sender, api.review(id, verdict, sender.getName()), found -> found.ifPresentOrElse(
                 finding -> info(sender, "Fund #" + id + ": " + finding.review().map(ChatViews::reviewText).orElseThrow()),
                 () -> error(sender, "Fund #" + id + " gibt es nicht.")));
     }
 
     private void scan(CommandSender sender, String[] args) {
         if (args.length > 1 && args[1].equalsIgnoreCase("stop")) {
-            reply(sender, scanner.cancel(), count -> info(sender, count + " Scans abgebrochen."));
+            replies.when(sender, api.cancelScans(), count -> info(sender, count + " Scans abgebrochen."));
             return;
         }
         World world = args.length > 1 ? Bukkit.getWorld(args[1])
@@ -170,8 +162,8 @@ public final class VisCommand implements TabExecutor {
             error(sender, "Unbekannte Welt " + args[1]);
             return;
         }
-        reply(sender, scanner.enqueue(world.getName(), ScanCause.MANUAL), job -> info(sender, job.isPresent()
-                ? "Scan von " + world.getName() + " eingereiht. Fortschritt: /vis status"
+        replies.when(sender, api.requestScan(world.getName()), job -> info(sender, job.isPresent()
+                ? "Scan #" + job.get().id() + " von " + world.getName() + " eingereiht. Fortschritt: /vis status"
                 : "Für " + world.getName() + " läuft schon ein Scan."));
     }
 
@@ -189,36 +181,11 @@ public final class VisCommand implements TabExecutor {
         action.accept(id.getAsLong());
     }
 
-    private <T> void reply(CommandSender sender, CompletableFuture<T> future, Consumer<T> then) {
-        future.whenComplete((value, error) -> mainThread.run(() -> {
-            if (error != null) {
-                error(sender, "Fehler: " + error.getMessage());
-            } else {
-                then.accept(value);
-            }
-        }));
-    }
-
-    private static String describe(ScanJob job) {
-        return job.tilesTotal() == 0
-                ? "Scan #" + job.id() + " " + job.world() + ": plant Kacheln"
-                : "Scan #" + job.id() + " " + job.world() + ": Kachel " + job.tilesDone() + "/" + job.tilesTotal() + ", "
-                + job.findings() + " Funde, " + job.failures() + " Fehler";
-    }
-
     private static OptionalLong parse(String text) {
         try {
             return OptionalLong.of(Long.parseLong(text));
         } catch (NumberFormatException e) {
             return OptionalLong.empty();
         }
-    }
-
-    private static void info(CommandSender sender, String text) {
-        sender.sendMessage(ChatViews.prefix().append(Component.text(text, NamedTextColor.GRAY)));
-    }
-
-    private static void error(CommandSender sender, String text) {
-        sender.sendMessage(ChatViews.prefix().append(Component.text(text, NamedTextColor.RED)));
     }
 }

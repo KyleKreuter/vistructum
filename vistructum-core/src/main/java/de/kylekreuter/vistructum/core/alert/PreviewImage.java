@@ -1,10 +1,11 @@
 package de.kylekreuter.vistructum.core.alert;
 
-import javax.imageio.ImageIO;
+import de.kylekreuter.vistructum.api.Preview;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import javax.imageio.ImageIO;
 
 public final class PreviewImage {
 

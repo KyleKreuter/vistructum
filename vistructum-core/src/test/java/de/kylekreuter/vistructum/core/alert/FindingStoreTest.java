@@ -2,6 +2,7 @@ package de.kylekreuter.vistructum.core.alert;
 
 import de.kylekreuter.vistructum.api.BlockBox;
 import de.kylekreuter.vistructum.api.Finding;
+import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.core.store.Database;

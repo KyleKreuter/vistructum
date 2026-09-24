@@ -15,7 +15,15 @@ public interface VistructumApi {
 
     CompletableFuture<Optional<Finding>> review(long id, Verdict verdict, String reviewer);
 
+    CompletableFuture<Optional<Preview>> preview(long id);
+
     CompletableFuture<Optional<byte[]>> renderPreview(long id);
 
-    CompletableFuture<Boolean> requestScan(String world);
+    CompletableFuture<Optional<ScanJob>> requestScan(String world);
+
+    CompletableFuture<List<ScanJob>> activeScans();
+
+    CompletableFuture<Integer> cancelScans();
+
+    CompletableFuture<VistructumStatus> status();
 }

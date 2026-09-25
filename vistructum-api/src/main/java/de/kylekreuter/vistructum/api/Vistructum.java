@@ -9,15 +9,16 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>The Vistructum core plugin registers exactly one implementation of this interface with the Bukkit
  * {@link org.bukkit.plugin.ServicesManager} while it is enabled. The facade is divided into the areas
- * {@link #findings()} and {@link #scans()}, complemented by the aggregated {@link #status()}.
+ * {@link #findings()}, {@link #scans()} and {@link #players()}, complemented by the aggregated {@link #status()}.
  *
  * <h2>Threading contract</h2>
  * <ul>
  *   <li>All methods may be called from any thread.</li>
  *   <li>Every {@link CompletableFuture} returned by this API, including those returned by {@link Findings},
- *       {@link Scans} and {@link Page}, completes on the server main thread. Dependent stages that are attached
- *       without an executor therefore run on the main thread and may call the Bukkit API directly.</li>
- *   <li>Storage access and model inference never run on the main thread.</li>
+ *       {@link Scans}, {@link Players} and {@link Page}, completes on the server main thread. Dependent stages
+ *       that are attached without an executor therefore run on the main thread and may call the Bukkit API
+ *       directly.</li>
+ *   <li>Storage access, account lookups and model inference never run on the main thread.</li>
  *   <li>Blocking on a returned future from the main thread, for instance through {@link CompletableFuture#join()}
  *       or {@link CompletableFuture#get()}, deadlocks the server, because completion is scheduled for a later
  *       tick of that same thread.</li>
@@ -37,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @see Findings
  * @see Scans
+ * @see Players
  */
 public interface Vistructum {
 
@@ -67,6 +69,13 @@ public interface Vistructum {
      * @return the scans area, never {@code null}; the same instance is returned on every call
      */
     Scans scans();
+
+    /**
+     * Returns the area for account data of the players that built findings.
+     *
+     * @return the players area, never {@code null}; the same instance is returned on every call
+     */
+    Players players();
 
     /**
      * Collects an aggregated snapshot of the operational state.

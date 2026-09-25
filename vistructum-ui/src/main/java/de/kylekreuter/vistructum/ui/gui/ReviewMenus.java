@@ -3,6 +3,7 @@ package de.kylekreuter.vistructum.ui.gui;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.Page;
+import de.kylekreuter.vistructum.api.PlayerFace;
 import de.kylekreuter.vistructum.api.Review;
 import de.kylekreuter.vistructum.api.ReviewState;
 import de.kylekreuter.vistructum.api.Verdict;
@@ -70,8 +71,10 @@ public final class ReviewMenus {
 
     public void openDetail(Player player, long id, ListPosition back) {
         deliver(player, vistructum.findings().get(id).thenCompose(found -> found
-                .map(finding -> scene(finding).thenCombine(builder(finding), (scene, builder) ->
-                        Optional.of(new DetailView(finding, scene, builder))))
+                .map(finding -> {
+                    CompletableFuture<Optional<PlayerFace>> face = face(finding);
+                    return scene(finding).thenApply(scene -> Optional.of(new DetailView(finding, scene, face)));
+                })
                 .orElseGet(() -> CompletableFuture.completedFuture(Optional.empty()))), view -> view.ifPresentOrElse(
                 detail -> showDetail(player, detail, back),
                 () -> player.sendMessage(messages.chat(Message.COMMAND_FINDING_MISSING, number("id", id)))));
@@ -148,10 +151,25 @@ public final class ReviewMenus {
     }
 
     private void showDetail(Player player, DetailView view, ListPosition back) {
+        if (view.face().isDone()) {
+            showDetail(player, view, view.face().join(), back);
+            return;
+        }
+        Menu shown = showDetail(player, view, Optional.empty(), back);
+        view.face().thenAcceptAsync(face -> {
+            boolean changed = face.map(PlayerFace::hasSkin).orElse(false)
+                    || !builderName(view.finding(), face).equals(builderName(view.finding(), Optional.empty()));
+            if (changed && player.isOnline() && player.getOpenInventory().getTopInventory() == shown.getInventory()) {
+                showDetail(player, view, face, back);
+            }
+        }, mainThread);
+    }
+
+    private Menu showDetail(Player player, DetailView view, Optional<PlayerFace> face, ListPosition back) {
         Finding finding = view.finding();
         String label = messages.plain(Message.MENU_FINDING, number("id", finding.id()));
-        Component title = PixelText.detail(label, view.scene(), view.builder().face().orElseGet(Faces::placeholder),
-                view.builder().name(), fields(finding));
+        Component title = PixelText.detail(label, view.scene(), face.map(Faces::of).orElseGet(Faces::placeholder),
+                builderName(finding, face), fields(finding));
         Menu menu = new Menu(9 * Layout.DETAIL_ROWS, title);
         menu.put(Layout.CONFIRM, icon("confirm", messages.item(Message.MENU_CONFIRM), List.of()),
                 clicked -> judge(clicked, finding.id(), Verdict.CONFIRMED, back));
@@ -164,6 +182,7 @@ public final class ReviewMenus {
         menu.put(Layout.BACK, icon("list", messages.item(Message.MENU_BACK), List.of()),
                 clicked -> openList(clicked, back));
         player.openInventory(menu.getInventory());
+        return menu;
     }
 
     private List<Field> fields(Finding finding) {
@@ -192,20 +211,28 @@ public final class ReviewMenus {
         return Scene.capture(plugin, world, finding.box()).exceptionally(error -> Scene.empty());
     }
 
-    private CompletableFuture<Builder> builder(Finding finding) {
-        List<UUID> players = finding.players().stream().sorted().toList();
-        if (players.isEmpty()) {
-            return CompletableFuture.completedFuture(new Builder(messages.plain(Message.MENU_BUILDER_UNKNOWN),
-                    Optional.empty()));
+    private CompletableFuture<Optional<PlayerFace>> face(Finding finding) {
+        return firstBuilder(finding)
+                .map(player -> vistructum.players().face(player).thenApply(Optional::of)
+                        .exceptionally(error -> Optional.empty()))
+                .orElseGet(() -> CompletableFuture.completedFuture(Optional.empty()));
+    }
+
+    private String builderName(Finding finding, Optional<PlayerFace> face) {
+        Optional<UUID> first = firstBuilder(finding);
+        if (first.isEmpty()) {
+            return messages.plain(Message.MENU_BUILDER_UNKNOWN);
         }
-        UUID first = players.getFirst();
-        Optional<String> knownName = Optional.ofNullable(Bukkit.getOfflinePlayer(first).getName());
-        return Faces.load(first, knownName).thenApplyAsync(profile -> {
-            String name = profile.name().orElseGet(() -> messages.plain(Message.MENU_BUILDER_UNKNOWN));
-            String shown = players.size() == 1 ? name : messages.plain(Message.MENU_BUILDER_MORE,
-                    text("name", name), number("count", players.size() - 1L));
-            return new Builder(shown, profile.face());
-        }, mainThread);
+        String name = face.flatMap(PlayerFace::name)
+                .or(() -> Optional.ofNullable(Bukkit.getOfflinePlayer(first.get()).getName()))
+                .orElseGet(() -> messages.plain(Message.MENU_BUILDER_UNKNOWN));
+        int others = finding.players().size() - 1;
+        return others == 0 ? name : messages.plain(Message.MENU_BUILDER_MORE, text("name", name),
+                number("count", others));
+    }
+
+    private static Optional<UUID> firstBuilder(Finding finding) {
+        return finding.players().stream().sorted().findFirst();
     }
 
     private <T> void deliver(Player player, CompletableFuture<T> future, Consumer<T> then) {
@@ -245,9 +272,6 @@ public final class ReviewMenus {
     private record ListView(Page<Finding> page, long total) {
     }
 
-    private record Builder(String name, Optional<Picture> face) {
-    }
-
-    private record DetailView(Finding finding, Picture scene, Builder builder) {
+    private record DetailView(Finding finding, Picture scene, CompletableFuture<Optional<PlayerFace>> face) {
     }
 }

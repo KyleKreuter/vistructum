@@ -278,3 +278,30 @@ def test_irregular_positives_carry_their_own_subtype():
     rng = np.random.default_rng(8)
     subtypes = {make_mask_sample(rng, 1)[2].startswith("pos-irregular-") for _ in range(40)}
     assert subtypes == {True, False}
+
+
+def test_dropout_never_removes_line_ends_or_small_shapes():
+    from generator.scenes import MIN_CELLS_FOR_REMOVAL, _apply_dropout, removable_cells
+    line = np.zeros((1, 10), dtype=bool)
+    line[0, 2:8] = True
+    ends = {tuple(cell) for cell in removable_cells(line)}
+    assert (0, 2) not in ends and (0, 7) not in ends and (0, 4) in ends
+    rng = np.random.default_rng(4)
+    small = build_irregular_mask(_LargestDraws(), (1, 1, 1, 1))[:6, :6]
+    if small.sum() < MIN_CELLS_FOR_REMOVAL:
+        assert np.array_equal(_apply_dropout(rng, small, 0.5, 0.5), small)
+    big = build_irregular_mask(_LargestDraws(), (1, 1, 1, 1))
+    for _ in range(20):
+        kept = _apply_dropout(rng, big, 0.5, 0.5)
+        tips = [tuple(cell) for cell in np.argwhere(big) if tuple(cell) not in {tuple(c) for c in removable_cells(big)}]
+        assert all(kept[tip] for tip in tips)
+
+
+def test_irregular_partial_hooks_cover_zero_to_three_hooks(monkeypatch):
+    from generator import shapes
+    hook_counts = set()
+    monkeypatch.setattr(shapes, "build_irregular_mask", lambda rng, sides: hook_counts.add(sum(map(bool, sides))))
+    rng = np.random.default_rng(12)
+    for _ in range(200):
+        shapes.irregular_partial_hooks(rng)
+    assert hook_counts == {0, 1, 2, 3}

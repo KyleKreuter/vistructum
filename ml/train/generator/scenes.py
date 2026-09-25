@@ -23,6 +23,7 @@ MARGIN = (CANVAS - CROP) // 2
 MIN_VISIBLE = 0.9
 MAX_REDRAWS = 24
 EXTRA_GAP = 1
+MIN_CELLS_FOR_REMOVAL = 40
 MAX_DECOYS = 6
 
 HOLDOUT_ONLY_HARD_FAMILY = "windmill-3"
@@ -250,14 +251,13 @@ def _stamp_shape(rng, blocks, heights, mask):
     if sloppy:
         remove = float(rng.uniform(0.01, 0.05))
         add = float(rng.uniform(0.0, 0.03))
-        on = np.argwhere(stamp_mask)
-        keep = np.ones(len(on), dtype=bool)
-        n_remove = int(len(on) * remove)
+        candidates = removable_cells(mask)
+        n_cells = int(mask.sum())
+        n_remove = min(len(candidates), int(n_cells * remove)) if n_cells >= MIN_CELLS_FOR_REMOVAL else 0
+        stamp_mask = mask.copy()
         if n_remove:
-            idx = rng.choice(len(on), size=n_remove, replace=False)
-            keep[idx] = False
-        stamp_mask = np.zeros_like(mask)
-        stamp_mask[on[keep, 0], on[keep, 1]] = True
+            idx = rng.choice(len(candidates), size=n_remove, replace=False)
+            stamp_mask[candidates[idx, 0], candidates[idx, 1]] = False
         off = np.argwhere(~mask)
         n_add = int(len(off) * add)
         if n_add and len(off):
@@ -370,15 +370,25 @@ def make_fullscan_sample(rng, label, holdout=False):
     return cropped.astype(np.uint8), int(label), subtype, biome, vis
 
 
+def removable_cells(mask):
+    padded = np.pad(mask, 1)
+    neighbours = (padded[:-2, 1:-1].astype(np.int8) + padded[2:, 1:-1] + padded[1:-1, :-2] + padded[1:-1, 2:])
+    return np.argwhere(mask & (neighbours >= 2))
+
+
 def _apply_dropout(rng, footprint, keep_lo=0.85, keep_hi=1.0):
     modified = np.zeros(footprint.shape, dtype=bool)
     cells = np.argwhere(footprint)
     if len(cells) == 0:
         return modified
-    keep_frac = float(rng.uniform(keep_lo, keep_hi))
-    n_keep = max(1, int(len(cells) * keep_frac))
-    idx = rng.choice(len(cells), size=n_keep, replace=False)
-    modified[cells[idx, 0], cells[idx, 1]] = True
+    modified[cells[:, 0], cells[:, 1]] = True
+    if len(cells) < MIN_CELLS_FOR_REMOVAL:
+        return modified
+    candidates = removable_cells(footprint)
+    n_drop = min(len(candidates), int(len(cells) * (1.0 - float(rng.uniform(keep_lo, keep_hi)))))
+    if n_drop:
+        idx = rng.choice(len(candidates), size=n_drop, replace=False)
+        modified[candidates[idx, 0], candidates[idx, 1]] = False
     return modified
 
 

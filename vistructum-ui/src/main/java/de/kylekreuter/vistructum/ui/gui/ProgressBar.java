@@ -14,6 +14,8 @@ public final class ProgressBar {
     static final int FILL_HEIGHT = 5;
     static final int FILL_ASCENT = -2;
     static final int FILL_STEPS = 8;
+    static final int LABEL_LIFT = 3;
+    static final int LABEL_ASCENT = 7 + LABEL_LIFT;
 
     private ProgressBar() {
     }
@@ -25,7 +27,7 @@ public final class ProgressBar {
                         .font(Glyphs.FONT)
                         .color(NamedTextColor.WHITE)
                         .shadowColor(ShadowColor.none()))
-                .append(label)
+                .append(label.font(Glyphs.BAR_LABEL))
                 .append(Component.text(Glyphs.shift(labelWidth / 2 - labelWidth)).font(Glyphs.FONT))
                 .build();
     }

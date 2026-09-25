@@ -39,8 +39,9 @@ public record ResourcePack(byte[] zip, String sha1) {
         }
         text(files, "assets/vistructum/font/gui.json", fontJson());
         for (int top = Glyphs.FIRST_LINE; top < Layout.DETAIL_HEIGHT; top++) {
-            text(files, "assets/vistructum/font/line_" + top + ".json", lineFontJson(top));
+            text(files, "assets/vistructum/font/line_" + top + ".json", asciiFontJson(Glyphs.ascentAt(top)));
         }
+        text(files, "assets/vistructum/font/bar_label.json", asciiFontJson(ProgressBar.LABEL_ASCENT));
         List<String> overrides = new ArrayList<>();
         List<String> entries = new ArrayList<>();
         for (int index = 0; index < ICONS.size(); index++) {
@@ -111,7 +112,7 @@ public record ResourcePack(byte[] zip, String sha1) {
         }
     }
 
-    private static String lineFontJson(int top) {
+    private static String asciiFontJson(int ascent) {
         List<String> rows = new ArrayList<>();
         for (int row = 0; row < 16; row++) {
             StringBuilder chars = new StringBuilder();
@@ -122,7 +123,7 @@ public record ResourcePack(byte[] zip, String sha1) {
             rows.add("\"" + chars + "\"");
         }
         return "{\"providers\": [{\"type\": \"space\", \"advances\": {\" \": 4}}, {\"type\": \"bitmap\", "
-                + "\"file\": \"minecraft:font/ascii.png\", \"height\": 8, \"ascent\": " + Glyphs.ascentAt(top)
+                + "\"file\": \"minecraft:font/ascii.png\", \"height\": 8, \"ascent\": " + ascent
                 + ", \"chars\": [" + String.join(", ", rows) + "]}]}";
     }
 

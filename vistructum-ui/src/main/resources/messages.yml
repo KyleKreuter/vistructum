@@ -41,8 +41,8 @@ scan:
   done: "<prefix><gray>Scan #<id> of <world> was completed: <findings> findings were created, <failures> tiles failed.</gray>"
   stopped: "<prefix><gray>Scan #<id> of <world> was cancelled: <findings> findings were created, <failures> tiles failed.</gray>"
   failed: "<prefix><red>Scan #<id> of <world> was stopped by an error: <findings> findings were created, <failures> tiles failed.</red>"
-  bar-progress: "<gray>Fullscan of <world>: <percent>, <findings> findings</gray>"
-  bar-done: "<gray>Fullscan of <world> is done: <findings> findings</gray>"
+  bar-progress: "<white>Fullscan of <world>: <percent>, <findings> findings</white>"
+  bar-done: "<white>Fullscan of <world> is done: <findings> findings</white>"
 
 pack:
   prompt: "<gray>The vistructum review menu and scan bar are displayed with this resource pack.</gray>"

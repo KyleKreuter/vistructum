@@ -63,6 +63,12 @@ class ProgressBarTest {
     }
 
     @Test
+    void labelUsesTheLiftedFont() {
+        Component title = ProgressBar.title(Component.text("Fullscan"), 0.5);
+        assertEquals(Glyphs.BAR_LABEL, title.children().get(1).font());
+    }
+
+    @Test
     void packShipsTheBarTexturesAndGlyphs() throws Exception {
         Map<String, byte[]> files = new HashMap<>();
         try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(ResourcePack.build().zip()))) {
@@ -77,6 +83,8 @@ class ProgressBarTest {
             assertTrue(files.containsKey("assets/vistructum/textures/font/bar_fill_" + (1 << step) + ".png"));
             assertTrue(font.contains(String.format("\\u%04X", (int) Glyphs.barFill(step))));
         }
+        String label = new String(files.get("assets/vistructum/font/bar_label.json"), StandardCharsets.UTF_8);
+        assertTrue(label.contains("\"ascent\": " + ProgressBar.LABEL_ASCENT));
     }
 
     private static int advance(String glyphs) {

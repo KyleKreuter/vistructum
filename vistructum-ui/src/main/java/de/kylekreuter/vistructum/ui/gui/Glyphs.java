@@ -7,6 +7,7 @@ import java.util.List;
 final class Glyphs {
 
     static final Key FONT = Key.key("vistructum", "gui");
+    static final Key BAR_LABEL = Key.key("vistructum", "bar_label");
     static final char LIST_BACKGROUND = '\uE201';
     static final char DETAIL_BACKGROUND = '\uE202';
     static final char SCENE_PANEL = '\uE203';

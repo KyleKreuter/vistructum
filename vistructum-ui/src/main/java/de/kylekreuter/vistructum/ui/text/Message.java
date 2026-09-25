@@ -33,6 +33,8 @@ public enum Message {
     SCAN_DONE("scan.done"),
     SCAN_STOPPED("scan.stopped"),
     SCAN_FAILED("scan.failed"),
+    SCAN_BAR_PROGRESS("scan.bar-progress"),
+    SCAN_BAR_DONE("scan.bar-done"),
     PACK_PROMPT("pack.prompt"),
     SOURCE_MASK("source.mask"),
     SOURCE_FULLSCAN("source.fullscan"),

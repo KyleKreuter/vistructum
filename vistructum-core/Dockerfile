@@ -12,6 +12,6 @@ RUN mvn -q -B -pl vistructum-core,vistructum-ui -am package
 
 FROM itzg/minecraft-server:java21
 
-COPY --from=build /build/vistructum-core/target/vistructum-[0-9]*.jar /data/plugins/
-COPY --from=build /build/vistructum-ui/target/vistructum-ui-[0-9]*.jar /data/plugins/
+COPY --from=build /build/vistructum-core/target/vistructum-[0-9]*.jar /plugins/
+COPY --from=build /build/vistructum-ui/target/vistructum-ui-[0-9]*.jar /plugins/
 RUN mkdir -p /data/plugins/vistructum /data/plugins/vistructum-ui && chmod -R a+rwX /data/plugins

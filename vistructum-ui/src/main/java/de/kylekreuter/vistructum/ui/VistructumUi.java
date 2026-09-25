@@ -29,6 +29,7 @@ public final class VistructumUi extends JavaPlugin {
     private static final String MESSAGES_FILE = "messages.yml";
 
     private PackServer packServer;
+    private ScanBossBar scanBossBar;
 
     @Override
     public void onEnable() {
@@ -56,6 +57,8 @@ public final class VistructumUi extends JavaPlugin {
         vis.setExecutor(command);
         vis.setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new FindingAlerts(STAFF_PERMISSION, messages, clock), this);
+        scanBossBar = new ScanBossBar(this, STAFF_PERMISSION, messages);
+        getServer().getPluginManager().registerEvents(scanBossBar, this);
         getServer().getPluginManager().registerEvents(new MenuListener(), this);
         getServer().getPluginManager().registerEvents(new PackDelivery(pack,
                 URI.create(Objects.requireNonNull(getConfig().getString("pack.public-url"), "pack.public-url")),
@@ -64,6 +67,10 @@ public final class VistructumUi extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (scanBossBar != null) {
+            scanBossBar.close();
+            scanBossBar = null;
+        }
         if (packServer != null) {
             packServer.close();
             packServer = null;

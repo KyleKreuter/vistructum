@@ -25,7 +25,7 @@ public record ResourcePack(byte[] zip, String sha1) {
         Map<String, byte[]> files = new LinkedHashMap<>();
         text(files, "pack.mcmeta", """
                 {"pack": {"pack_format": 34, "supported_formats": {"min_inclusive": 34, "max_inclusive": 999},
-                  "min_format": 34, "max_format": 999, "description": "vistructum review menu"}}
+                  "min_format": 34, "max_format": 999, "description": "vistructum staff interface"}}
                 """);
         files.put("assets/vistructum/textures/font/pixel_tall.png", Textures.pixel(Glyphs.PIXEL_TEXTURE_HEIGHT));
         files.put("assets/vistructum/textures/font/detail.png", Textures.detailBackground());
@@ -33,6 +33,10 @@ public record ResourcePack(byte[] zip, String sha1) {
         files.put("assets/vistructum/textures/font/info.png", Textures.infoPanel());
         files.put("assets/vistructum/textures/font/list.png", Textures.listBackground());
         files.put("assets/vistructum/textures/font/logo.png", resource("logo.png"));
+        files.put("assets/vistructum/textures/font/bar_frame.png", Textures.barFrame());
+        for (int step = 0; step < ProgressBar.FILL_STEPS; step++) {
+            files.put("assets/vistructum/textures/font/bar_fill_" + (1 << step) + ".png", Textures.barFill(1 << step));
+        }
         text(files, "assets/vistructum/font/gui.json", fontJson());
         for (int top = Glyphs.FIRST_LINE; top < Layout.DETAIL_HEIGHT; top++) {
             text(files, "assets/vistructum/font/line_" + top + ".json", lineFontJson(top));
@@ -81,6 +85,12 @@ public record ResourcePack(byte[] zip, String sha1) {
                 Glyphs.INFO_PANEL));
         providers.add(bitmap("vistructum:font/logo.png", Layout.LOGO_HEIGHT, Glyphs.ascentAt(Layout.LOGO_TOP),
                 Glyphs.LOGO));
+        providers.add(bitmap("vistructum:font/bar_frame.png", ProgressBar.FRAME_HEIGHT, ProgressBar.FRAME_ASCENT,
+                Glyphs.BAR_FRAME));
+        for (int step = 0; step < ProgressBar.FILL_STEPS; step++) {
+            providers.add(bitmap("vistructum:font/bar_fill_" + (1 << step) + ".png", ProgressBar.FILL_HEIGHT,
+                    ProgressBar.FILL_ASCENT, Glyphs.barFill(step)));
+        }
         for (int pixelSize : Glyphs.PIXEL_SIZES) {
             for (int top = 0; top < Layout.DETAIL_HEIGHT; top++) {
                 providers.add(bitmap("vistructum:font/pixel_tall.png", Glyphs.PIXEL_TEXTURE_HEIGHT * pixelSize,

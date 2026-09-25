@@ -10,7 +10,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      java: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.java == 'true' }}
+      ml: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.ml == 'true' }}
+      docker: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.docker == 'true' }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            java:
+              - "pom.xml"
+              - "vistructum-*/**"
+              - "models/**"
+              - ".github/workflows/build.yml"
+            ml:
+              - "ml/**"
+              - "models/**"
+              - ".github/workflows/build.yml"
+            docker:
+              - "**/pom.xml"
+              - "**/Dockerfile"
+              - "docker-compose.yml"
+              - ".dockerignore"
+              - "models/**"
+              - ".github/workflows/build.yml"
+
   java:
+    needs: changes
+    if: needs.changes.outputs.java == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +54,8 @@ jobs:
       - run: mvn -B -q package
 
   ml:
+    needs: changes
+    if: needs.changes.outputs.ml == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -53,6 +88,8 @@ jobs:
           python run.py --config configs/smoke.yaml --set kind=fullscan --set data_dir=runs/data/smoke-scan --no-gate
 
   docker:
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS block_changes (
     y           INTEGER NOT NULL,
     z           INTEGER NOT NULL,
     player      TEXT    NOT NULL,
+    kind        TEXT    NOT NULL CHECK (kind IN ('PLACE', 'BREAK')),
+    material    TEXT    NOT NULL,
     changed_at  INTEGER NOT NULL,
     reported_at INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (world, x, y, z, player)

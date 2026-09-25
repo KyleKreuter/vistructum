@@ -28,7 +28,7 @@ public final class BlockChangeListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
         if (!(event instanceof BlockMultiPlaceEvent)) {
-            record(event.getBlock(), event.getPlayer());
+            record(event.getBlock(), event.getPlayer(), ChangeKind.PLACE);
         }
     }
 
@@ -39,17 +39,17 @@ public final class BlockChangeListener implements Listener {
             Location location = state.getLocation();
             store.record(location.getWorld().getName(),
                     new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ()),
-                    event.getPlayer().getUniqueId(), now);
+                    event.getPlayer().getUniqueId(), ChangeKind.PLACE, location.getBlock().getType().name(), now);
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent event) {
-        record(event.getBlock(), event.getPlayer());
+        record(event.getBlock(), event.getPlayer(), ChangeKind.BREAK);
     }
 
-    private void record(Block block, Player player) {
+    private void record(Block block, Player player, ChangeKind kind) {
         store.record(block.getWorld().getName(), new BlockPos(block.getX(), block.getY(), block.getZ()),
-                player.getUniqueId(), clock.getAsLong());
+                player.getUniqueId(), kind, block.getType().name(), clock.getAsLong());
     }
 }

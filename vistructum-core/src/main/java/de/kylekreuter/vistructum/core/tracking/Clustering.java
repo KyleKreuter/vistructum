@@ -27,8 +27,12 @@ public final class Clustering {
             }
             Position position = worlds.computeIfAbsent(change.world(), w -> new LinkedHashMap<>())
                     .computeIfAbsent(change.pos(), Position::new);
-            position.players.add(change.player());
-            position.newest = Math.max(position.newest, change.changedAt());
+            (change.kind() == ChangeKind.PLACE ? position.placers : position.breakers).add(change.player());
+            if (change.changedAt() >= position.newest) {
+                position.newest = change.changedAt();
+                position.kind = change.kind();
+                position.material = change.material();
+            }
             position.unreported |= change.unreported();
         }
         List<Cluster> ready = new ArrayList<>();
@@ -72,14 +76,12 @@ public final class Clustering {
     }
 
     private static Cluster toCluster(String world, List<Position> members, long newest, int maxExtent) {
-        Set<BlockPos> positions = new HashSet<>(members.size());
-        Set<UUID> players = new HashSet<>();
+        Map<BlockPos, ChangedBlock> blocks = new HashMap<>(members.size());
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
         for (Position member : members) {
             BlockPos pos = member.pos;
-            positions.add(pos);
-            players.addAll(member.players);
+            blocks.put(pos, new ChangedBlock(member.kind, member.material, member.placers, member.breakers));
             minX = Math.min(minX, pos.x());
             minY = Math.min(minY, pos.y());
             minZ = Math.min(minZ, pos.z());
@@ -88,7 +90,7 @@ public final class Clustering {
             maxZ = Math.max(maxZ, pos.z());
         }
         boolean oversized = maxX - minX + 1 > maxExtent || maxY - minY + 1 > maxExtent || maxZ - minZ + 1 > maxExtent;
-        return new Cluster(world, positions, players, new BlockPos(minX, minY, minZ), new BlockPos(maxX, maxY, maxZ),
+        return new Cluster(world, blocks, new BlockPos(minX, minY, minZ), new BlockPos(maxX, maxY, maxZ),
                 newest, oversized);
     }
 
@@ -116,8 +118,11 @@ public final class Clustering {
     private static final class Position {
 
         private final BlockPos pos;
-        private final Set<UUID> players = new HashSet<>();
+        private final Set<UUID> placers = new HashSet<>();
+        private final Set<UUID> breakers = new HashSet<>();
         private long newest = Long.MIN_VALUE;
+        private ChangeKind kind = ChangeKind.PLACE;
+        private String material = "";
         private boolean unreported;
         private Position parent = this;
 

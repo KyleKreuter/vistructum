@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.ui;
 
 import de.kylekreuter.vistructum.api.Vistructum;
+import de.kylekreuter.vistructum.ui.gui.MapCards;
 import de.kylekreuter.vistructum.ui.gui.MenuListener;
 import de.kylekreuter.vistructum.ui.gui.PackDelivery;
 import de.kylekreuter.vistructum.ui.gui.PackServer;
@@ -20,6 +21,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Level;
 
 public final class VistructumUi extends JavaPlugin {
@@ -27,6 +29,7 @@ public final class VistructumUi extends JavaPlugin {
     private static final String STAFF_PERMISSION = "vistructum.staff";
     private static final String ADMIN_PERMISSION = "vistructum.admin";
     private static final String MESSAGES_FILE = "messages.yml";
+    private static final String MAPS_FILE = "maps.yml";
 
     private PackServer packServer;
 
@@ -50,7 +53,7 @@ public final class VistructumUi extends JavaPlugin {
         } catch (IOException e) {
             getLogger().log(Level.SEVERE, "the resource pack cannot be served on port " + port, e);
         }
-        ReviewMenus menus = new ReviewMenus(this, vistructum, messages, clock);
+        ReviewMenus menus = new ReviewMenus(this, vistructum, messages, clock, loadMapCards());
         VisCommand command = new VisCommand(vistructum, menus, messages, STAFF_PERMISSION, ADMIN_PERMISSION, clock);
         PluginCommand vis = Objects.requireNonNull(getCommand("vis"));
         vis.setExecutor(command);
@@ -67,6 +70,18 @@ public final class VistructumUi extends JavaPlugin {
         if (packServer != null) {
             packServer.close();
             packServer = null;
+        }
+    }
+
+    private Optional<MapCards> loadMapCards() {
+        if (!getConfig().getBoolean("list.map-previews")) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(MapCards.load(new File(getDataFolder(), MAPS_FILE), getServer().getWorlds().getFirst()));
+        } catch (IOException e) {
+            getLogger().log(Level.SEVERE, "the map ids cannot be stored in " + MAPS_FILE + ", map previews are off", e);
+            return Optional.empty();
         }
     }
 

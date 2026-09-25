@@ -21,13 +21,27 @@ final class Scene {
     }
 
     static CompletableFuture<Picture> capture(Plugin plugin, World world, BlockBox box) {
-        int size = Math.max(Layout.MAP_PIXELS, Math.max(box.maxX() - box.minX(), box.maxZ() - box.minZ()) + 1 + MARGIN);
+        View view = View.of(box);
+        int size = Math.max(Layout.MAP_PIXELS, Math.max(view.planeWidth(box), view.planeHeight(box)) + 1 + MARGIN);
         int left = box.centerX() - size / 2;
         int top = box.centerZ() - size / 2;
-        int firstChunkX = left >> 4;
-        int lastChunkX = (left + size - 1) >> 4;
-        int firstChunkZ = (top - 1) >> 4;
-        int lastChunkZ = (top + size - 1) >> 4;
+        int firstChunkX = switch (view) {
+            case TOP, ALONG_Z -> left >> 4;
+            case ALONG_X -> box.minX() >> 4;
+        };
+        int lastChunkX = switch (view) {
+            case TOP, ALONG_Z -> (left + size - 1) >> 4;
+            case ALONG_X -> (box.maxX() + Picture.BACKDROP) >> 4;
+        };
+        int firstChunkZ = switch (view) {
+            case TOP -> (top - 1) >> 4;
+            case ALONG_X -> top >> 4;
+            case ALONG_Z -> box.minZ() >> 4;
+        };
+        int lastChunkZ = switch (view) {
+            case TOP, ALONG_X -> (top + size - 1) >> 4;
+            case ALONG_Z -> (box.maxZ() + Picture.BACKDROP) >> 4;
+        };
         List<CompletableFuture<?>> loads = new ArrayList<>();
         for (int chunkX = firstChunkX; chunkX <= lastChunkX; chunkX++) {
             for (int chunkZ = firstChunkZ; chunkZ <= lastChunkZ; chunkZ++) {
@@ -35,7 +49,9 @@ final class Scene {
             }
         }
         return CompletableFuture.allOf(loads.toArray(CompletableFuture[]::new))
-                .thenApply(loaded -> Picture.surface(world, box.centerX(), box.centerZ(), size).resample(Layout.MAP_PIXELS))
+                .thenApply(loaded -> (view == View.TOP
+                        ? Picture.surface(world, box.centerX(), box.centerZ(), size)
+                        : Picture.side(world, box, view, size)).resample(Layout.MAP_PIXELS))
                 .whenComplete((picture, error) -> {
                     for (int chunkX = firstChunkX; chunkX <= lastChunkX; chunkX++) {
                         for (int chunkZ = firstChunkZ; chunkZ <= lastChunkZ; chunkZ++) {

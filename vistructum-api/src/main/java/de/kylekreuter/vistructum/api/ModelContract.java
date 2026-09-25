@@ -13,7 +13,7 @@ public final class ModelContract {
     /**
      * Model version expected for {@link Source#MASK}.
      */
-    public static final String MASK_MODEL_VERSION = "bf-mask-1";
+    public static final String MASK_MODEL_VERSION = "bf-mask-2";
 
     /**
      * Model version expected for {@link Source#FULLSCAN}.

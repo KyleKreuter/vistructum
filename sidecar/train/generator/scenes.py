@@ -6,7 +6,14 @@ from vistructum_ml.scene import Scene
 from .builds import BUILD_FAMILIES, village
 from .palette import BUILD_BLOCKS, ID_LUMINANCE, block_id
 from .shapes import HARD_NEGATIVE_FAMILIES
-from .symbol import build_irregular_symbol, build_symbol_mask, rotate45, sample_size_thick, sanitize_negative_mask, visible_fraction
+from .symbol import (
+    build_irregular_symbol,
+    build_symbol_mask,
+    rotate45,
+    sample_size_thick,
+    sanitize_negative_mask,
+    visible_fraction,
+)
 from .terrain import generate_terrain
 
 CANVAS = 96

@@ -6,7 +6,14 @@ from vistructum_ml.scene import Scene
 from .builds import BUILD_FAMILIES, village
 from .palette import BUILD_BLOCKS, ID_LUMINANCE, block_id
 from .shapes import HARD_NEGATIVE_FAMILIES
-from .symbol import build_symbol_mask, rotate45, sample_size_thick, sanitize_negative_mask, visible_fraction
+from .symbol import (
+    build_irregular_symbol,
+    build_symbol_mask,
+    rotate45,
+    sample_size_thick,
+    sanitize_negative_mask,
+    visible_fraction,
+)
 from .terrain import generate_terrain
 
 CANVAS = 96
@@ -19,6 +26,7 @@ EXTRA_GAP = 1
 MAX_DECOYS = 6
 
 HOLDOUT_ONLY_HARD_FAMILY = "windmill-3"
+IRREGULAR_SHARE = 0.5
 
 POS_BASE_MODES = (
     "raised", "raised-same", "flush-diff", "flush-same-lum", "carved", "mixed", "outlined",
@@ -107,16 +115,19 @@ def _same_luminance_other_block(rng, ground_id):
 
 
 def _build_symbol_variant(rng, holdout):
-    size_max = 64 if holdout else 60
-    size, thick = sample_size_thick(rng, max_size=size_max)
     mirror = bool(rng.random() < 0.5)
     rot_k = int(rng.integers(0, 4))
-    mask = build_symbol_mask(size, thick, mirror)
+    irregular = bool(rng.random() < IRREGULAR_SHARE)
+    if irregular:
+        mask = build_irregular_symbol(rng, mirror)
+    else:
+        size, thick = sample_size_thick(rng, max_size=64 if holdout else 60)
+        mask = build_symbol_mask(size, thick, mirror)
     mask = np.rot90(mask, rot_k)
     diag = rng.random() < 0.03
     if diag:
         mask = rotate45(mask)
-    return mask, mirror, diag
+    return mask, irregular, diag
 
 
 def _in_crop_top_left(rng, h, w):
@@ -264,9 +275,9 @@ def _stamp_shape(rng, blocks, heights, mask):
 
 
 def _stamp_symbol(rng, blocks, heights, holdout):
-    mask, _mirror, diag = _build_symbol_variant(rng, holdout)
+    mask, irregular, diag = _build_symbol_variant(rng, holdout)
     footprint, suffix, vis = _stamp_shape(rng, blocks, heights, mask)
-    subtype = f"pos-{suffix}"
+    subtype = f"pos-irregular-{suffix}" if irregular else f"pos-{suffix}"
     if diag:
         subtype += "-diag45"
     return footprint, subtype, vis

@@ -6,6 +6,8 @@ from generator.scenes import CROP, make_fullscan_sample, make_mask_sample
 from generator.shapes import HARD_NEGATIVE_FAMILIES
 from generator.shortcut_check import compute_shortcut_auc
 from generator.symbol import (
+    build_irregular_mask,
+    build_irregular_symbol,
     build_symbol_mask,
     is_c4_chiral,
     is_c4_symmetric,
@@ -234,3 +236,45 @@ def test_symbols_are_spread_over_the_crop_not_centered(monkeypatch):
         centers.append((rows.min() + rows.max()) / 2 - MARGIN)
     spread = np.percentile(centers, 90) - np.percentile(centers, 10)
     assert spread > CROP / 4
+
+
+def test_irregular_symbols_cover_small_and_even_sizes():
+    rng = np.random.default_rng(21)
+    shapes = [build_irregular_symbol(rng, bool(i % 2)).shape for i in range(400)]
+    assert min(min(shape) for shape in shapes) == 5
+    assert any(h % 2 == 0 or w % 2 == 0 for h, w in shapes)
+    assert any(h != w for h, w in shapes)
+
+
+
+class _LargestDraws:
+    def random(self):
+        return 0.99
+
+    def integers(self, low, high):
+        return high - 1
+
+
+def test_irregular_symbol_with_equal_arms_is_chiral_and_mirrors_by_hook_side():
+    plain = build_irregular_mask(_LargestDraws(), (1, 1, 1, 1))
+    mirrored = build_irregular_mask(_LargestDraws(), (-1, -1, -1, -1))
+    assert is_c4_chiral(plain)
+    assert is_c4_chiral(mirrored)
+    assert np.array_equal(plain, np.fliplr(mirrored))
+
+def test_irregular_hard_negatives_never_carry_four_matching_hooks():
+    rng = np.random.default_rng(5)
+    for name in ("irregular-partial-hooks", "irregular-alt-hooks"):
+        for _ in range(200):
+            mask = HARD_NEGATIVE_FAMILIES[name](rng)
+            assert mask.any()
+            assert not is_c4_chiral(mask)
+
+
+def test_irregular_positives_carry_their_own_subtype():
+    from evaluate import subtype_groups
+    assert subtype_groups("pos-irregular-raised-on-roof") == ("pos-irregular", "raised")
+    assert subtype_groups("pos-raised-sloppy") == ("pos", "raised")
+    rng = np.random.default_rng(8)
+    subtypes = {make_mask_sample(rng, 1)[2].startswith("pos-irregular-") for _ in range(40)}
+    assert subtypes == {True, False}

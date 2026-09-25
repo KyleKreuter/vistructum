@@ -36,7 +36,16 @@ def build_symbol_mask(size, thick, mirror):
     return canvas
 
 
+def _pad_square(mask):
+    h, w = mask.shape
+    size = max(h, w)
+    out = np.zeros((size, size), dtype=mask.dtype)
+    out[(size - h) // 2:(size - h) // 2 + h, (size - w) // 2:(size - w) // 2 + w] = mask
+    return out
+
+
 def rotate45(mask):
+    mask = _pad_square(mask)
     size = mask.shape[0]
     cy = cx = (size - 1) / 2.0
     ys, xs = np.mgrid[0:size, 0:size]
@@ -89,3 +98,56 @@ def sanitize_negative_mask(mask, rng):
         out[r, c] = False
         guard += 1
     return out
+
+
+
+SMALL_ARM_SHARE = 0.45
+MAX_ARM = 30
+MAX_ARM_RATIO = 2.5
+MAX_HOOK_RATIO = 1.3
+HOOK_SHIFT_SHARE = 0.2
+
+
+def sample_irregular_arms(rng):
+    if rng.random() < SMALL_ARM_SHARE:
+        base = int(rng.integers(2, 5))
+    else:
+        base = int(rng.integers(2, MAX_ARM + 1))
+    thick = int(rng.integers(1, max(1, base // 3) + 1))
+    low = max(thick + 1, int(np.ceil(base / MAX_ARM_RATIO)))
+    high = max(low, min(MAX_ARM, int(base * MAX_ARM_RATIO)))
+    arms = [int(rng.integers(low, high + 1)) if rng.random() < 0.6 else max(low, base) for _ in range(4)]
+    return arms, thick
+
+
+def _rotate_clockwise(cells, thick, turns):
+    for _ in range(turns):
+        cells = [(c, thick - 1 - r) for r, c in cells]
+    return cells
+
+
+def _upward_arm(rng, arm, thick, hook_side):
+    cells = [(r, c) for r in range(-arm, 0) for c in range(thick)]
+    if hook_side == 0:
+        return cells
+    shift = 1 if arm > thick and rng.random() < HOOK_SHIFT_SHARE else 0
+    hook = int(rng.integers(1, max(1, round(arm * MAX_HOOK_RATIO)) + 1))
+    columns = range(thick, thick + hook) if hook_side > 0 else range(-hook, 0)
+    cells += [(r, c) for r in range(-arm + shift, -arm + shift + thick) for c in columns]
+    return cells
+
+
+def build_irregular_mask(rng, hook_sides):
+    arms, thick = sample_irregular_arms(rng)
+    cells = [(r, c) for r in range(thick) for c in range(thick)]
+    for turn, (arm, side) in enumerate(zip(arms, hook_sides)):
+        cells += _rotate_clockwise(_upward_arm(rng, arm, thick, side), thick, turn)
+    rows = np.array([r for r, _ in cells])
+    cols = np.array([c for _, c in cells])
+    mask = np.zeros((rows.max() - rows.min() + 1, cols.max() - cols.min() + 1), dtype=bool)
+    mask[rows - rows.min(), cols - cols.min()] = True
+    return mask
+
+
+def build_irregular_symbol(rng, mirror):
+    return build_irregular_mask(rng, (-1 if mirror else 1,) * 4)

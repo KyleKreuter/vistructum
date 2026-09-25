@@ -1,7 +1,7 @@
 import numpy as np
 from generator.areas import make_area
 from generator.rng import rng_for
-from scan_eval import calibrate, calibrate_prefilter, cascade, refined_fraction, score_at
+from scan_eval import VOTES, calibrate, calibrate_prefilter, cascade, refined_fraction, score_at, sweep
 
 from vistructum_ml.gates import ScanGate
 
@@ -84,3 +84,9 @@ def test_areas_place_disjoint_symbols_with_truth_boxes():
 def test_negative_areas_have_no_truth():
     _, truth, _ = make_area(rng_for(3, "scan", 1), "fullscan", 256, 0)
     assert truth == []
+
+
+def test_mask_calibration_only_offers_a_single_vote():
+    results = [area([(0, 0)], [0.97], [(10, 10, 20, 20)])]
+    assert {row["min_votes"] for row in sweep(results, VOTES["mask"])} == {1}
+    assert {row["min_votes"] for row in sweep(results, VOTES["fullscan"])} == {1, 2, 3}

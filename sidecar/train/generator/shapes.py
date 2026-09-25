@@ -1,6 +1,6 @@
 import numpy as np
 
-from .symbol import sample_size_thick
+from .symbol import build_irregular_mask, sample_size_thick
 
 
 def _canvas(size):
@@ -250,6 +250,18 @@ def fylfot_mirror(rng, max_size=None):
     return canvas
 
 
+def irregular_partial_hooks(rng, max_size=None):
+    hooked = {int(i) for i in rng.choice(4, size=int(rng.integers(0, 3)), replace=False)}
+    side = 1 if rng.random() < 0.5 else -1
+    return build_irregular_mask(rng, tuple(side if arm in hooked else 0 for arm in range(4)))
+
+
+def irregular_alternating_hooks(rng, max_size=None):
+    side = 1 if rng.random() < 0.5 else -1
+    flipped = int(rng.integers(0, 2))
+    return build_irregular_mask(rng, tuple(-side if arm % 2 == flipped else side for arm in range(4)))
+
+
 HARD_NEGATIVE_FAMILIES = {
     "greek-cross": greek_cross,
     "latin-cross": latin_cross,
@@ -259,6 +271,8 @@ HARD_NEGATIVE_FAMILIES = {
     "t-shapes-d4": t_shapes_d4,
     "plus-alt-hooks": plus_alternating_hooks,
     "plus-partial-hooks": plus_partial_hooks,
+    "irregular-partial-hooks": irregular_partial_hooks,
+    "irregular-alt-hooks": irregular_alternating_hooks,
     "windmill-3": windmill3,
     "spiral": spiral,
     "square-spiral": square_spiral,

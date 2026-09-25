@@ -50,7 +50,7 @@ class FindingStoreTest {
     }
 
     private static FindingCandidate candidate(String world, BlockBox box) {
-        return new FindingCandidate(Source.MASK, world, box, 0.97, 2, Set.of(UUID.randomUUID()), "Achse Y", "bf-mask-1",
+        return new FindingCandidate(Source.MASK, world, box, 0.97, 2, Set.of(UUID.randomUUID()), "Achse Y", "bf-mask-2",
                 new Preview(2, 1, new byte[]{40, (byte) 235}));
     }
 

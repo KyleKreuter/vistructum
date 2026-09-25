@@ -20,7 +20,7 @@ from vistructum_ml.metadata import read_session_metadata, validate
 AREA_SIZE = {"mask": 128, "fullscan": 256}
 THRESHOLDS = tuple(float(t) for t in np.round(np.concatenate([
     np.arange(0.30, 0.90, 0.05), np.arange(0.90, 0.99, 0.01), np.arange(0.99, 0.9999, 0.001)]), 4))
-VOTES = (1, 2, 3)
+VOTES = {"mask": (1,), "fullscan": (1, 2, 3)}
 META_SCAN = "vistructum.scan_calibration"
 META_PREFILTER_SCAN = "vistructum.prefilter_calibration"
 CALIBRATION_MARGIN = 0.6
@@ -120,11 +120,11 @@ def score_at(results, threshold, min_votes, area_clusters=None):
     }
 
 
-def sweep(results):
+def sweep(results, vote_levels):
     table = []
     for threshold in THRESHOLDS:
         area_clusters = [clusters(area["positions"], area["scores"], threshold) for area in results]
-        table += [score_at(results, threshold, votes, area_clusters) for votes in VOTES]
+        table += [score_at(results, threshold, votes, area_clusters) for votes in vote_levels]
     return table
 
 
@@ -199,7 +199,7 @@ def run(model_path, split, negatives, positives, seed, workers, holdout=False, w
     gate = SCAN_GATES[kind]
     started = time.time()
     results = collect(model_path, kind, seed, split, negatives, positives, workers, holdout, full=write)
-    table = sweep(results)
+    table = sweep(results, VOTES[kind])
     report = {"kind": kind, "split": split, "seed": seed, "holdout": holdout, "negative_areas": negatives,
               "positive_areas": positives, "area_size": AREA_SIZE[kind], "seconds": round(time.time() - started, 1),
               "refined_fraction": refined_fraction(results)}

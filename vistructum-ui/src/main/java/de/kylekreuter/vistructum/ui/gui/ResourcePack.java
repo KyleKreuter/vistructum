@@ -61,6 +61,13 @@ public record ResourcePack(byte[] zip, String sha1) {
         text(files, "assets/minecraft/items/paper.json", "{\"model\": {\"type\": \"minecraft:range_dispatch\", "
                 + "\"property\": \"minecraft:custom_model_data\", \"index\": 0, \"entries\": [" + String.join(", ", entries)
                 + "], \"fallback\": {\"type\": \"minecraft:model\", \"model\": \"minecraft:item/paper\"}}}");
+        text(files, "assets/minecraft/models/item/filled_map.json", "{\"parent\": \"minecraft:item/generated\", "
+                + "\"textures\": {\"layer0\": \"minecraft:item/filled_map\", \"layer1\": \"minecraft:item/filled_map_markings\"}, "
+                + "\"overrides\": [" + String.join(", ", overrides) + "]}");
+        text(files, "assets/minecraft/items/filled_map.json", "{\"model\": {\"type\": \"minecraft:range_dispatch\", "
+                + "\"property\": \"minecraft:custom_model_data\", \"index\": 0, \"entries\": [" + String.join(", ", entries)
+                + "], \"fallback\": {\"type\": \"minecraft:model\", \"model\": \"minecraft:item/filled_map\", \"tints\": ["
+                + "{\"type\": \"minecraft:constant\", \"value\": -1}, {\"type\": \"minecraft:map_color\", \"default\": 4603950}]}}}");
         byte[] zip = zip(files);
         return new ResourcePack(zip, sha1(zip));
     }

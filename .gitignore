@@ -1,5 +1,6 @@
 # Lokale Planung und Dokumentation bleiben aus dem Repo
 *.md
+!README.md
 
 # Secrets und lokale Konfiguration
 .env

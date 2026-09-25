@@ -69,6 +69,35 @@ public final class FindingStore {
     public CompletableFuture<FindingSlice> query(FindingQuery query) {
         StringBuilder sql = new StringBuilder("SELECT " + COLUMNS + " FROM findings WHERE 1 = 1");
         List<Object> arguments = new ArrayList<>();
+        appendCriteria(query, sql, arguments);
+        query.beforeId().ifPresent(id -> {
+            sql.append(" AND id < ?");
+            arguments.add(id);
+        });
+        sql.append(" ORDER BY id DESC LIMIT ?");
+        arguments.add(query.limit() + 1);
+        return database.transaction(connection -> {
+            List<Finding> rows = list(connection, sql.toString(), bindAll(arguments));
+            boolean more = rows.size() > query.limit();
+            return new FindingSlice(more ? rows.subList(0, query.limit()) : rows, more);
+        });
+    }
+
+    public CompletableFuture<Long> count(FindingQuery query) {
+        StringBuilder sql = new StringBuilder("SELECT count(*) FROM findings WHERE 1 = 1");
+        List<Object> arguments = new ArrayList<>();
+        appendCriteria(query, sql, arguments);
+        return database.transaction(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+                bindAll(arguments).bind(statement);
+                try (ResultSet rows = statement.executeQuery()) {
+                    return rows.getLong(1);
+                }
+            }
+        });
+    }
+
+    private static void appendCriteria(FindingQuery query, StringBuilder sql, List<Object> arguments) {
         query.world().ifPresent(world -> {
             sql.append(" AND world = ?");
             arguments.add(world);
@@ -87,30 +116,14 @@ public final class FindingStore {
             sql.append(" AND created_at >= ?");
             arguments.add(since.toEpochMilli());
         });
-        query.beforeId().ifPresent(id -> {
-            sql.append(" AND id < ?");
-            arguments.add(id);
-        });
-        sql.append(" ORDER BY id DESC LIMIT ?");
-        arguments.add(query.limit() + 1);
-        return database.transaction(connection -> {
-            List<Finding> rows = list(connection, sql.toString(), statement -> {
-                for (int i = 0; i < arguments.size(); i++) {
-                    statement.setObject(i + 1, arguments.get(i));
-                }
-            });
-            boolean more = rows.size() > query.limit();
-            return new FindingSlice(more ? rows.subList(0, query.limit()) : rows, more);
-        });
     }
 
-    public CompletableFuture<Integer> countOpen() {
-        return database.transaction(connection -> {
-            try (Statement statement = connection.createStatement();
-                 ResultSet rows = statement.executeQuery("SELECT count(*) FROM findings WHERE verdict IS NULL")) {
-                return rows.getInt(1);
+    private static Binder bindAll(List<Object> arguments) {
+        return statement -> {
+            for (int i = 0; i < arguments.size(); i++) {
+                statement.setObject(i + 1, arguments.get(i));
             }
-        });
+        };
     }
 
     public CompletableFuture<Optional<Finding>> review(long id, Verdict verdict, String reviewer, Instant now) {

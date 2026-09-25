@@ -83,14 +83,15 @@ class FindingStoreTest {
     void reviewClosesAFinding() throws Exception {
         Finding stored = store.insertUnlessDuplicate(candidate("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE)
                 .get().orElseThrow();
-        assertEquals(1, store.countOpen().get());
+        assertEquals(1L, store.count(FindingQuery.open()).get());
 
         Finding reviewed = store.review(stored.id(), Verdict.FALSE_ALARM, "Staff", NOW.plusSeconds(60)).get()
                 .orElseThrow();
         assertFalse(reviewed.open());
         assertEquals(Verdict.FALSE_ALARM, reviewed.review().orElseThrow().verdict());
         assertEquals("Staff", reviewed.review().orElseThrow().reviewer());
-        assertEquals(0, store.countOpen().get());
+        assertEquals(0L, store.count(FindingQuery.open()).get());
+        assertEquals(1L, store.count(FindingQuery.all().state(ReviewState.REVIEWED).before(stored.id() + 1).limit(1)).get());
         assertTrue(store.query(FindingQuery.open()).get().findings().isEmpty());
         assertEquals(1, store.query(FindingQuery.all().state(ReviewState.REVIEWED).since(NOW)).get().findings().size());
     }

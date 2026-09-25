@@ -1,7 +1,7 @@
 package de.kylekreuter.vistructum.ui;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import de.kylekreuter.vistructum.ui.text.Message;
+import de.kylekreuter.vistructum.ui.text.Messages;
 import org.bukkit.command.CommandSender;
 
 import java.util.Objects;
@@ -14,25 +14,17 @@ public final class Replies {
     private Replies() {
     }
 
-    public static <T> void when(CommandSender sender, CompletableFuture<T> future, Consumer<T> then) {
+    public static <T> void when(CommandSender sender, Messages messages, CompletableFuture<T> future, Consumer<T> then) {
         future.whenComplete((value, error) -> {
             if (error != null) {
-                error(sender, "Fehler: " + message(error));
+                sender.sendMessage(messages.chat(Message.COMMAND_FAILED, Messages.text("reason", reason(error))));
             } else {
                 then.accept(value);
             }
         });
     }
 
-    public static void info(CommandSender sender, String text) {
-        sender.sendMessage(ChatViews.prefix().append(Component.text(text, NamedTextColor.GRAY)));
-    }
-
-    public static void error(CommandSender sender, String text) {
-        sender.sendMessage(ChatViews.prefix().append(Component.text(text, NamedTextColor.RED)));
-    }
-
-    private static String message(Throwable error) {
+    private static String reason(Throwable error) {
         Throwable cause = error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
         return Objects.requireNonNullElse(cause.getMessage(), cause.getClass().getSimpleName());
     }

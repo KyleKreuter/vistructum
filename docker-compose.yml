@@ -24,6 +24,7 @@ services:
       dockerfile: vistructum-core/Dockerfile
     ports:
       - "25565:25565"
+      - "${PACK_PORT:-8765}:8765"
     environment:
       EULA: "TRUE"
       TYPE: PAPER
@@ -32,11 +33,14 @@ services:
       ONLINE_MODE: "FALSE"
       SIDECAR_HOST: sidecar
       SIDECAR_PORT: "8000"
+      MODRINTH_PROJECTS: "${MODRINTH_PROJECTS:-viaversion,viabackwards}"
     volumes:
       - vistructum-state:/data/plugins/vistructum
+      - vistructum-ui-config:/data/plugins/vistructum-ui
     depends_on:
       sidecar:
         condition: service_healthy
 
 volumes:
   vistructum-state:
+  vistructum-ui-config:

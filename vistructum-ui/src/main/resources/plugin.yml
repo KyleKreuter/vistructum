@@ -3,7 +3,7 @@ version: '${project.version}'
 main: de.kylekreuter.vistructum.ui.VistructumUi
 api-version: '1.21'
 author: Kyle Kreuter
-description: Chat review for Vistructum findings, built on the Vistructum API.
+description: Review menu and chat output for Vistructum findings, built on the Vistructum API.
 depend: [vistructum]
 commands:
   vis:

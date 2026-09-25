@@ -1,0 +1,86 @@
+prefix: "<gradient:#A8F5A8:#1B6E1B>[vistructum]</gradient> "
+date-format: "d MMM yyyy, HH:mm"
+
+command:
+  no-permission: "<prefix><red>This action is not permitted.</red>"
+  player-only: "<prefix><red>This command can only be run by a player.</red>"
+  failed: "<prefix><red>The request failed: <reason></red>"
+  usage: "<prefix><gray>Usage: /vis [status | review [count] | show <id> | tp <id> | confirm <id> | falsealarm <id> | scan [world|stop]]</gray>"
+  id-missing: "<prefix><red>A finding ID is required, for example /vis <subcommand> 12.</red>"
+  count-invalid: "<prefix><red>The count must be a positive number.</red>"
+  finding-missing: "<prefix><red>Finding #<id> was not found.</red>"
+  world-not-loaded: "<prefix><red>World <world> is not loaded.</red>"
+  world-unknown: "<prefix><red>World <world> is not known.</red>"
+
+status:
+  sidecar: "<prefix><gray>The sidecar is reported as <status>, models: <models>.</gray>"
+  sidecar-unreachable: "<prefix><red>The sidecar could not be reached: <reason></red>"
+  changes: "<prefix><gray><count> block changes are tracked.</gray>"
+  open: "<prefix><gray><count> findings are open.</gray>"
+  no-scan: "<prefix><gray>No scan is running.</gray>"
+
+review:
+  empty: "<prefix><gray>No open findings were found.</gray>"
+  header: "<prefix><gray><count> open findings are listed, newest first:</gray>"
+  line: "<prefix><gray>#<id> in <world> at <location>, <probability>, <source>, detected <age> ago.</gray>"
+  more: "<prefix><gray>More open findings are available.</gray>"
+
+finding:
+  detail: "<prefix><gray>Finding #<id> was detected in <world> at <location> on <detected> (<probability>, <source>). Builder: <builder>.</gray>"
+  unreviewed: "<prefix><gray>No verdict has been recorded for finding #<id>.</gray>"
+  created: "<prefix><yellow>Finding #<id> was detected in <world> at <location> (<probability>, <source>).</yellow> <click:run_command:'/vis show <id>'><hover:show_text:'/vis show <id>'><gray>[Open]</gray></hover></click> <click:run_command:'/vis tp <id>'><hover:show_text:'/vis tp <id>'><aqua>[TP]</aqua></hover></click>"
+  confirmed: "<prefix><gray>Finding #<id> was confirmed by <reviewer>.</gray>"
+  false-alarm: "<prefix><gray>Finding #<id> was marked as a false alarm by <reviewer>.</gray>"
+
+scan:
+  planning: "<prefix><gray>Scan #<id> of <world> is being planned.</gray>"
+  progress: "<prefix><gray>Scan #<id> of <world>: <done> of <total> tiles are checked, <findings> findings were created, <failures> tiles failed.</gray>"
+  queued: "<prefix><gray>Scan #<id> of <world> was queued. Progress is shown by /vis status.</gray>"
+  already-running: "<prefix><gray>A scan of <world> is already running.</gray>"
+  cancelled: "<prefix><gray><count> scans were cancelled.</gray>"
+  done: "<prefix><gray>Scan #<id> of <world> was completed: <findings> findings were created, <failures> tiles failed.</gray>"
+  stopped: "<prefix><gray>Scan #<id> of <world> was cancelled: <findings> findings were created, <failures> tiles failed.</gray>"
+  failed: "<prefix><red>Scan #<id> of <world> was stopped by an error: <findings> findings were created, <failures> tiles failed.</red>"
+
+pack:
+  prompt: "<gray>The vistructum review menu is displayed with this resource pack.</gray>"
+
+source:
+  mask: "Live check"
+  fullscan: "Fullscan"
+
+age:
+  minutes: "<count> min"
+  hours: "<count> h"
+  days: "<count> d"
+
+menu:
+  finding: "Finding #<id>"
+  builder-unknown: "Unknown"
+  builder-more: "<name> +<count>"
+  field-world: "World"
+  field-location: "Location"
+  field-detected: "Detected"
+  field-probability: "Probability"
+  field-source: "Source"
+  field-confirmed: "Confirmed by"
+  field-false-alarm: "False alarm by"
+  confirm: "<green>Confirm</green>"
+  false-alarm: "<red>False alarm</red>"
+  teleport: "<aqua>Teleport</aqua>"
+  back: "<white>Back to the list</white>"
+  previous: "<white>Previous page</white>"
+  next: "<white>Next page</white>"
+  page: "Page <page> of <pages>"
+  filter-open: "<gold>Open findings</gold>"
+  filter-open-hint: "<gray>Click to show closed findings.</gray>"
+  filter-closed: "<gray>Closed findings</gray>"
+  filter-closed-hint: "<gray>Click to show open findings.</gray>"
+  card: "<white>Finding #<id></white>"
+  card-world: "<gray>World: <world></gray>"
+  card-location: "<gray>Location: <location></gray>"
+  card-probability: "<gray>Probability: <probability></gray>"
+  card-age: "<gray>Detected <age> ago</gray>"
+  card-confirmed: "<red>Confirmed by <reviewer></red>"
+  card-false-alarm: "<gray>False alarm by <reviewer></gray>"
+  card-hint: "<dark_gray>Click to open.</dark_gray>"

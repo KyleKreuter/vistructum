@@ -36,6 +36,19 @@ public interface Findings {
     CompletableFuture<Page<Finding>> find(FindingQuery query);
 
     /**
+     * Counts the findings that match the given query.
+     *
+     * <p>World, source, review state and creation time are applied as in {@link #find(FindingQuery)}. The page
+     * size {@link FindingQuery#limit()} and the paging cursor {@link FindingQuery#beforeId()} are ignored, so the
+     * result is the total over all pages.
+     *
+     * @param query selection criteria
+     * @return a future completing with the number of matching findings
+     * @throws NullPointerException if {@code query} is {@code null}
+     */
+    CompletableFuture<Long> count(FindingQuery query);
+
+    /**
      * Records a verdict for a finding.
      *
      * <p>An existing verdict is replaced. The review time is taken from the server clock. After the verdict has

@@ -69,7 +69,7 @@ def make_client(monkeypatch, model_dir, ort_threads=None):
 
 @pytest.fixture
 def both_models_dir(tmp_path):
-    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5)
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-2", threshold=0.5)
     build_onnx_model(tmp_path / "scan.onnx", 4, "fullscan", "bf-scan-2", threshold=0.5)
     return tmp_path
 
@@ -83,7 +83,7 @@ def test_health_ok_when_both_loaded(monkeypatch, both_models_dir):
 
 
 def test_health_degraded_when_one_missing(monkeypatch, tmp_path):
-    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5)
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-2", threshold=0.5)
     client = make_client(monkeypatch, tmp_path)
     with client:
         resp = client.get("/health")
@@ -102,7 +102,7 @@ def test_health_503_when_none_loaded(monkeypatch, tmp_path):
 
 
 def test_invalid_model_is_skipped_not_fatal(monkeypatch, tmp_path):
-    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5)
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-2", threshold=0.5)
     build_onnx_model(tmp_path / "broken.onnx", 1, "fullscan", "bf-scan-broken", drop_key="vistructum.threshold")
     client = make_client(monkeypatch, tmp_path)
     with client:
@@ -112,7 +112,7 @@ def test_invalid_model_is_skipped_not_fatal(monkeypatch, tmp_path):
 
 
 def test_model_with_outdated_channel_layout_is_skipped(monkeypatch, tmp_path):
-    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5)
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-2", threshold=0.5)
     build_onnx_model(tmp_path / "scan.onnx", 3, "fullscan", "bf-scan-1", threshold=0.5)
     client = make_client(monkeypatch, tmp_path)
     with client:
@@ -120,8 +120,8 @@ def test_model_with_outdated_channel_layout_is_skipped(monkeypatch, tmp_path):
 
 
 def test_duplicate_kind_fails_startup(monkeypatch, tmp_path):
-    build_onnx_model(tmp_path / "a-mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5)
-    build_onnx_model(tmp_path / "b-mask.onnx", 1, "mask", "bf-mask-1", threshold=0.4)
+    build_onnx_model(tmp_path / "a-mask.onnx", 1, "mask", "bf-mask-2", threshold=0.5)
+    build_onnx_model(tmp_path / "b-mask.onnx", 1, "mask", "bf-mask-2", threshold=0.4)
     client = make_client(monkeypatch, tmp_path)
     with pytest.raises(RuntimeError, match="duplicate"), client:
         pass
@@ -133,7 +133,7 @@ def test_version_reports_metadata_not_hardcoded(monkeypatch, both_models_dir):
         resp = client.get("/version")
         assert resp.status_code == 200
         body = resp.json()
-        assert body["mask"]["model_version"] == "bf-mask-1"
+        assert body["mask"]["model_version"] == "bf-mask-2"
         assert body["mask"]["labels"] == ["ok", "hakenkreuz"]
         assert body["mask"]["threshold"] == 0.5
         assert body["mask"]["feature_spec"] == "fs-1"
@@ -143,7 +143,7 @@ def test_version_reports_metadata_not_hardcoded(monkeypatch, both_models_dir):
 
 
 def test_version_reports_min_votes_from_metadata(monkeypatch, tmp_path):
-    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5, min_votes=3)
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-2", threshold=0.5, min_votes=3)
     client = make_client(monkeypatch, tmp_path)
     with client:
         resp = client.get("/version")
@@ -159,7 +159,7 @@ def test_infer_mask_flagged_true_for_heavily_modified_area(monkeypatch, both_mod
         assert resp.status_code == 200
         body = resp.json()
         assert body["kind"] == "mask"
-        assert body["model_version"] == "bf-mask-1"
+        assert body["model_version"] == "bf-mask-2"
         assert body["windows"] == 1
         assert body["flagged"] is True
         assert body["max_score"] > body["threshold"]
@@ -168,7 +168,7 @@ def test_infer_mask_flagged_true_for_heavily_modified_area(monkeypatch, both_mod
 
 
 def test_infer_cascade_refines_only_windows_above_the_prefilter(monkeypatch, tmp_path):
-    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.6,
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-2", threshold=0.6,
                      extra_meta={"vistructum.tta": "1", "vistructum.prefilter": "0.5"})
     client = make_client(monkeypatch, tmp_path)
     with client:
@@ -225,7 +225,7 @@ def test_infer_missing_fullscan_fields_returns_422(monkeypatch, both_models_dir)
 
 
 def test_infer_unloaded_kind_returns_503(monkeypatch, tmp_path):
-    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5)
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-2", threshold=0.5)
     client = make_client(monkeypatch, tmp_path)
     with client:
         n = 64 * 64
@@ -283,7 +283,7 @@ def test_infer_detections_shape_sorted_by_score_and_capped(monkeypatch, both_mod
 
 
 def test_infer_isolated_single_window_not_flagged_when_min_votes_two(monkeypatch, tmp_path):
-    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5, min_votes=2)
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-2", threshold=0.5, min_votes=2)
     client = make_client(monkeypatch, tmp_path)
     with client:
         modified = b64_uint8(np.ones(64 * 64, dtype=np.uint8))
@@ -297,7 +297,7 @@ def test_infer_isolated_single_window_not_flagged_when_min_votes_two(monkeypatch
 
 
 def test_infer_overlapping_windows_flagged_when_min_votes_two(monkeypatch, tmp_path):
-    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-1", threshold=0.5, min_votes=2)
+    build_onnx_model(tmp_path / "mask.onnx", 1, "mask", "bf-mask-2", threshold=0.5, min_votes=2)
     client = make_client(monkeypatch, tmp_path)
     with client:
         modified = np.ones((64 + GRID, 64), dtype=np.uint8)

@@ -7,7 +7,7 @@ if [[ -z "${KAGGLE_USERNAME:-}" ]]; then
 fi
 
 TRAIN_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONFIGS="${1:-configs/mask-v1.yaml,configs/scan-v1.yaml}"
+CONFIGS="${1:-configs/mask-v2.yaml,configs/scan-v1.yaml}"
 REF="${2:-$(git -C "$TRAIN_DIR" rev-parse HEAD)}"
 SLUG="${KERNEL_SLUG:-vistructum-train}"
 

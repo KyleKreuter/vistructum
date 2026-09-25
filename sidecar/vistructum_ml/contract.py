@@ -20,7 +20,7 @@ class ModelKind:
     offset: tuple
 
 
-MASK = ModelKind("mask", "bf-mask-1", 1, (1.0,), (0.0,))
+MASK = ModelKind("mask", "bf-mask-2", 1, (1.0,), (0.0,))
 FULLSCAN = ModelKind(
     "fullscan",
     "bf-scan-2",

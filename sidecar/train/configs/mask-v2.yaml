@@ -1,6 +1,6 @@
 kind: mask
-data_dir: runs/data/mask-v1
-out_dir: runs/mask-v1
+data_dir: runs/data/mask-v2
+out_dir: runs/mask-v2
 widths: [16, 32, 48, 64, 96]
 dropout: 0.1
 epochs: 30

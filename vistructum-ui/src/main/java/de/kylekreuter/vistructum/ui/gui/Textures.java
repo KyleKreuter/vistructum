@@ -21,6 +21,11 @@ final class Textures {
     private static final Color BUTTON = new Color(0x4A, 0x4A, 0x4A);
     private static final Color ARROW = new Color(0xA0, 0xA0, 0xA0);
     private static final Color ARROW_DISABLED = new Color(0x5A, 0x5A, 0x5A);
+    private static final Color BAR_EDGE = new Color(0x1E, 0x1E, 0x1E);
+    private static final Color BAR_WELL = new Color(0x3A, 0x3A, 0x3A);
+    private static final Color BAR_LIGHT = new Color(0x8F, 0xE3, 0x9B);
+    private static final Color BAR_FILL = new Color(0x3F, 0xA3, 0x4D);
+    private static final Color BAR_SHADE = new Color(0x2A, 0x7A, 0x36);
 
     private Textures() {
     }
@@ -28,6 +33,31 @@ final class Textures {
     static byte[] pixel(int height) {
         BufferedImage image = new BufferedImage(1, height, BufferedImage.TYPE_INT_ARGB);
         image.setRGB(0, 0, 0xFFFFFFFF);
+        return png(image);
+    }
+
+    static byte[] barFrame() {
+        BufferedImage image = new BufferedImage(ProgressBar.FRAME_WIDTH, ProgressBar.FRAME_HEIGHT,
+                BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = image.createGraphics();
+        g.setColor(BAR_EDGE);
+        g.fillRect(0, 0, ProgressBar.FRAME_WIDTH, ProgressBar.FRAME_HEIGHT);
+        g.setColor(BAR_WELL);
+        g.fillRect(1, 1, ProgressBar.FILL_WIDTH, ProgressBar.FILL_HEIGHT);
+        g.dispose();
+        return png(image);
+    }
+
+    static byte[] barFill(int width) {
+        BufferedImage image = new BufferedImage(width, ProgressBar.FILL_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = image.createGraphics();
+        g.setColor(BAR_FILL);
+        g.fillRect(0, 0, width, ProgressBar.FILL_HEIGHT);
+        g.setColor(BAR_LIGHT);
+        g.fillRect(0, 0, width, 1);
+        g.setColor(BAR_SHADE);
+        g.fillRect(0, ProgressBar.FILL_HEIGHT - 1, width, 1);
+        g.dispose();
         return png(image);
     }
 

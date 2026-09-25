@@ -7,11 +7,13 @@ import java.util.List;
 final class Glyphs {
 
     static final Key FONT = Key.key("vistructum", "gui");
+    static final Key BAR_LABEL = Key.key("vistructum", "bar_label");
     static final char LIST_BACKGROUND = '\uE201';
     static final char DETAIL_BACKGROUND = '\uE202';
     static final char SCENE_PANEL = '\uE203';
     static final char INFO_PANEL = '\uE204';
     static final char LOGO = '\uE205';
+    static final char BAR_FRAME = '\uE206';
     static final int BACKGROUND_ASCENT = 13;
     static final List<Integer> PIXEL_SIZES = List.of(2, 4);
     static final int PIXEL_TEXTURE_HEIGHT = 16;
@@ -20,6 +22,10 @@ final class Glyphs {
     static final char NEGATIVE_ONE = shiftChar(-1);
 
     private Glyphs() {
+    }
+
+    static char barFill(int step) {
+        return (char) (0xE210 + step);
     }
 
     static char pixel(int pixelSize, int top) {

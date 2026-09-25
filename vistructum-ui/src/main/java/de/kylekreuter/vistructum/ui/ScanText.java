@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.ui;
 
 import de.kylekreuter.vistructum.api.ScanJob;
+import de.kylekreuter.vistructum.api.ScanStatus;
 import de.kylekreuter.vistructum.ui.text.Message;
 import de.kylekreuter.vistructum.ui.text.Messages;
 import net.kyori.adventure.text.Component;
@@ -24,6 +25,13 @@ public final class ScanText {
             case CANCELLED -> Message.SCAN_STOPPED;
             case FAILED -> Message.SCAN_FAILED;
         }, values(job));
+    }
+
+    public static double completion(ScanJob job) {
+        if (job.status() == ScanStatus.DONE) {
+            return 1.0;
+        }
+        return job.tilesTotal() == 0 ? 0.0 : Math.min(1.0, (double) job.tilesDone() / job.tilesTotal());
     }
 
     public static TagResolver values(ScanJob job) {

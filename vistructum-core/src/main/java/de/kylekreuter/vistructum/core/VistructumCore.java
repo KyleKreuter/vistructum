@@ -4,6 +4,9 @@ import de.kylekreuter.vistructum.api.InferenceMode;
 import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
+import de.kylekreuter.vistructum.core.face.FaceCache;
+import de.kylekreuter.vistructum.core.face.FaceStore;
+import de.kylekreuter.vistructum.core.face.MojangFaces;
 import de.kylekreuter.vistructum.core.inference.FallbackInference;
 import de.kylekreuter.vistructum.core.inference.Inference;
 import de.kylekreuter.vistructum.core.inference.InferenceSettings;
@@ -88,7 +91,8 @@ public final class VistructumCore extends JavaPlugin {
         }
 
         getServer().getServicesManager().register(Vistructum.class,
-                new VistructumService(mainThread, changes, findings, scans, scanner, inference, clock), this,
+                new VistructumService(mainThread, changes, findings, scans, scanner, inference,
+                        new FaceCache(new FaceStore(database), new MojangFaces(), clock), clock), this,
                 ServicePriority.Normal);
     }
 

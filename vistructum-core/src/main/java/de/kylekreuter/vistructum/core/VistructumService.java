@@ -6,6 +6,8 @@ import de.kylekreuter.vistructum.api.FindingReviewedEvent;
 import de.kylekreuter.vistructum.api.InferenceStatus;
 import de.kylekreuter.vistructum.api.Findings;
 import de.kylekreuter.vistructum.api.Page;
+import de.kylekreuter.vistructum.api.PlayerFace;
+import de.kylekreuter.vistructum.api.Players;
 import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.ScanCause;
 import de.kylekreuter.vistructum.api.ScanJob;
@@ -16,6 +18,7 @@ import de.kylekreuter.vistructum.api.VistructumStatus;
 import de.kylekreuter.vistructum.core.alert.FindingSlice;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
 import de.kylekreuter.vistructum.core.alert.PreviewImage;
+import de.kylekreuter.vistructum.core.face.FaceCache;
 import de.kylekreuter.vistructum.core.scan.ScanStore;
 import de.kylekreuter.vistructum.core.scan.WorldScanner;
 import de.kylekreuter.vistructum.core.inference.Inference;
@@ -26,6 +29,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -39,18 +43,22 @@ public final class VistructumService implements Vistructum {
     private final ScanStore scanStore;
     private final WorldScanner scanner;
     private final Inference inference;
+    private final FaceCache faces;
     private final Clock clock;
     private final Findings findings = new StoredFindings();
     private final Scans scans = new ScheduledScans();
+    private final Players players = new CachedPlayers();
 
     public VistructumService(MainThread mainThread, BlockChangeStore changes, FindingStore findingStore,
-                             ScanStore scanStore, WorldScanner scanner, Inference inference, Clock clock) {
+                             ScanStore scanStore, WorldScanner scanner, Inference inference, FaceCache faces,
+                             Clock clock) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.changes = Objects.requireNonNull(changes, "changes");
         this.findingStore = Objects.requireNonNull(findingStore, "findingStore");
         this.scanStore = Objects.requireNonNull(scanStore, "scanStore");
         this.scanner = Objects.requireNonNull(scanner, "scanner");
         this.inference = Objects.requireNonNull(inference, "inference");
+        this.faces = Objects.requireNonNull(faces, "faces");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
@@ -62,6 +70,11 @@ public final class VistructumService implements Vistructum {
     @Override
     public Scans scans() {
         return scans;
+    }
+
+    @Override
+    public Players players() {
+        return players;
     }
 
     @Override
@@ -167,6 +180,17 @@ public final class VistructumService implements Vistructum {
         @Override
         public CompletableFuture<List<ScanJob>> cancelAll() {
             return mainThread.handOff(mainThread.supply(scanner::cancel).thenCompose(cancelled -> cancelled).thenApply(List::copyOf));
+        }
+    }
+
+    private final class CachedPlayers implements Players {
+
+        @Override
+        public CompletableFuture<PlayerFace> face(UUID player) {
+            Objects.requireNonNull(player, "player");
+            CompletableFuture<Optional<String>> knownName =
+                    mainThread.supply(() -> Optional.ofNullable(Bukkit.getOfflinePlayer(player).getName()));
+            return mainThread.handOff(knownName.thenCompose(name -> faces.face(player, name)));
         }
     }
 }

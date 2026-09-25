@@ -1,7 +1,8 @@
 kind: mask
 data_dir: runs/data/mask-v2
 out_dir: runs/mask-v2
-widths: [16, 32, 48, 64, 96]
+widths: [24, 48, 64, 96, 128]
+depths: [1, 2, 2, 2, 1]
 dropout: 0.1
 epochs: 60
 batch: 256

@@ -116,7 +116,7 @@ docker compose up -d sidecar
 
 | File | Content |
 |---|---|
-| `plugins/vistructum/config.yml` | Inference mode, model updates, sidecar address, live check timing, daily fullscan |
+| `plugins/vistructum/config.yml` | Inference mode, model updates, sidecar address, live check timing, daily fullscan, retention |
 | `plugins/vistructum-ui/config.yml` | Resource pack port and public URL, map previews in the list |
 | `plugins/vistructum-ui/messages.yml` | All chat and menu texts in MiniMessage format |
 

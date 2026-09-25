@@ -154,6 +154,16 @@ public final class FindingStore {
         });
     }
 
+    public CompletableFuture<Integer> deleteReviewedBefore(Instant cutoff) {
+        return database.transaction(connection -> {
+            try (PreparedStatement delete = connection.prepareStatement(
+                    "DELETE FROM findings WHERE verdict IS NOT NULL AND reviewed_at < ?")) {
+                delete.setLong(1, cutoff.toEpochMilli());
+                return delete.executeUpdate();
+            }
+        });
+    }
+
     private static boolean overlapsRecent(Connection connection, FindingCandidate candidate, Instant cutoff) throws SQLException {
         BlockBox box = candidate.box();
         try (PreparedStatement select = connection.prepareStatement(OVERLAPPING)) {

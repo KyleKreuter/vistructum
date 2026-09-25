@@ -3,6 +3,7 @@ package de.kylekreuter.vistructum.core;
 import de.kylekreuter.vistructum.api.InferenceMode;
 import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
+import de.kylekreuter.vistructum.core.alert.FindingRetention;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
 import de.kylekreuter.vistructum.core.face.FaceCache;
 import de.kylekreuter.vistructum.core.face.FaceStore;
@@ -43,6 +44,7 @@ public final class VistructumCore extends JavaPlugin {
     private MaskMonitor maskMonitor;
     private WorldScanner scanner;
     private DailySchedule schedule;
+    private FindingRetention retention;
 
     @Override
     public void onEnable() {
@@ -72,8 +74,8 @@ public final class VistructumCore extends JavaPlugin {
         }
         inference = createInference(settings);
 
-        FindingReporter reporter = new FindingReporter(mainThread, findings, getLogger(),
-                Duration.ofDays(config.getLong("alerts.dedupe-days")), clock);
+        Duration dedupe = Duration.ofDays(config.getLong("alerts.dedupe-days"));
+        FindingReporter reporter = new FindingReporter(mainThread, findings, getLogger(), dedupe, clock);
 
         getServer().getPluginManager().registerEvents(new BlockChangeListener(changes, clock::millis), this);
         ClusterSettings clusterSettings = new ClusterSettings(Duration.ofMinutes(config.getLong("tracking.ttl-minutes")),
@@ -90,15 +92,31 @@ public final class VistructumCore extends JavaPlugin {
             schedule.start();
         }
 
+        FaceStore faces = new FaceStore(database);
+        long reviewedDays = config.getLong("retention.reviewed-days");
+        if (reviewedDays > 0) {
+            Duration keepReviewed = Duration.ofDays(reviewedDays);
+            if (keepReviewed.compareTo(dedupe) < 0) {
+                getLogger().warning("retention.reviewed-days is shorter than alerts.dedupe-days, using "
+                        + dedupe.toDays() + " days");
+                keepReviewed = dedupe;
+            }
+            retention = new FindingRetention(mainThread, findings, faces, keepReviewed, getLogger(), clock);
+            retention.start();
+        }
+
         getServer().getServicesManager().register(Vistructum.class,
                 new VistructumService(mainThread, changes, findings, scans, scanner, inference,
-                        new FaceCache(new FaceStore(database), new MojangFaces(), clock), clock), this,
+                        new FaceCache(faces, new MojangFaces(), clock), clock), this,
                 ServicePriority.Normal);
     }
 
     @Override
     public void onDisable() {
         getServer().getServicesManager().unregisterAll(this);
+        if (retention != null) {
+            retention.stop();
+        }
         if (schedule != null) {
             schedule.stop();
         }

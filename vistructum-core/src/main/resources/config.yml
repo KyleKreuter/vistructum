@@ -34,3 +34,6 @@ scan:
 
 alerts:
   dedupe-days: 14
+
+retention:
+  reviewed-days: 90

@@ -80,6 +80,23 @@ class FindingStoreTest {
     }
 
     @Test
+    void deleteReviewedBeforeKeepsOpenAndRecentlyReviewedFindings() throws Exception {
+        Finding old = store.insertUnlessDuplicate(candidate("a", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
+                .orElseThrow();
+        Finding recent = store.insertUnlessDuplicate(candidate("b", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
+                .orElseThrow();
+        Finding open = store.insertUnlessDuplicate(candidate("c", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
+                .orElseThrow();
+        store.review(old.id(), Verdict.CONFIRMED, "Staff", NOW).get();
+        store.review(recent.id(), Verdict.FALSE_ALARM, "Staff", NOW.plus(Duration.ofDays(30))).get();
+
+        assertEquals(1, store.deleteReviewedBefore(NOW.plus(Duration.ofDays(10))).get());
+        assertTrue(store.find(old.id()).get().isEmpty());
+        assertTrue(store.find(recent.id()).get().isPresent());
+        assertTrue(store.find(open.id()).get().isPresent());
+    }
+
+    @Test
     void reviewClosesAFinding() throws Exception {
         Finding stored = store.insertUnlessDuplicate(candidate("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE)
                 .get().orElseThrow();

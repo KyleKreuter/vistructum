@@ -53,6 +53,17 @@ public final class FaceStore {
         });
     }
 
+    public CompletableFuture<Integer> deleteUnreferenced() {
+        return database.transaction(connection -> {
+            try (PreparedStatement delete = connection.prepareStatement("""
+                    DELETE FROM player_faces
+                    WHERE NOT EXISTS (SELECT 1 FROM findings WHERE instr(findings.players, player_faces.player) > 0)
+                    """)) {
+                return delete.executeUpdate();
+            }
+        });
+    }
+
     private static byte[] encode(List<Integer> pixels) {
         ByteBuffer buffer = ByteBuffer.allocate(pixels.size() * Integer.BYTES);
         pixels.forEach(buffer::putInt);

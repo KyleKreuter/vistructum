@@ -1,39 +1,53 @@
 package de.kylekreuter.vistructum.ui;
 
+import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingCreatedEvent;
 import de.kylekreuter.vistructum.api.FindingReviewedEvent;
+import de.kylekreuter.vistructum.api.Review;
 import de.kylekreuter.vistructum.api.ScanFinishedEvent;
+import de.kylekreuter.vistructum.api.Verdict;
+import de.kylekreuter.vistructum.ui.text.Message;
+import de.kylekreuter.vistructum.ui.text.Messages;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 
+import java.time.Clock;
 import java.util.Objects;
 
 public final class FindingAlerts implements Listener {
 
     private final String staffPermission;
+    private final Messages messages;
+    private final Clock clock;
 
-    public FindingAlerts(String staffPermission) {
+    public FindingAlerts(String staffPermission, Messages messages, Clock clock) {
         this.staffPermission = Objects.requireNonNull(staffPermission, "staffPermission");
+        this.messages = Objects.requireNonNull(messages, "messages");
+        this.clock = Objects.requireNonNull(clock, "clock");
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onCreated(FindingCreatedEvent event) {
-        broadcast(ChatViews.alert(event.getFinding()));
+        broadcast(messages.chat(Message.FINDING_CREATED, messages.finding(event.getFinding(), clock.instant())));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onReviewed(FindingReviewedEvent event) {
-        event.getFinding().review().ifPresent(review -> broadcast(ChatViews.prefix().append(Component.text(
-                "Fund #" + event.getFinding().id() + ": " + ChatViews.reviewText(review), NamedTextColor.GRAY))));
+        Finding finding = event.getFinding();
+        finding.review().ifPresent(review -> broadcast(verdict(messages, finding, review)));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onScanFinished(ScanFinishedEvent event) {
-        broadcast(ChatViews.prefix().append(Component.text(ChatViews.finished(event.getJob()), NamedTextColor.GRAY)));
+        broadcast(ScanText.finished(messages, event.getJob()));
+    }
+
+    public static Component verdict(Messages messages, Finding finding, Review review) {
+        return messages.chat(review.verdict() == Verdict.CONFIRMED ? Message.FINDING_CONFIRMED : Message.FINDING_FALSE_ALARM,
+                Messages.number("id", finding.id()), Messages.text("reviewer", review.reviewer()));
     }
 
     private void broadcast(Component message) {

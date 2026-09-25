@@ -70,10 +70,10 @@ public final class VistructumService implements Vistructum {
                 .thenApply(health -> new SidecarStatus(true, health.status(), health.models(), Optional.empty()))
                 .exceptionally(error -> SidecarStatus.unreachable(rootMessage(error)));
         CompletableFuture<Integer> tracked = changes.count();
-        CompletableFuture<Integer> open = findingStore.countOpen();
+        CompletableFuture<Long> open = findingStore.count(FindingQuery.open());
         CompletableFuture<List<ScanJob>> active = scanStore.active();
         return mainThread.handOff(CompletableFuture.allOf(tracked, open, active, sidecar).thenApply(ignored ->
-                new VistructumStatus(tracked.join(), open.join(), active.join(), sidecar.join())));
+                new VistructumStatus(tracked.join(), Math.toIntExact(open.join()), active.join(), sidecar.join())));
     }
 
     private static String rootMessage(Throwable error) {
@@ -92,6 +92,12 @@ public final class VistructumService implements Vistructum {
         public CompletableFuture<Page<Finding>> find(FindingQuery query) {
             Objects.requireNonNull(query, "query");
             return mainThread.handOff(findingStore.query(query).thenApply(slice -> new FindingPage(query, slice)));
+        }
+
+        @Override
+        public CompletableFuture<Long> count(FindingQuery query) {
+            Objects.requireNonNull(query, "query");
+            return mainThread.handOff(findingStore.count(query));
         }
 
         @Override

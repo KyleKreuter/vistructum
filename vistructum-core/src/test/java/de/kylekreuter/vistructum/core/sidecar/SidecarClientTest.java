@@ -1,7 +1,10 @@
 package de.kylekreuter.vistructum.core.sidecar;
 
 import com.sun.net.httpserver.HttpServer;
-import de.kylekreuter.vistructum.core.scene.SurfaceScene;
+import de.kylekreuter.vistructum.inference.Detection;
+import de.kylekreuter.vistructum.inference.InferResult;
+import de.kylekreuter.vistructum.inference.ModelKind;
+import de.kylekreuter.vistructum.inference.SurfaceScene;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,6 +14,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -46,7 +50,7 @@ class SidecarClientTest {
                  "max_score":0.91,"flagged":true,"elapsed_ms":12.5,
                  "detections":[{"top":1,"left":2,"bottom":9,"right":10,"score":0.91,"votes":3}]}"""));
 
-        InferResult result = client.infer("fullscan", tinyScene(), null).get(2, TimeUnit.SECONDS);
+        InferResult result = client.infer(ModelKind.FULLSCAN, tinyScene(), null).get(2, TimeUnit.SECONDS);
 
         assertEquals("fullscan", result.kind());
         assertEquals("bf-bin-1", result.modelVersion());
@@ -65,7 +69,7 @@ class SidecarClientTest {
         String body = "{\"detail\":\"model for kind 'fullscan' not loaded\"}";
         server.createContext("/infer", exchange -> respond(exchange, 503, body));
 
-        CompletableFuture<InferResult> future = client.infer("fullscan", tinyScene(), null);
+        CompletableFuture<InferResult> future = client.infer(ModelKind.FULLSCAN, tinyScene(), null);
 
         SidecarException exception = assertSidecarException(future);
         assertEquals(503, exception.status());
@@ -77,7 +81,7 @@ class SidecarClientTest {
         String body = "{\"detail\":\"'blocks' has 3 int16 values, expected 4\"}";
         server.createContext("/infer", exchange -> respond(exchange, 422, body));
 
-        CompletableFuture<InferResult> future = client.infer("fullscan", tinyScene(), null);
+        CompletableFuture<InferResult> future = client.infer(ModelKind.FULLSCAN, tinyScene(), null);
 
         SidecarException exception = assertSidecarException(future);
         assertEquals(422, exception.status());
@@ -85,43 +89,37 @@ class SidecarClientTest {
     }
 
     @Test
-    void health200IsParsedAsOk() throws Exception {
-        server.createContext("/health", exchange -> respond(exchange, 200,
-                "{\"status\":\"ok\",\"models\":{\"mask\":true,\"fullscan\":true}}"));
+    void versionsMapsEachKindToItsModelVersion() throws Exception {
+        server.createContext("/version", exchange -> respond(exchange, 200,
+                "{\"mask\":{\"model_version\":\"bf-mask-2\",\"tta\":false},"
+                        + "\"fullscan\":{\"model_version\":\"bf-scan-2\",\"tta\":true}}"));
 
-        Health health = client.health().get(2, TimeUnit.SECONDS);
+        Map<String, String> versions = client.versions().get(2, TimeUnit.SECONDS);
 
-        assertEquals("ok", health.status());
-        assertEquals(true, health.models().get("mask"));
-        assertEquals(true, health.models().get("fullscan"));
+        assertEquals(Map.of("mask", "bf-mask-2", "fullscan", "bf-scan-2"), versions);
     }
 
     @Test
-    void health503IsParsedAsDegradedNotAsAnException() throws Exception {
-        server.createContext("/health", exchange -> respond(exchange, 503,
-                "{\"status\":\"degraded\",\"models\":{\"mask\":false,\"fullscan\":true}}"));
+    void versionsFailOnAnErrorStatus() {
+        server.createContext("/version", exchange -> respond(exchange, 500, "{}"));
 
-        Health health = client.health().get(2, TimeUnit.SECONDS);
-
-        assertEquals("degraded", health.status());
-        assertEquals(false, health.models().get("mask"));
-        assertEquals(true, health.models().get("fullscan"));
+        assertEquals(500, assertSidecarException(client.versions()).status());
     }
 
     @Test
     void requestTimeoutCompletesExceptionally() throws IOException {
-        server.createContext("/health", exchange -> {
+        server.createContext("/version", exchange -> {
             try {
                 Thread.sleep(2000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            respond(exchange, 200, "{\"status\":\"ok\",\"models\":{}}");
+            respond(exchange, 200, "{}");
         });
         SidecarClient shortTimeoutClient = new SidecarClient(
                 "localhost", server.getAddress().getPort(), Duration.ofSeconds(2), Duration.ofMillis(100));
 
-        CompletableFuture<Health> future = shortTimeoutClient.health();
+        CompletableFuture<Map<String, String>> future = shortTimeoutClient.versions();
 
         ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(2, TimeUnit.SECONDS));
         assertTrue(exception.getCause() instanceof java.net.http.HttpTimeoutException);
@@ -130,22 +128,22 @@ class SidecarClientTest {
 
     @Test
     void futureCompletesOffTheCallingThread() throws Exception {
-        server.createContext("/health", exchange -> {
+        server.createContext("/version", exchange -> {
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            respond(exchange, 200, "{\"status\":\"ok\",\"models\":{}}");
+            respond(exchange, 200, "{}");
         });
         Thread callingThread = Thread.currentThread();
 
         long start = System.nanoTime();
-        CompletableFuture<Thread> completionThread = client.health()
-                .handle((health, error) -> Thread.currentThread());
+        CompletableFuture<Thread> completionThread = client.versions()
+                .handle((versions, error) -> Thread.currentThread());
         long elapsedMs = (System.nanoTime() - start) / 1_000_000;
 
-        assertTrue(elapsedMs < 200, "health() must return before the server responds, took " + elapsedMs + "ms");
+        assertTrue(elapsedMs < 200, "versions() must return before the server responds, took " + elapsedMs + "ms");
         assertNotEquals(callingThread, completionThread.get(2, TimeUnit.SECONDS));
     }
 

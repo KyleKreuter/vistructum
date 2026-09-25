@@ -3,13 +3,13 @@ package de.kylekreuter.vistructum.core;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.FindingReviewedEvent;
+import de.kylekreuter.vistructum.api.InferenceStatus;
 import de.kylekreuter.vistructum.api.Findings;
 import de.kylekreuter.vistructum.api.Page;
 import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.ScanCause;
 import de.kylekreuter.vistructum.api.ScanJob;
 import de.kylekreuter.vistructum.api.Scans;
-import de.kylekreuter.vistructum.api.SidecarStatus;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.api.VistructumStatus;
@@ -18,7 +18,7 @@ import de.kylekreuter.vistructum.core.alert.FindingStore;
 import de.kylekreuter.vistructum.core.alert.PreviewImage;
 import de.kylekreuter.vistructum.core.scan.ScanStore;
 import de.kylekreuter.vistructum.core.scan.WorldScanner;
-import de.kylekreuter.vistructum.core.sidecar.SidecarClient;
+import de.kylekreuter.vistructum.core.inference.Inference;
 import de.kylekreuter.vistructum.core.tracking.BlockChangeStore;
 import org.bukkit.Bukkit;
 
@@ -38,19 +38,19 @@ public final class VistructumService implements Vistructum {
     private final FindingStore findingStore;
     private final ScanStore scanStore;
     private final WorldScanner scanner;
-    private final SidecarClient client;
+    private final Inference inference;
     private final Clock clock;
     private final Findings findings = new StoredFindings();
     private final Scans scans = new ScheduledScans();
 
     public VistructumService(MainThread mainThread, BlockChangeStore changes, FindingStore findingStore,
-                             ScanStore scanStore, WorldScanner scanner, SidecarClient client, Clock clock) {
+                             ScanStore scanStore, WorldScanner scanner, Inference inference, Clock clock) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.changes = Objects.requireNonNull(changes, "changes");
         this.findingStore = Objects.requireNonNull(findingStore, "findingStore");
         this.scanStore = Objects.requireNonNull(scanStore, "scanStore");
         this.scanner = Objects.requireNonNull(scanner, "scanner");
-        this.client = Objects.requireNonNull(client, "client");
+        this.inference = Objects.requireNonNull(inference, "inference");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
@@ -66,19 +66,12 @@ public final class VistructumService implements Vistructum {
 
     @Override
     public CompletableFuture<VistructumStatus> status() {
-        CompletableFuture<SidecarStatus> sidecar = client.health()
-                .thenApply(health -> new SidecarStatus(true, health.status(), health.models(), Optional.empty()))
-                .exceptionally(error -> SidecarStatus.unreachable(rootMessage(error)));
+        CompletableFuture<InferenceStatus> models = inference.status();
         CompletableFuture<Integer> tracked = changes.count();
         CompletableFuture<Long> open = findingStore.count(FindingQuery.open());
         CompletableFuture<List<ScanJob>> active = scanStore.active();
-        return mainThread.handOff(CompletableFuture.allOf(tracked, open, active, sidecar).thenApply(ignored ->
-                new VistructumStatus(tracked.join(), Math.toIntExact(open.join()), active.join(), sidecar.join())));
-    }
-
-    private static String rootMessage(Throwable error) {
-        Throwable cause = error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
-        return Objects.requireNonNullElse(cause.getMessage(), cause.getClass().getSimpleName());
+        return mainThread.handOff(CompletableFuture.allOf(tracked, open, active, models).thenApply(ignored ->
+                new VistructumStatus(tracked.join(), Math.toIntExact(open.join()), active.join(), models.join())));
     }
 
     private final class StoredFindings implements Findings {

@@ -11,18 +11,18 @@ import java.util.Objects;
  * @param openFindings number of findings without a verdict
  * @param activeScans unmodifiable list of the scans in state {@link ScanStatus#QUEUED} or
  *                    {@link ScanStatus#RUNNING}, ordered by ascending identifier
- * @param sidecar reachability and model state of the inference sidecar
+ * @param inference state of the inference path that serves detections
  */
-public record VistructumStatus(int trackedChanges, int openFindings, List<ScanJob> activeScans, SidecarStatus sidecar) {
+public record VistructumStatus(int trackedChanges, int openFindings, List<ScanJob> activeScans, InferenceStatus inference) {
 
     /**
      * Validates the components and copies {@code activeScans} into an unmodifiable list.
      *
-     * @throws NullPointerException if {@code activeScans} or {@code sidecar} is {@code null}, or
+     * @throws NullPointerException if {@code activeScans} or {@code inference} is {@code null}, or
      *                              {@code activeScans} contains {@code null}
      */
     public VistructumStatus {
         activeScans = List.copyOf(activeScans);
-        Objects.requireNonNull(sidecar, "sidecar");
+        Objects.requireNonNull(inference, "inference");
     }
 }

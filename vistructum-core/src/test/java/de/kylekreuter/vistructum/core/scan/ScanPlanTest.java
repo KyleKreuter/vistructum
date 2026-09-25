@@ -1,6 +1,6 @@
 package de.kylekreuter.vistructum.core.scan;
 
-import de.kylekreuter.vistructum.api.ModelContract;
+import de.kylekreuter.vistructum.inference.Contract;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -15,8 +15,8 @@ class ScanPlanTest {
     void everyWindowOverAChunkBelongsToAPlannedTile() {
         List<int[]> chunks = List.of(new int[]{0, 0}, new int[]{-1, 3}, new int[]{11, -12}, new int[]{12, 12});
         List<ScanPlan.Tile> tiles = ScanPlan.tiles(chunks);
-        int grid = ModelContract.GRID_SIZE;
-        int stride = ModelContract.WINDOW_STRIDE;
+        int grid = Contract.GRID;
+        int stride = Contract.STRIDE;
         for (int[] chunk : chunks) {
             for (int bx = chunk[0] << 4; bx < (chunk[0] << 4) + 16; bx++) {
                 for (int ox = Math.floorDiv(bx - grid + 1 + stride - 1, stride) * stride; ox <= bx; ox += stride) {
@@ -32,8 +32,8 @@ class ScanPlanTest {
     @Test
     void tilesFollowTheWorldWideWindowGrid() {
         for (ScanPlan.Tile tile : ScanPlan.tiles(List.of(new int[]{-40, 7}, new int[]{3, -2}))) {
-            assertEquals(0, Math.floorMod(tile.originX(), ModelContract.WINDOW_STRIDE));
-            assertEquals(0, Math.floorMod(tile.originZ(), ModelContract.WINDOW_STRIDE));
+            assertEquals(0, Math.floorMod(tile.originX(), Contract.STRIDE));
+            assertEquals(0, Math.floorMod(tile.originZ(), Contract.STRIDE));
             assertEquals(0, Math.floorMod(tile.originX(), ScanPlan.TILE_STEP));
         }
     }

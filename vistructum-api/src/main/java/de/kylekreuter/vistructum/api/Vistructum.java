@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
  *   <li>Every {@link CompletableFuture} returned by this API, including those returned by {@link Findings},
  *       {@link Scans} and {@link Page}, completes on the server main thread. Dependent stages that are attached
  *       without an executor therefore run on the main thread and may call the Bukkit API directly.</li>
- *   <li>Storage access and sidecar requests never run on the main thread.</li>
+ *   <li>Storage access and model inference never run on the main thread.</li>
  *   <li>Blocking on a returned future from the main thread, for instance through {@link CompletableFuture#join()}
  *       or {@link CompletableFuture#get()}, deadlocks the server, because completion is scheduled for a later
  *       tick of that same thread.</li>
@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
  * </ul>
  *
  * <h2>Failure contract</h2>
- * Unless stated otherwise, a returned future completes exceptionally when the underlying storage or sidecar
+ * Unless stated otherwise, a returned future completes exceptionally when the underlying storage or inference
  * operation fails. The returned future is completed with the original cause, not with a
  * {@link java.util.concurrent.CompletionException} wrapping it.
  *
@@ -72,8 +72,8 @@ public interface Vistructum {
      * Collects an aggregated snapshot of the operational state.
      *
      * <p>The storage-derived values are read independently of one another and do not form a single consistent
-     * transaction. An unreachable or unhealthy sidecar does not fail the returned future; it is reported through
-     * {@link VistructumStatus#sidecar()} instead.
+     * transaction. Unavailable inference does not fail the returned future; it is reported through
+     * {@link VistructumStatus#inference()} instead.
      *
      * @return a future completing on the main thread with the current status
      */

@@ -12,7 +12,9 @@
 
     <modules>
         <module>vistructum-api</module>
+        <module>vistructum-inference</module>
         <module>vistructum-core</module>
+        <module>vistructum-sidecar</module>
         <module>vistructum-ui</module>
     </modules>
 
@@ -23,6 +25,8 @@
         <junit.version>5.11.4</junit.version>
         <sqlite-jdbc.version>3.53.4.0</sqlite-jdbc.version>
         <shade.version>3.6.0</shade.version>
+        <onnxruntime.version>1.20.0</onnxruntime.version>
+        <gson.version>2.11.0</gson.version>
     </properties>
 
     <repositories>
@@ -56,6 +60,21 @@
                 <groupId>de.kylekreuter.vistructum</groupId>
                 <artifactId>vistructum-api</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>de.kylekreuter.vistructum</groupId>
+                <artifactId>vistructum-inference</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.microsoft.onnxruntime</groupId>
+                <artifactId>onnxruntime</artifactId>
+                <version>${onnxruntime.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>${gson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

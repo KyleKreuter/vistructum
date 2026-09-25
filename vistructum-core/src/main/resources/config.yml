@@ -1,6 +1,16 @@
 database:
   file: vistructum.db
 
+inference:
+  mode: local
+  fallback: none
+  threads: 1
+
+models:
+  update: auto
+  repository: KyleKreuter/vistructum
+  check-hours: 24
+
 sidecar:
   host: 127.0.0.1
   port: 8000

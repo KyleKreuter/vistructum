@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.core.scene;
 
 import de.kylekreuter.vistructum.api.BlockBox;
+import de.kylekreuter.vistructum.inference.SurfaceScene;
 
 import java.util.ArrayList;
 import java.util.Collection;

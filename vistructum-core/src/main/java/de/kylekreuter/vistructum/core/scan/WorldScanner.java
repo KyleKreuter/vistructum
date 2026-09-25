@@ -14,10 +14,11 @@ import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.core.MainThread;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
 import de.kylekreuter.vistructum.core.alert.PreviewCrop;
-import de.kylekreuter.vistructum.core.scene.SurfaceScene;
-import de.kylekreuter.vistructum.core.sidecar.Detection;
-import de.kylekreuter.vistructum.core.sidecar.InferResult;
-import de.kylekreuter.vistructum.core.sidecar.SidecarClient;
+import de.kylekreuter.vistructum.core.inference.Inference;
+import de.kylekreuter.vistructum.inference.Detection;
+import de.kylekreuter.vistructum.inference.InferResult;
+import de.kylekreuter.vistructum.inference.ModelKind;
+import de.kylekreuter.vistructum.inference.SurfaceScene;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.ChunkSnapshot;
@@ -50,7 +51,7 @@ public final class WorldScanner {
 
     private final MainThread mainThread;
     private final ScanStore scans;
-    private final SidecarClient client;
+    private final Inference inference;
     private final FindingReporter reporter;
     private final int chunksPerTick;
     private final Clock clock;
@@ -69,11 +70,11 @@ public final class WorldScanner {
     private Map<Long, ChunkSnapshot> snapshots;
     private int awaitedLoads;
 
-    public WorldScanner(MainThread mainThread, ScanStore scans, SidecarClient client, FindingReporter reporter,
+    public WorldScanner(MainThread mainThread, ScanStore scans, Inference inference, FindingReporter reporter,
                         int chunksPerTick, Clock clock) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.scans = Objects.requireNonNull(scans, "scans");
-        this.client = Objects.requireNonNull(client, "client");
+        this.inference = Objects.requireNonNull(inference, "inference");
         this.reporter = Objects.requireNonNull(reporter, "reporter");
         this.chunksPerTick = chunksPerTick;
         this.clock = Objects.requireNonNull(clock, "clock");
@@ -213,7 +214,7 @@ public final class WorldScanner {
         CompletableFuture<Integer> reported = CompletableFuture
                 .supplyAsync(() -> surface.sample(taken, current.originX(), current.originZ(), ScanPlan.TILE_SIZE,
                         ScanPlan.TILE_SIZE), sampler)
-                .thenCompose(scene -> client.infer(Source.FULLSCAN.modelKind(), scene, context(running, current))
+                .thenCompose(scene -> inference.infer(ModelKind.FULLSCAN, scene, context(running, current))
                         .thenCompose(result -> reporter.reportAll(candidates(running.world(), current, scene, result))));
         CompletableFuture<ScanJob> completed = reported.handle((count, error) -> {
             if (error != null) {

@@ -3,7 +3,7 @@ package de.kylekreuter.vistructum.ui;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.ReviewState;
-import de.kylekreuter.vistructum.api.SidecarStatus;
+import de.kylekreuter.vistructum.api.InferenceStatus;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.api.VistructumStatus;
@@ -25,6 +25,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.OptionalLong;
 import java.util.function.Consumer;
@@ -103,11 +104,13 @@ public final class VisCommand implements TabExecutor {
 
     private List<Component> statusLines(VistructumStatus status) {
         List<Component> lines = new ArrayList<>();
-        SidecarStatus sidecar = status.sidecar();
-        lines.add(sidecar.reachable()
-                ? messages.chat(Message.STATUS_SIDECAR, text("status", sidecar.status()),
-                text("models", sidecar.models().toString()))
-                : messages.chat(Message.STATUS_SIDECAR_UNREACHABLE, text("reason", sidecar.error().orElse("-"))));
+        InferenceStatus inference = status.inference();
+        String mode = inference.mode().name().toLowerCase(Locale.ROOT);
+        lines.add(inference.available()
+                ? messages.chat(Message.STATUS_INFERENCE, text("mode", mode),
+                text("models", inference.models().toString()))
+                : messages.chat(Message.STATUS_INFERENCE_UNAVAILABLE, text("mode", mode),
+                text("reason", inference.error().orElse("-"))));
         lines.add(messages.chat(Message.STATUS_CHANGES, number("count", status.trackedChanges())));
         lines.add(messages.chat(Message.STATUS_OPEN, number("count", status.openFindings())));
         if (status.activeScans().isEmpty()) {

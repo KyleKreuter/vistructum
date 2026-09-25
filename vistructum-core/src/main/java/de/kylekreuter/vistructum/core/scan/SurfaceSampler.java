@@ -1,7 +1,7 @@
 package de.kylekreuter.vistructum.core.scan;
 
 import de.kylekreuter.vistructum.core.scene.Luminance;
-import de.kylekreuter.vistructum.core.scene.SurfaceScene;
+import de.kylekreuter.vistructum.inference.SurfaceScene;
 import org.bukkit.ChunkSnapshot;
 import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;

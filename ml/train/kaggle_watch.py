@@ -27,7 +27,7 @@ def kaggle(cmd, *args):
 def status(cmd, slug):
     result = kaggle(cmd, "kernels", "status", slug)
     text = (result.stdout + result.stderr).strip()
-    match = re.search(r"(queued|running|complete|error|cancel\w*)", text, re.IGNORECASE)
+    match = re.search(r'has status "(?:KernelWorkerStatus\.)?(queued|running|complete|error|cancel\w*)"', text, re.IGNORECASE)
     return (match.group(1).lower() if match else "unknown"), text
 
 

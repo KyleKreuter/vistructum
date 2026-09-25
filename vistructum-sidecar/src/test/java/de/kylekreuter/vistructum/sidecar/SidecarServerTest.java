@@ -65,7 +65,7 @@ class SidecarServerTest {
         assertTrue(SidecarServer.healthy(sidecar.port()));
 
         JsonObject versions = JsonParser.parseString(get("/version").body()).getAsJsonObject();
-        assertEquals("bf-mask-2", versions.getAsJsonObject("mask").get("model_version").getAsString());
+        assertEquals("bf-mask-3", versions.getAsJsonObject("mask").get("model_version").getAsString());
         assertTrue(versions.getAsJsonObject("fullscan").get("tta").getAsBoolean());
     }
 

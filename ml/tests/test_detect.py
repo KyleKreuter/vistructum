@@ -24,7 +24,7 @@ def test_windows_touching_edges_do_not_overlap():
 
 def test_min_votes_metadata_defaults_and_validates():
     meta = {
-        "vistructum.model_version": "bf-mask-2",
+        "vistructum.model_version": "bf-mask-3",
         "vistructum.kind": "mask",
         "vistructum.labels": '["ok", "hakenkreuz"]',
         "vistructum.feature_spec": "fs-1",

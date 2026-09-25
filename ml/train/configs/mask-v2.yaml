@@ -19,10 +19,11 @@ device: cpu
 seed: 42
 num_threads: 4
 quantize: true
+tta: true
 scan_negatives: 6000
 scan_positives: 1000
 scan_workers: 4
-gen_train: 120000
+gen_train: 180000
 gen_val: 12500
 gen_test: 12500
 gen_holdout: 12500

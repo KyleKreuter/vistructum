@@ -110,7 +110,8 @@ def _same_luminance_other_block(rng, ground_id):
 def _build_symbol_variant(rng, holdout):
     mirror = bool(rng.random() < 0.5)
     rot_k = int(rng.integers(0, 4))
-    if rng.random() < IRREGULAR_SHARE:
+    irregular = bool(rng.random() < IRREGULAR_SHARE)
+    if irregular:
         mask = build_irregular_symbol(rng, mirror)
     else:
         size, thick = sample_size_thick(rng, max_size=64 if holdout else 60)
@@ -119,7 +120,7 @@ def _build_symbol_variant(rng, holdout):
     diag = rng.random() < 0.03
     if diag:
         mask = rotate45(mask)
-    return mask, mirror, diag
+    return mask, irregular, diag
 
 
 def _in_crop_top_left(rng, h, w):
@@ -267,9 +268,9 @@ def _stamp_shape(rng, blocks, heights, mask):
 
 
 def _stamp_symbol(rng, blocks, heights, holdout):
-    mask, _mirror, diag = _build_symbol_variant(rng, holdout)
+    mask, irregular, diag = _build_symbol_variant(rng, holdout)
     footprint, suffix, vis = _stamp_shape(rng, blocks, heights, mask)
-    subtype = f"pos-{suffix}"
+    subtype = f"pos-irregular-{suffix}" if irregular else f"pos-{suffix}"
     if diag:
         subtype += "-diag45"
     return footprint, subtype, vis

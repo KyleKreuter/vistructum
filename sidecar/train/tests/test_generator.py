@@ -269,3 +269,12 @@ def test_irregular_hard_negatives_never_carry_four_matching_hooks():
             mask = HARD_NEGATIVE_FAMILIES[name](rng)
             assert mask.any()
             assert not is_c4_chiral(mask)
+
+
+def test_irregular_positives_carry_their_own_subtype():
+    from evaluate import subtype_groups
+    assert subtype_groups("pos-irregular-raised-on-roof") == ("pos-irregular", "raised")
+    assert subtype_groups("pos-raised-sloppy") == ("pos", "raised")
+    rng = np.random.default_rng(8)
+    subtypes = {make_mask_sample(rng, 1)[2].startswith("pos-irregular-") for _ in range(40)}
+    assert subtypes == {True, False}

@@ -19,8 +19,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class BlockChangeStore {
 
     private static final String UPSERT = """
-            INSERT INTO block_changes (world, x, y, z, player, changed_at) VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT (world, x, y, z, player) DO UPDATE SET changed_at = excluded.changed_at
+            INSERT INTO block_changes (world, x, y, z, player, kind, material, changed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (world, x, y, z, player) DO UPDATE
+            SET kind = excluded.kind, material = excluded.material, changed_at = excluded.changed_at
             """;
     private static final String MARK_REPORTED =
             "UPDATE block_changes SET reported_at = ? WHERE world = ? AND x = ? AND y = ? AND z = ?";
@@ -33,8 +34,8 @@ public final class BlockChangeStore {
         this.database = Objects.requireNonNull(database, "database");
     }
 
-    public void record(String world, BlockPos pos, UUID player, long changedAt) {
-        unwritten.add(new BlockChange(world, pos, player, changedAt, 0));
+    public void record(String world, BlockPos pos, UUID player, ChangeKind kind, String material, long changedAt) {
+        unwritten.add(new BlockChange(world, pos, player, kind, material, changedAt, 0));
         if (flushQueued.compareAndSet(false, true)) {
             database.transaction(this::flush);
         }
@@ -75,7 +76,9 @@ public final class BlockChangeStore {
                 upsert.setInt(3, change.pos().y());
                 upsert.setInt(4, change.pos().z());
                 upsert.setString(5, change.player().toString());
-                upsert.setLong(6, change.changedAt());
+                upsert.setString(6, change.kind().name());
+                upsert.setString(7, change.material());
+                upsert.setLong(8, change.changedAt());
                 upsert.addBatch();
             }
             upsert.executeBatch();
@@ -94,11 +97,12 @@ public final class BlockChangeStore {
     private static List<BlockChange> readAll(Connection connection) throws SQLException {
         List<BlockChange> changes = new ArrayList<>();
         try (PreparedStatement select = connection.prepareStatement(
-                "SELECT world, x, y, z, player, changed_at, reported_at FROM block_changes");
+                "SELECT world, x, y, z, player, kind, material, changed_at, reported_at FROM block_changes");
              ResultSet rows = select.executeQuery()) {
             while (rows.next()) {
                 changes.add(new BlockChange(rows.getString(1), new BlockPos(rows.getInt(2), rows.getInt(3), rows.getInt(4)),
-                        UUID.fromString(rows.getString(5)), rows.getLong(6), rows.getLong(7)));
+                        UUID.fromString(rows.getString(5)), ChangeKind.valueOf(rows.getString(6)), rows.getString(7),
+                        rows.getLong(8), rows.getLong(9)));
             }
         }
         return changes;

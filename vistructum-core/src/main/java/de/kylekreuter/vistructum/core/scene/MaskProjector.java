@@ -6,6 +6,7 @@ import de.kylekreuter.vistructum.inference.SurfaceScene;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public final class MaskProjector {
 
@@ -35,6 +36,10 @@ public final class MaskProjector {
             }
         }
         return projections;
+    }
+
+    public Optional<Projection> project(Axis axis, Collection<BlockPos> positions) {
+        return positions.isEmpty() ? Optional.empty() : Optional.ofNullable(project(axis, positions, boundsOf(positions)));
     }
 
     private Projection project(Axis axis, Collection<BlockPos> positions, BlockBox bounds) {

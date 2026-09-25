@@ -50,6 +50,9 @@ def _longest_prefix(text, options):
 
 
 def subtype_groups(name):
+    if name.startswith("pos-irregular-"):
+        rest = name[14:]
+        return "pos-irregular", _longest_prefix(rest, MODES) or rest
     if name.startswith("pos-"):
         rest = name[4:]
         return "pos", _longest_prefix(rest, MODES) or rest
@@ -73,7 +76,7 @@ def subtype_breakdown(scores, y, subtype, threshold):
     positive = y == 1
     groups = [subtype_groups(str(name)) for name in subtype.tolist()]
     shapes = np.array([g[0] for g in groups])
-    modes = np.array([f"{'pos' if g[0] == 'pos' else 'neg'}:{g[1]}" for g in groups])
+    modes = np.array([f"{'pos' if g[0].startswith('pos') else 'neg'}:{g[1]}" for g in groups])
     return {
         "by_shape": {name: _rates(flagged, positive, shapes == name) for name in sorted(set(shapes.tolist()))},
         "by_mode": {name: _rates(flagged, positive, modes == name) for name in sorted(set(modes.tolist()))},

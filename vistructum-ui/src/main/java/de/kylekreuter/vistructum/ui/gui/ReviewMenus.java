@@ -18,6 +18,8 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.MapMeta;
+import org.bukkit.map.MapView;
 import org.bukkit.plugin.Plugin;
 
 import java.time.Clock;
@@ -42,13 +44,16 @@ public final class ReviewMenus {
     private final Messages messages;
     private final Clock clock;
     private final Executor mainThread;
+    private final Optional<MapCards> mapCards;
 
-    public ReviewMenus(Plugin plugin, Vistructum vistructum, Messages messages, Clock clock) {
+    public ReviewMenus(Plugin plugin, Vistructum vistructum, Messages messages, Clock clock,
+                       Optional<MapCards> mapCards) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.vistructum = Objects.requireNonNull(vistructum, "vistructum");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.mainThread = Bukkit.getScheduler().getMainThreadExecutor(plugin);
+        this.mapCards = Objects.requireNonNull(mapCards, "mapCards");
     }
 
     public void openList(Player player, ListPosition position) {
@@ -80,7 +85,7 @@ public final class ReviewMenus {
         Instant now = clock.instant();
         for (int index = 0; index < items.size(); index++) {
             Finding finding = items.get(index);
-            menu.put(Layout.LIST_CARDS.get(index), card(finding, now),
+            menu.put(Layout.LIST_CARDS.get(index), card(finding, now, index),
                     clicked -> openDetail(clicked, finding.id(), position));
         }
         if (position.page() > 1) {
@@ -103,9 +108,21 @@ public final class ReviewMenus {
                         List.of(messages.item(open ? Message.MENU_FILTER_OPEN_HINT : Message.MENU_FILTER_CLOSED_HINT))),
                 clicked -> openList(clicked, position.toggled()));
         player.openInventory(menu.getInventory());
+        mapCards.ifPresent(cards -> fillMaps(player, menu, items, cards));
     }
 
-    private ItemStack card(Finding finding, Instant now) {
+    private void fillMaps(Player player, Menu menu, List<Finding> items, MapCards cards) {
+        for (int index = 0; index < items.size(); index++) {
+            int card = index;
+            scene(items.get(index)).thenAcceptAsync(picture -> {
+                if (player.isOnline() && player.getOpenInventory().getTopInventory() == menu.getInventory()) {
+                    cards.send(player, card, picture);
+                }
+            }, mainThread);
+        }
+    }
+
+    private ItemStack card(Finding finding, Instant now, int index) {
         TagResolver values = messages.finding(finding, now);
         List<Component> lore = new ArrayList<>();
         lore.add(messages.item(Message.MENU_CARD_WORLD, values));
@@ -118,7 +135,16 @@ public final class ReviewMenus {
         String model = finding.review().map(Review::verdict)
                 .map(verdict -> verdict == Verdict.CONFIRMED ? "card_confirmed" : "card_dismissed")
                 .orElse("card");
-        return icon(model, messages.item(Message.MENU_CARD, values), lore);
+        ItemStack card = icon(model, messages.item(Message.MENU_CARD, values), lore);
+        return mapCards.map(cards -> onMap(card, cards.view(index))).orElse(card);
+    }
+
+    private static ItemStack onMap(ItemStack card, MapView view) {
+        ItemStack map = card.withType(Material.FILLED_MAP);
+        MapMeta meta = (MapMeta) map.getItemMeta();
+        meta.setMapView(view);
+        map.setItemMeta(meta);
+        return map;
     }
 
     private void showDetail(Player player, DetailView view, ListPosition back) {

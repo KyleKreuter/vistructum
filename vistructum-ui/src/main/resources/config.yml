@@ -1,3 +1,6 @@
 pack:
   bind-port: 8765
   public-url: "http://localhost:8765/pack.zip"
+
+list:
+  map-previews: false

@@ -1,0 +1,40 @@
+name: models
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "models/*.onnx"
+  workflow_dispatch:
+
+concurrency:
+  group: models
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r ml/requirements.txt
+      - run: python ml/release_manifest.py --models models --out models.json
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="models-${GITHUB_SHA::12}"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "release $tag already exists"
+            exit 0
+          fi
+          gh release create "$tag" models/*.onnx models.json \
+            --target "$GITHUB_SHA" \
+            --title "Models ${GITHUB_SHA::12}" \
+            --notes "Models from ${GITHUB_SHA}. Checksums are listed in models.json." \
+            --latest=false

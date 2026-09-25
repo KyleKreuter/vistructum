@@ -23,6 +23,25 @@
             <artifactId>vistructum-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>de.kylekreuter.vistructum</groupId>
+            <artifactId>vistructum-inference</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.microsoft.onnxruntime</groupId>
+                    <artifactId>onnxruntime</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.code.gson</groupId>
+                    <artifactId>gson</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.microsoft.onnxruntime</groupId>
+            <artifactId>onnxruntime</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
         </dependency>

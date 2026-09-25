@@ -13,8 +13,8 @@ command:
   world-unknown: "<prefix><red>World <world> is not known.</red>"
 
 status:
-  sidecar: "<prefix><gray>The sidecar is reported as <status>, models: <models>.</gray>"
-  sidecar-unreachable: "<prefix><red>The sidecar could not be reached: <reason></red>"
+  inference: "<prefix><gray>Inference runs <mode>, models: <models>.</gray>"
+  inference-unavailable: "<prefix><red>Inference (<mode>) is not available: <reason></red>"
   changes: "<prefix><gray><count> block changes are tracked.</gray>"
   open: "<prefix><gray><count> findings are open.</gray>"
   no-scan: "<prefix><gray>No scan is running.</gray>"

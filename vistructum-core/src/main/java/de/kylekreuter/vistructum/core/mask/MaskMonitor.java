@@ -7,15 +7,16 @@ import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.core.MainThread;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
 import de.kylekreuter.vistructum.core.alert.PreviewCrop;
+import de.kylekreuter.vistructum.core.inference.Inference;
 import de.kylekreuter.vistructum.core.scene.MaskProjector;
 import de.kylekreuter.vistructum.core.scene.Projection;
-import de.kylekreuter.vistructum.core.scene.SurfaceScene;
-import de.kylekreuter.vistructum.core.sidecar.Detection;
-import de.kylekreuter.vistructum.core.sidecar.InferResult;
-import de.kylekreuter.vistructum.core.sidecar.SidecarClient;
 import de.kylekreuter.vistructum.core.tracking.BlockChangeStore;
 import de.kylekreuter.vistructum.core.tracking.Cluster;
 import de.kylekreuter.vistructum.core.tracking.ClusterSettings;
+import de.kylekreuter.vistructum.inference.Detection;
+import de.kylekreuter.vistructum.inference.InferResult;
+import de.kylekreuter.vistructum.inference.ModelKind;
+import de.kylekreuter.vistructum.inference.SurfaceScene;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -33,7 +34,7 @@ public final class MaskMonitor {
     private final BlockChangeStore changes;
     private final ClusterSettings settings;
     private final MaskProjector projector;
-    private final SidecarClient client;
+    private final Inference inference;
     private final FindingReporter reporter;
     private final Clock clock;
     private final Logger logger;
@@ -41,12 +42,12 @@ public final class MaskMonitor {
     private BukkitTask task;
 
     public MaskMonitor(MainThread mainThread, BlockChangeStore changes, ClusterSettings settings, MaskProjector projector,
-                       SidecarClient client, FindingReporter reporter, Clock clock) {
+                       Inference inference, FindingReporter reporter, Clock clock) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.changes = Objects.requireNonNull(changes, "changes");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.projector = Objects.requireNonNull(projector, "projector");
-        this.client = Objects.requireNonNull(client, "client");
+        this.inference = Objects.requireNonNull(inference, "inference");
         this.reporter = Objects.requireNonNull(reporter, "reporter");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.logger = mainThread.plugin().getLogger();
@@ -70,7 +71,7 @@ public final class MaskMonitor {
 
     private void check(Cluster cluster) {
         for (Projection projection : projector.project(cluster.positions())) {
-            client.infer(Source.MASK.modelKind(), projection.scene(), context(cluster, projection))
+            inference.infer(ModelKind.MASK, projection.scene(), context(cluster, projection))
                     .thenCompose(result -> reporter.reportAll(candidates(cluster, projection, result)))
                     .exceptionally(this::warn);
         }

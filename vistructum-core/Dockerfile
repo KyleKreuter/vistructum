@@ -2,10 +2,13 @@ FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /build
 COPY pom.xml .
+COPY models models
 COPY vistructum-api vistructum-api
+COPY vistructum-inference vistructum-inference
 COPY vistructum-core vistructum-core
+COPY vistructum-sidecar vistructum-sidecar
 COPY vistructum-ui vistructum-ui
-RUN mvn -q -B package -DskipTests=false
+RUN mvn -q -B -pl vistructum-core,vistructum-ui -am package
 
 FROM itzg/minecraft-server:java21
 

@@ -22,9 +22,9 @@ public enum Source {
     }
 
     /**
-     * Returns the identifier of the sidecar model that serves this detection path.
+     * Returns the identifier of the model that serves this detection path.
      *
-     * @return the model kind, also used as key in {@link SidecarStatus#models()}
+     * @return the model kind, also used as key in {@link InferenceStatus#models()}
      */
     public String modelKind() {
         return modelKind;

@@ -1,6 +1,6 @@
 package de.kylekreuter.vistructum.core.scan;
 
-import de.kylekreuter.vistructum.api.ModelContract;
+import de.kylekreuter.vistructum.inference.Contract;
 
 import java.util.Collection;
 import java.util.Comparator;
@@ -10,10 +10,10 @@ import java.util.TreeSet;
 public final class ScanPlan {
 
     public static final int TILE_SIZE = 256;
-    public static final int TILE_STEP = TILE_SIZE - ModelContract.GRID_SIZE;
+    public static final int TILE_STEP = TILE_SIZE - Contract.GRID;
 
     static {
-        if (TILE_STEP % ModelContract.WINDOW_STRIDE != 0) {
+        if (TILE_STEP % Contract.STRIDE != 0) {
             throw new IllegalStateException("tile step " + TILE_STEP + " breaks the window grid");
         }
     }
@@ -39,7 +39,7 @@ public final class ScanPlan {
     }
 
     private static int firstTile(int minBlock) {
-        return Math.floorDiv(minBlock - ModelContract.GRID_SIZE + 1, TILE_STEP);
+        return Math.floorDiv(minBlock - Contract.GRID + 1, TILE_STEP);
     }
 
     private static int lastTile(int maxBlock) {

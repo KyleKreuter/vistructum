@@ -15,18 +15,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class StatusTest {
 
     @Test
-    void unreachableSidecarCarriesTheError() {
-        SidecarStatus sidecar = SidecarStatus.unreachable("connection refused");
-        assertFalse(sidecar.reachable());
-        assertEquals(Optional.of("connection refused"), sidecar.error());
-        assertEquals(Map.of(), sidecar.models());
+    void unavailableInferenceCarriesModeAndError() {
+        InferenceStatus inference = InferenceStatus.unavailable(InferenceMode.REMOTE, "connection refused");
+        assertFalse(inference.available());
+        assertEquals(InferenceMode.REMOTE, inference.mode());
+        assertEquals(Optional.of("connection refused"), inference.error());
+        assertEquals(Map.of(), inference.models());
     }
 
     @Test
     void statusListsAreImmutableCopies() {
         List<ScanJob> jobs = new ArrayList<>(List.of(new ScanJob(1, "world", ScanCause.MANUAL, ScanStatus.RUNNING, 4, 1,
                 0, 0, Instant.EPOCH)));
-        VistructumStatus status = new VistructumStatus(3, 2, jobs, SidecarStatus.unreachable("down"));
+        VistructumStatus status = new VistructumStatus(3, 2, jobs, InferenceStatus.unavailable(InferenceMode.LOCAL, "down"));
         jobs.clear();
         assertEquals(1, status.activeScans().size());
         assertThrows(UnsupportedOperationException.class, () -> status.activeScans().clear());

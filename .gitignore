@@ -22,7 +22,7 @@ dist/
 build/
 
 # Generierte Daten und Laeufe (reproduzierbar via generator + Seed + Commit)
-sidecar/train/runs/
+ml/train/runs/
 results/
 
 # Laufzeit-State (SQLite, Logs)

@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.core.scene;
 
 import de.kylekreuter.vistructum.api.BlockBox;
+import de.kylekreuter.vistructum.inference.SurfaceScene;
 
 public record Projection(Axis axis, SurfaceScene scene, BlockBox bounds, int margin) {
 

@@ -1,22 +1,18 @@
 services:
   sidecar:
-    build: ./sidecar
+    build:
+      context: .
+      dockerfile: vistructum-sidecar/Dockerfile
     hostname: sidecar
     ports:
       - "127.0.0.1:${SIDECAR_PORT:-8000}:8000"
     volumes:
-      - ./models:/models:ro
-      - ./captures:/captures
+      - sidecar-models:/models
     environment:
       ORT_THREADS: "${ORT_THREADS:-1}"
-      CAPTURE_DIR: "${CAPTURE_DIR:-}"
-      CAPTURE_MAX: "${CAPTURE_MAX:-20000}"
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
-      interval: 10s
-      timeout: 3s
-      start_period: 10s
-      retries: 3
+      MODELS_UPDATE: "${MODELS_UPDATE:-auto}"
+      MODELS_REPOSITORY: "${MODELS_REPOSITORY:-KyleKreuter/vistructum}"
+      MODELS_CHECK_HOURS: "${MODELS_CHECK_HOURS:-24}"
 
   server:
     build:
@@ -37,10 +33,8 @@ services:
     volumes:
       - vistructum-state:/data/plugins/vistructum
       - vistructum-ui-config:/data/plugins/vistructum-ui
-    depends_on:
-      sidecar:
-        condition: service_healthy
 
 volumes:
+  sidecar-models:
   vistructum-state:
   vistructum-ui-config:

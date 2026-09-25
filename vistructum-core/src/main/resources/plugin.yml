@@ -6,3 +6,4 @@ author: Kyle Kreuter
 description: Detects swastikas built from blocks and publishes findings through the Vistructum API.
 libraries:
   - org.xerial:sqlite-jdbc:${sqlite-jdbc.version}
+  - com.microsoft.onnxruntime:onnxruntime:${onnxruntime.version}

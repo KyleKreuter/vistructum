@@ -69,6 +69,18 @@ class ProgressBarTest {
     }
 
     @Test
+    void labelAscentStaysWithinTheGlyphHeight() {
+        assertTrue(ProgressBar.LABEL_ASCENT <= 8);
+    }
+
+    @Test
+    void frameCoversTheVanillaBar() {
+        int frameTop = -2 - ProgressBar.FRAME_ASCENT;
+        assertTrue(frameTop <= 0);
+        assertTrue(frameTop + ProgressBar.FRAME_HEIGHT >= 5);
+    }
+
+    @Test
     void packShipsTheBarTexturesAndGlyphs() throws Exception {
         Map<String, byte[]> files = new HashMap<>();
         try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(ResourcePack.build().zip()))) {

@@ -9,12 +9,12 @@ public final class ProgressBar {
 
     static final int FRAME_WIDTH = 182;
     static final int FRAME_HEIGHT = 7;
-    static final int FRAME_ASCENT = -1;
+    static final int FRAME_ASCENT = -2;
     static final int FILL_WIDTH = 180;
     static final int FILL_HEIGHT = 5;
-    static final int FILL_ASCENT = -2;
+    static final int FILL_ASCENT = -3;
     static final int FILL_STEPS = 8;
-    static final int LABEL_LIFT = 3;
+    static final int LABEL_LIFT = 1;
     static final int LABEL_ASCENT = 7 + LABEL_LIFT;
 
     private ProgressBar() {

@@ -7,7 +7,7 @@
     <parent>
         <groupId>de.kylekreuter.vistructum</groupId>
         <artifactId>vistructum</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
 
     <artifactId>vistructum-core</artifactId>

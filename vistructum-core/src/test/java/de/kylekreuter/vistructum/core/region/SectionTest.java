@@ -3,6 +3,7 @@ package de.kylekreuter.vistructum.core.region;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,15 +18,25 @@ class SectionTest {
             for (int i = 0; i < indices.length; i++) {
                 indices[i] = (i * 7) % paletteSize;
             }
-            List<String> palette = java.util.stream.IntStream.range(0, paletteSize).mapToObj(i -> "b" + i).toList();
+            List<PaletteEntry> palette = IntStream.range(0, paletteSize).mapToObj(i -> new PaletteEntry("b" + i, "")).toList();
             Section section = new Section(0, palette, NbtWriter.pack(indices, paletteSize));
             assertArrayEquals(indices, section.indices(), "palette size " + paletteSize);
         }
     }
 
     @Test
+    void packRoundTripsIndices() {
+        int[] indices = new int[Section.VOLUME];
+        for (int i = 0; i < indices.length; i++) {
+            indices[i] = i % 3;
+        }
+        List<PaletteEntry> palette = List.of(PaletteEntry.AIR, new PaletteEntry("a", ""), new PaletteEntry("b", ""));
+        assertArrayEquals(indices, Section.pack(0, palette, indices).indices());
+    }
+
+    @Test
     void singleEntryPaletteNeedsNoData() {
-        assertArrayEquals(new int[Section.VOLUME], new Section(0, List.of("minecraft:stone"), new long[0]).indices());
+        assertArrayEquals(new int[Section.VOLUME], new Section(0, List.of(PaletteEntry.AIR), new long[0]).indices());
     }
 
     @Test
@@ -38,6 +49,6 @@ class SectionTest {
 
     @Test
     void rejectsTooShortData() {
-        assertThrows(IllegalArgumentException.class, () -> new Section(0, List.of("a", "b"), new long[3]));
+        assertThrows(IllegalArgumentException.class, () -> new Section(0, List.of(PaletteEntry.AIR, new PaletteEntry("b", "")), new long[3]));
     }
 }

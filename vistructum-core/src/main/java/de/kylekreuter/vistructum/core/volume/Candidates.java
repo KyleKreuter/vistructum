@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.core.volume;
 
 import de.kylekreuter.vistructum.core.region.ChunkColumn;
+import de.kylekreuter.vistructum.core.region.PaletteEntry;
 import de.kylekreuter.vistructum.core.region.Section;
 import de.kylekreuter.vistructum.core.scene.BlockPos;
 
@@ -28,38 +29,55 @@ public final class Candidates {
 
     public Map<String, List<BlockPos>> of(ChunkColumn column) {
         Map<String, List<BlockPos>> byMaterial = new HashMap<>();
+        addTo(byMaterial, column);
+        return byMaterial;
+    }
+
+    public void addTo(Map<String, List<BlockPos>> byMaterial, ChunkColumn column) {
         int fillerLimit = (int) Math.floor(fillerShare * Section.VOLUME);
         int baseX = column.chunkX() << 4;
         int baseZ = column.chunkZ() << 4;
         for (Section section : column.sections()) {
-            List<String> palette = section.palette();
-            boolean[] kept = new boolean[palette.size()];
+            List<PaletteEntry> palette = section.palette();
+            if (palette.size() == 1) {
+                continue;
+            }
+            String[] names = new String[palette.size()];
             boolean any = false;
             for (int i = 0; i < palette.size(); i++) {
-                String name = palette.get(i);
-                kept[i] = !AIR.contains(name) && accepted.test(name);
-                any |= kept[i];
+                String name = palette.get(i).name();
+                if (!AIR.contains(name) && accepted.test(name)) {
+                    names[i] = name;
+                    any = true;
+                }
             }
-            if (!any || palette.size() == 1) {
+            if (!any) {
                 continue;
             }
             int[] indices = section.indices();
-            int[] counts = new int[palette.size()];
+            int[] perEntry = new int[names.length];
             for (int index : indices) {
-                counts[index]++;
+                perEntry[index]++;
             }
-            for (int i = 0; i < palette.size(); i++) {
-                kept[i] &= counts[i] > 0 && counts[i] <= fillerLimit;
+            Map<String, Integer> counts = new HashMap<>();
+            for (int i = 0; i < names.length; i++) {
+                if (names[i] != null) {
+                    counts.merge(names[i], perEntry[i], Integer::sum);
+                }
+            }
+            for (int i = 0; i < names.length; i++) {
+                if (names[i] != null && counts.getOrDefault(names[i], 0) > fillerLimit) {
+                    names[i] = null;
+                }
             }
             int baseY = section.y() << 4;
             for (int i = 0; i < Section.VOLUME; i++) {
-                int paletteIndex = indices[i];
-                if (kept[paletteIndex]) {
-                    byMaterial.computeIfAbsent(palette.get(paletteIndex), name -> new ArrayList<>())
+                String name = names[indices[i]];
+                if (name != null) {
+                    byMaterial.computeIfAbsent(name, key -> new ArrayList<>())
                             .add(new BlockPos(baseX + (i & 15), baseY + (i >> 8), baseZ + ((i >> 4) & 15)));
                 }
             }
         }
-        return byMaterial;
     }
 }

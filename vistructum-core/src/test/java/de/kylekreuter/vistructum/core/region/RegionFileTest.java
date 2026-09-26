@@ -74,6 +74,27 @@ class RegionFileTest {
         assertEquals(1, column.sections().get(1).indices()[Section.index(1, 2, 3)]);
     }
 
+    @Test
+    void decodesPaletteProperties() throws IOException {
+        byte[] nbt = NbtWriter.chunk(4189, ChunkColumn.FULL, List.of(NbtWriter.section(0,
+                List.of("minecraft:oak_stairs[half=top,facing=east]"), new long[0])));
+        assertEquals(new PaletteEntry("minecraft:oak_stairs", "[facing=east,half=top]"),
+                ChunkColumn.decode(0, 0, nbt).sections().getFirst().palette().getFirst());
+    }
+
+    @Test
+    void readsOnlyWantedChunksAndListsPresentOnes() throws IOException {
+        byte[] nbt = NbtWriter.root(Map.of("DataVersion", 4189));
+        Path file = dir.resolve("r.1.0.mca");
+        writeRegion(file, Map.of(0, frame(3, nbt), 5, frame(3, nbt), 64, frame(3, nbt)));
+        List<int[]> present = RegionFile.present(file);
+        assertEquals(3, present.size());
+        assertArrayEquals(new int[]{37, 0}, present.get(1));
+        List<RegionChunk> wanted = RegionFile.read(file, (x, z) -> z == 2);
+        assertEquals(1, wanted.size());
+        assertEquals(32, wanted.getFirst().chunkX());
+    }
+
     private static void writeRegion(Path file, Map<Integer, byte[]> frames) throws IOException {
         ByteBuffer header = ByteBuffer.allocate(8192);
         ByteArrayOutputStream body = new ByteArrayOutputStream();

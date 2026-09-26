@@ -30,7 +30,12 @@ scan:
   daily-at: "04:00"
   worlds:
     - world
+    - world_nether
+    - world_the_end
   chunks-per-tick: 8
+  workers: 2
+  volume:
+    filler-share: 0.10
 
 alerts:
   dedupe-days: 14

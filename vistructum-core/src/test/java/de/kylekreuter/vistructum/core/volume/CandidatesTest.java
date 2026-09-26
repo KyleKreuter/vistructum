@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.core.volume;
 
 import de.kylekreuter.vistructum.core.region.ChunkColumn;
+import de.kylekreuter.vistructum.core.region.PaletteEntry;
 import de.kylekreuter.vistructum.core.region.Section;
 import de.kylekreuter.vistructum.core.scene.BlockPos;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CandidatesTest {
 
-    private static final List<String> PALETTE = List.of("minecraft:air", "minecraft:stone", "minecraft:red_wool");
+    private static final List<PaletteEntry> PALETTE = List.of(PaletteEntry.AIR, new PaletteEntry("minecraft:stone", ""),
+            new PaletteEntry("minecraft:red_wool", ""));
 
     @Test
     void keepsRareMaterialsAndDropsFillerAndAir() {
@@ -46,6 +48,19 @@ class CandidatesTest {
         indices[0] = 2;
         ChunkColumn column = column(0, 0, new Section(0, PALETTE, pack(indices)));
         assertTrue(new Candidates(0.25, name -> !name.endsWith("wool")).of(column).isEmpty());
+    }
+
+    @Test
+    void fillerShareCountsAllStatesOfOneMaterial() {
+        List<PaletteEntry> palette = List.of(PaletteEntry.AIR, new PaletteEntry("minecraft:oak_stairs", "[facing=east]"),
+                new PaletteEntry("minecraft:oak_stairs", "[facing=west]"));
+        int[] indices = new int[Section.VOLUME];
+        for (int i = 0; i < 300; i++) {
+            indices[i] = 1 + i % 2;
+        }
+        ChunkColumn column = column(0, 0, new Section(0, palette, pack(indices)));
+        assertTrue(new Candidates(0.05, name -> true).of(column).isEmpty());
+        assertEquals(300, new Candidates(0.10, name -> true).of(column).get("minecraft:oak_stairs").size());
     }
 
     private static ChunkColumn column(int chunkX, int chunkZ, Section section) {

@@ -6,8 +6,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -38,43 +40,104 @@ public final class RegionFile {
     }
 
     public static List<RegionChunk> read(Path file) throws IOException {
-        int[] region = coordinates(file).orElseThrow(() -> new IOException("not a region file: " + file));
-        byte[] bytes = Files.readAllBytes(file);
-        List<RegionChunk> chunks = new ArrayList<>();
-        if (bytes.length < SECTOR) {
-            return chunks;
-        }
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        for (int index = 0; index < SIDE * SIDE; index++) {
-            int location = buffer.getInt(index * 4);
-            if (location == 0) {
-                continue;
+        return read(file, (chunkX, chunkZ) -> true);
+    }
+
+    public static List<int[]> present(Path file) throws IOException {
+        int[] region = region(file);
+        List<int[]> chunks = new ArrayList<>();
+        try (FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
+            ByteBuffer header = header(channel);
+            for (int index = 0; index < SIDE * SIDE; index++) {
+                if (header.getInt(index * 4) != 0) {
+                    chunks.add(new int[]{chunkX(region, index), chunkZ(region, index)});
+                }
             }
-            int chunkX = region[0] * SIDE + (index & 31);
-            int chunkZ = region[1] * SIDE + (index >> 5);
-            chunks.add(new RegionChunk(chunkX, chunkZ, payload(file, buffer, location, chunkX, chunkZ)));
         }
         return chunks;
     }
 
-    private static Optional<byte[]> payload(Path file, ByteBuffer buffer, int location, int chunkX, int chunkZ) {
-        int start = (location >>> 8) * SECTOR;
-        if (start + 5 > buffer.capacity()) {
-            return Optional.empty();
-        }
-        int length = buffer.getInt(start);
-        int type = buffer.get(start + 4) & 0xff;
-        try {
-            if ((type & EXTERNAL) != 0) {
-                Path external = file.resolveSibling("c." + chunkX + "." + chunkZ + ".mcc");
-                return decompress(type & ~EXTERNAL, Files.readAllBytes(external), 0, (int) Files.size(external));
+    public static List<RegionChunk> read(Path file, ChunkFilter wanted) throws IOException {
+        int[] region = region(file);
+        List<RegionChunk> chunks = new ArrayList<>();
+        try (FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
+            ByteBuffer header = header(channel);
+            long size = channel.size();
+            for (int index = 0; index < SIDE * SIDE; index++) {
+                int location = header.getInt(index * 4);
+                int chunkX = chunkX(region, index);
+                int chunkZ = chunkZ(region, index);
+                if (location == 0 || !wanted.test(chunkX, chunkZ)) {
+                    continue;
+                }
+                chunks.add(new RegionChunk(chunkX, chunkZ, payload(file, channel, size, location, chunkX, chunkZ)));
             }
-            if (length < 1 || start + 4 + length > buffer.capacity()) {
+        }
+        return chunks;
+    }
+
+    @FunctionalInterface
+    public interface ChunkFilter {
+
+        boolean test(int chunkX, int chunkZ);
+    }
+
+    private static int[] region(Path file) throws IOException {
+        return coordinates(file).orElseThrow(() -> new IOException("not a region file: " + file));
+    }
+
+    private static int chunkX(int[] region, int index) {
+        return region[0] * SIDE + (index & 31);
+    }
+
+    private static int chunkZ(int[] region, int index) {
+        return region[1] * SIDE + (index >> 5);
+    }
+
+    private static ByteBuffer header(FileChannel channel) throws IOException {
+        ByteBuffer header = ByteBuffer.allocate(SECTOR);
+        if (channel.size() >= SECTOR) {
+            readFully(channel, header, 0);
+        }
+        return header;
+    }
+
+    private static Optional<byte[]> payload(Path file, FileChannel channel, long size, int location, int chunkX,
+                                            int chunkZ) {
+        long start = (long) (location >>> 8) * SECTOR;
+        int sectors = location & 0xff;
+        try {
+            if (start + 5 > size) {
                 return Optional.empty();
             }
-            return decompress(type, buffer.array(), start + 5, length - 1);
+            ByteBuffer frame = ByteBuffer.allocate(5);
+            readFully(channel, frame, start);
+            int length = frame.getInt(0);
+            int type = frame.get(4) & 0xff;
+            if ((type & EXTERNAL) != 0) {
+                Path external = file.resolveSibling("c." + chunkX + "." + chunkZ + ".mcc");
+                byte[] data = Files.readAllBytes(external);
+                return decompress(type & ~EXTERNAL, data, 0, data.length);
+            }
+            if (length < 1 || start + 4 + length > size || 4L + length > (long) sectors * SECTOR) {
+                return Optional.empty();
+            }
+            ByteBuffer body = ByteBuffer.allocate(length - 1);
+            readFully(channel, body, start + 5);
+            return decompress(type, body.array(), 0, length - 1);
         } catch (IOException | RuntimeException e) {
             return Optional.empty();
+        }
+    }
+
+    private static void readFully(FileChannel channel, ByteBuffer buffer, long position) throws IOException {
+        long offset = position;
+        while (buffer.hasRemaining()) {
+            int read = channel.read(buffer, offset);
+            if (read < 0) {
+                throw new IOException("unexpected end of region file");
+            }
+            offset += read;
         }
     }
 

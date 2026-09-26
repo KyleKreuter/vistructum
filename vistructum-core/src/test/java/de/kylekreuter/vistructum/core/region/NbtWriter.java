@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,9 +32,27 @@ final class NbtWriter {
     }
 
     static Map<String, Object> section(int y, List<String> palette, long[] data) {
-        List<Map<String, Object>> entries = palette.stream().<Map<String, Object>>map(name -> Map.of("Name", name)).toList();
+        List<Map<String, Object>> entries = palette.stream().<Map<String, Object>>map(NbtWriter::entry).toList();
         Map<String, Object> states = data.length == 0 ? Map.of("palette", entries) : Map.of("palette", entries, "data", data);
         return Map.of("Y", (byte) y, "block_states", states);
+    }
+
+    static byte[] chunk(int dataVersion, String status, List<Map<String, Object>> sections, long[] motionBlocking) {
+        return root(Map.of("DataVersion", dataVersion, "Status", status, "sections", sections,
+                "Heightmaps", Map.of("MOTION_BLOCKING", motionBlocking)));
+    }
+
+    private static Map<String, Object> entry(String state) {
+        PaletteEntry entry = PaletteEntry.parse(state);
+        if (entry.properties().isEmpty()) {
+            return Map.of("Name", entry.name());
+        }
+        Map<String, Object> properties = new HashMap<>();
+        for (String pair : entry.properties().substring(1, entry.properties().length() - 1).split(",")) {
+            String[] parts = pair.split("=");
+            properties.put(parts[0], parts[1]);
+        }
+        return Map.of("Name", entry.name(), "Properties", properties);
     }
 
     static long[] pack(int[] indices, int paletteSize) {

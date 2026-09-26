@@ -2,6 +2,7 @@ package de.kylekreuter.vistructum.core.region;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,12 +47,22 @@ public record ChunkColumn(int chunkX, int chunkZ, int dataVersion, String status
                 || !(states.get("palette") instanceof List<?> entries)) {
             return Optional.empty();
         }
-        List<String> palette = new ArrayList<>(entries.size());
+        List<PaletteEntry> palette = new ArrayList<>(entries.size());
         for (Object entry : entries) {
-            palette.add(entry instanceof Map<?, ?> state && state.get("Name") instanceof String name ? name
-                    : "minecraft:air");
+            palette.add(entry instanceof Map<?, ?> state ? entry(state) : PaletteEntry.AIR);
         }
         long[] data = states.get("data") instanceof long[] values ? values : new long[0];
         return Optional.of(new Section(y, palette, data));
+    }
+
+    private static PaletteEntry entry(Map<?, ?> state) {
+        if (!(state.get("Name") instanceof String name)) {
+            return PaletteEntry.AIR;
+        }
+        Map<String, String> properties = new HashMap<>();
+        if (state.get("Properties") instanceof Map<?, ?> values) {
+            values.forEach((key, value) -> properties.put(String.valueOf(key), String.valueOf(value)));
+        }
+        return PaletteEntry.of(name, properties);
     }
 }

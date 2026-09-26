@@ -45,3 +45,6 @@ Thumbs.db
 # Docker
 .docker/
 captures/
+
+# Release-Artefakte
+release/

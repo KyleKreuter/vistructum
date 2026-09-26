@@ -10,9 +10,9 @@ import export as export_mod
 import scan_eval
 import torch
 from config import add_config_args, load_config
-from data import findings_split
 
 import train as train_mod
+from data import findings_split
 
 
 def git_info():

@@ -119,7 +119,7 @@ def test_convert_holds_out_a_stratified_val_split(tmp_path):
     assert sorted((val["y"] == POSITIVE).tolist()) == [False, False, True, True]
     assert len(train["y"]) == 16
     assert not set(val["finding"].tolist()) & set(train["finding"].tolist())
-    again, *_ = convert([source], tmp_path / "again", "mask", val_fraction=0.2, seed=3)
+    convert([source], tmp_path / "again", "mask", val_fraction=0.2, seed=3)
     assert np.load(tmp_path / "again" / "mask-val.npz")["finding"].tolist() == val["finding"].tolist()
     with pytest.raises(ValueError, match="val_fraction"):
         convert([source], tmp_path / "bad", "mask", val_fraction=1.0)

@@ -5,10 +5,10 @@ from pathlib import Path
 
 import torch
 from config import add_config_args, load_config
-from data import d4_augment, findings_split, load_split, make_loader
 from model import SymbolNet
 from torch import nn
 
+from data import d4_augment, findings_split, load_split, make_loader
 from vistructum_ml.gates import GATES, metrics_at, select_threshold
 
 

@@ -53,7 +53,7 @@ def held_out(labels, fraction, seed):
     for label in np.unique(labels):
         index = np.flatnonzero(labels == label)
         rng.shuffle(index)
-        mask[index[:int(round(len(index) * fraction))]] = True
+        mask[index[:round(len(index) * fraction)]] = True
     return mask
 
 

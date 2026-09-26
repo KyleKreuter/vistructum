@@ -14,6 +14,7 @@ import de.kylekreuter.vistructum.core.inference.InferenceSettings;
 import de.kylekreuter.vistructum.core.inference.LocalInference;
 import de.kylekreuter.vistructum.core.inference.RemoteInference;
 import de.kylekreuter.vistructum.core.mask.MaskMonitor;
+import de.kylekreuter.vistructum.core.metrics.UsageMetrics;
 import de.kylekreuter.vistructum.core.scan.DailySchedule;
 import de.kylekreuter.vistructum.core.scan.ScanStore;
 import de.kylekreuter.vistructum.core.scan.WorldScanner;
@@ -27,6 +28,7 @@ import de.kylekreuter.vistructum.core.tracking.ClusterSettings;
 import de.kylekreuter.vistructum.inference.GitHubReleases;
 import de.kylekreuter.vistructum.inference.InferenceEngine;
 import de.kylekreuter.vistructum.inference.ModelFiles;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -49,6 +51,7 @@ public final class VistructumCore extends JavaPlugin {
     private WorldScanner scanner;
     private DailySchedule schedule;
     private FindingRetention retention;
+    private Metrics metrics;
 
     @Override
     public void onEnable() {
@@ -117,11 +120,17 @@ public final class VistructumCore extends JavaPlugin {
                 new VistructumService(mainThread, changes, findings, scans, scanner, inference,
                         new FaceCache(faces, new MojangFaces(), clock), clock), this,
                 ServicePriority.Normal);
+
+        metrics = UsageMetrics.start(this, settings, config.getBoolean("scan.enabled"),
+                config.getStringList("scan.worlds").size());
     }
 
     @Override
     public void onDisable() {
         getServer().getServicesManager().unregisterAll(this);
+        if (metrics != null) {
+            metrics.shutdown();
+        }
         if (retention != null) {
             retention.stop();
         }

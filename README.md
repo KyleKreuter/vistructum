@@ -124,6 +124,10 @@ docker compose up -d sidecar
 
 The [Configuration](https://github.com/KyleKreuter/vistructum/wiki/Configuration) wiki page describes every key.
 
+## Usage statistics
+
+Vistructum sends anonymous usage data to [bStats](https://bstats.org/plugin/bukkit/Vistructum/34300): server and player counts, the inference mode, the model update setting, whether the daily scan is on, the number of scan worlds, and whether `vistructum-ui` runs. It sends no findings, reviews, or player names. To turn this off for all plugins, set `enabled: false` in `plugins/bStats/config.yml`.
+
 ## Plugin API
 
 Add `vistructum-api` as a `provided` dependency and declare `depend: [vistructum]` in your `plugin.yml`.

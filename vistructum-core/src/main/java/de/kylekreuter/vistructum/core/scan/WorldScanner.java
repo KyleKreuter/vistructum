@@ -54,6 +54,8 @@ import java.util.stream.Stream;
 
 public final class WorldScanner {
 
+    private static final long RETRY_TICKS = 20L * 60;
+
     private final MainThread mainThread;
     private final ScanStore scans;
     private final Inference inference;
@@ -373,9 +375,10 @@ public final class WorldScanner {
             }
             waiting = false;
             if (error != null) {
-                logger.warning("fullscan stopped: " + error);
+                logger.warning("fullscan paused, retrying in " + RETRY_TICKS / 20 + " s: " + error);
                 reset();
                 stopTimer();
+                Bukkit.getScheduler().runTaskLater(mainThread.plugin(), this::start, RETRY_TICKS);
                 return;
             }
             then.accept(value);

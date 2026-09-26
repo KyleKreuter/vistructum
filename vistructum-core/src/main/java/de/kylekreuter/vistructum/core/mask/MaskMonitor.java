@@ -5,7 +5,9 @@ import de.kylekreuter.vistructum.api.FindingCandidate;
 import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.core.MainThread;
+import de.kylekreuter.vistructum.core.alert.DetectedCandidate;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
+import de.kylekreuter.vistructum.core.alert.ModelInput;
 import de.kylekreuter.vistructum.core.alert.PreviewCrop;
 import de.kylekreuter.vistructum.core.inference.Inference;
 import de.kylekreuter.vistructum.core.scene.Axis;
@@ -135,7 +137,7 @@ public final class MaskMonitor {
         return new BreakClassifier.Sample(true, block.getType().isSolid(), block.getType().name());
     }
 
-    private static List<FindingCandidate> candidates(Cluster cluster, Set<UUID> players, Projection projection,
+    private static List<DetectedCandidate> candidates(Cluster cluster, Set<UUID> players, Projection projection,
                                                      InferResult result) {
         if (!result.flagged()) {
             return List.of();
@@ -144,13 +146,14 @@ public final class MaskMonitor {
         return result.detections().stream().map(d -> candidate(cluster, players, projection, scene, result, d)).toList();
     }
 
-    private static FindingCandidate candidate(Cluster cluster, Set<UUID> players, Projection projection,
-                                              SurfaceScene scene, InferResult result, Detection detection) {
-        return new FindingCandidate(Source.MASK, cluster.world(),
+    private static DetectedCandidate candidate(Cluster cluster, Set<UUID> players, Projection projection,
+                                               SurfaceScene scene, InferResult result, Detection detection) {
+        FindingCandidate candidate = new FindingCandidate(Source.MASK, cluster.world(),
                 projection.toWorld(detection.top(), detection.left(), detection.bottom(), detection.right()),
                 detection.score(), detection.votes(), players, "Achse " + projection.axis(),
                 result.modelVersion(), PreviewCrop.ofMask(scene.modified(), scene.width(), scene.height(), detection.top(),
                 detection.left(), detection.bottom(), detection.right()));
+        return new DetectedCandidate(candidate, ModelInput.of(ModelKind.MASK, scene, detection));
     }
 
     private static JsonObject context(Cluster cluster, Projection projection, int blocks) {

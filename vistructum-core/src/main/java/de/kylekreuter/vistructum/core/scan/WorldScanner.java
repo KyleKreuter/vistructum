@@ -11,7 +11,9 @@ import de.kylekreuter.vistructum.api.ScanStartedEvent;
 import de.kylekreuter.vistructum.api.ScanStatus;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.core.MainThread;
+import de.kylekreuter.vistructum.core.alert.DetectedCandidate;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
+import de.kylekreuter.vistructum.core.alert.ModelInput;
 import de.kylekreuter.vistructum.core.alert.PreviewCrop;
 import de.kylekreuter.vistructum.core.inference.Inference;
 import de.kylekreuter.vistructum.core.region.ChunkColumn;
@@ -298,10 +300,10 @@ public final class WorldScanner {
             taken.forEach((key, snapshot) -> read.put(key, SnapshotColumns.of(snapshot, minY, maxY, version)));
             return read;
         }, workers).thenCompose(tileColumns -> tileColumns.values().stream().noneMatch(ChunkColumn::hasBlocks)
-                ? CompletableFuture.completedFuture(List.<FindingCandidate>of())
+                ? CompletableFuture.completedFuture(List.<DetectedCandidate>of())
                 : surface(running, current, tileColumns, minY, blockStates)
                         .thenCombine(volume(running, tileColumns, blockStates), (surface, volumes) -> {
-                            List<FindingCandidate> all = new ArrayList<>(surface);
+                            List<DetectedCandidate> all = new ArrayList<>(surface);
                             all.addAll(volumes);
                             return all;
                         })).thenCompose(reporter::reportAll);
@@ -326,7 +328,7 @@ public final class WorldScanner {
     private record TileProgress(ScanJob job, Optional<ScanPlan.Tile> next) {
     }
 
-    private CompletableFuture<List<FindingCandidate>> surface(ScanJob running, ScanPlan.Tile current,
+    private CompletableFuture<List<DetectedCandidate>> surface(ScanJob running, ScanPlan.Tile current,
                                                               Map<Long, ChunkColumn> tileColumns, int minY,
                                                               BlockStates blockStates) {
         return CompletableFuture.supplyAsync(() -> new ColumnSurface(minY, blockStates).sample(tileColumns,
@@ -335,12 +337,12 @@ public final class WorldScanner {
                         .thenApply(result -> candidates(running.world(), current, scene, result)));
     }
 
-    private CompletableFuture<List<FindingCandidate>> volume(ScanJob running, Map<Long, ChunkColumn> tileColumns,
+    private CompletableFuture<List<DetectedCandidate>> volume(ScanJob running, Map<Long, ChunkColumn> tileColumns,
                                                              PaperBlockStates blockStates) {
         VolumeShapes shapes = new VolumeShapes(volume, blockStates::solid);
         return CompletableFuture.supplyAsync(() -> shapes.candidates(tileColumns.values()), workers)
                 .thenCompose(byMaterial -> {
-                    List<CompletableFuture<List<FindingCandidate>>> checks = new ArrayList<>();
+                    List<CompletableFuture<List<DetectedCandidate>>> checks = new ArrayList<>();
                     byMaterial.forEach((material, positions) -> checks.add(CompletableFuture
                             .supplyAsync(() -> shapes.shapes(material, positions), workers)
                             .thenCompose(found -> checkShapes(running, found))));
@@ -349,8 +351,8 @@ public final class WorldScanner {
                 });
     }
 
-    private CompletableFuture<List<FindingCandidate>> checkShapes(ScanJob running, List<VolumeShape> found) {
-        List<CompletableFuture<List<FindingCandidate>>> checks = found.stream()
+    private CompletableFuture<List<DetectedCandidate>> checkShapes(ScanJob running, List<VolumeShape> found) {
+        List<CompletableFuture<List<DetectedCandidate>>> checks = found.stream()
                 .map(shape -> inference.infer(ModelKind.MASK, shape.projection().scene(), context(running, shape))
                         .thenApply(result -> candidates(running.world(), shape, result)))
                 .toList();
@@ -406,33 +408,36 @@ public final class WorldScanner {
         }
     }
 
-    private static List<FindingCandidate> candidates(String worldName, VolumeShape shape, InferResult result) {
+    private static List<DetectedCandidate> candidates(String worldName, VolumeShape shape, InferResult result) {
         if (!result.flagged()) {
             return List.of();
         }
         SurfaceScene scene = shape.projection().scene();
         return result.detections().stream().filter(detection -> !ShapeFilter.implausible(scene.modified(),
                 scene.width(), scene.height(), detection.top(), detection.left(), detection.bottom(),
-                detection.right())).map(detection -> new FindingCandidate(Source.FULLSCAN, worldName,
-                shape.projection().toWorld(detection.top(), detection.left(), detection.bottom(), detection.right()),
-                detection.score(), detection.votes(), Set.of(),
-                "Volumen " + shape.material().replace("minecraft:", "") + ", Achse " + shape.projection().axis(),
-                result.modelVersion(), PreviewCrop.ofMask(scene.modified(), scene.width(), scene.height(),
-                detection.top(), detection.left(), detection.bottom(), detection.right()))).toList();
+                detection.right())).map(detection -> new DetectedCandidate(
+                new FindingCandidate(Source.FULLSCAN, worldName,
+                        shape.projection().toWorld(detection.top(), detection.left(), detection.bottom(), detection.right()),
+                        detection.score(), detection.votes(), Set.of(),
+                        "Volumen " + shape.material().replace("minecraft:", "") + ", Achse " + shape.projection().axis(),
+                        result.modelVersion(), PreviewCrop.ofMask(scene.modified(), scene.width(), scene.height(),
+                        detection.top(), detection.left(), detection.bottom(), detection.right())),
+                ModelInput.of(ModelKind.MASK, scene, detection))).toList();
     }
 
-    private static List<FindingCandidate> candidates(String worldName, ScanPlan.Tile tile, SurfaceScene scene,
-                                             InferResult result) {
+    private static List<DetectedCandidate> candidates(String worldName, ScanPlan.Tile tile, SurfaceScene scene,
+                                                      InferResult result) {
         if (!result.flagged()) {
             return List.of();
         }
-        List<FindingCandidate> candidates = new ArrayList<>();
+        List<DetectedCandidate> candidates = new ArrayList<>();
         for (Detection detection : result.detections()) {
-            surfaceBox(tile, scene, detection).ifPresent(box -> candidates.add(new FindingCandidate(Source.FULLSCAN, worldName,
-                    box, detection.score(), detection.votes(), Set.of(),
-                    "Kachel " + tile.originX() + "," + tile.originZ(), result.modelVersion(),
-                    PreviewCrop.ofLuminance(scene.luminance(), scene.width(), scene.height(), detection.top(),
-                            detection.left(), detection.bottom(), detection.right()))));
+            surfaceBox(tile, scene, detection).ifPresent(box -> candidates.add(new DetectedCandidate(
+                    new FindingCandidate(Source.FULLSCAN, worldName, box, detection.score(), detection.votes(), Set.of(),
+                            "Kachel " + tile.originX() + "," + tile.originZ(), result.modelVersion(),
+                            PreviewCrop.ofLuminance(scene.luminance(), scene.width(), scene.height(), detection.top(),
+                                    detection.left(), detection.bottom(), detection.right())),
+                    ModelInput.of(ModelKind.FULLSCAN, scene, detection))));
         }
         return candidates;
     }

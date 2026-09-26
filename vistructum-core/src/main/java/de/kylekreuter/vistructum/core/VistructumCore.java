@@ -2,6 +2,7 @@ package de.kylekreuter.vistructum.core;
 
 import de.kylekreuter.vistructum.api.InferenceMode;
 import de.kylekreuter.vistructum.api.Vistructum;
+import de.kylekreuter.vistructum.core.alert.FindingExporter;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
 import de.kylekreuter.vistructum.core.alert.FindingRetention;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
@@ -44,6 +45,7 @@ public final class VistructumCore extends JavaPlugin {
 
     private static final double VOLUME_PRISM_FILL = 0.9;
     private static final int VOLUME_MIN_SIDE = 5;
+    private static final String EXPORT_FOLDER = "exports";
 
     private Database database;
     private Inference inference;
@@ -117,8 +119,9 @@ public final class VistructumCore extends JavaPlugin {
         }
 
         getServer().getServicesManager().register(Vistructum.class,
-                new VistructumService(mainThread, changes, findings, scans, scanner, inference,
-                        new FaceCache(faces, new MojangFaces(), clock), clock), this,
+                new VistructumService(mainThread, changes, findings,
+                        new FindingExporter(findings, getDataFolder().toPath().resolve(EXPORT_FOLDER), clock), scans,
+                        scanner, inference, new FaceCache(faces, new MojangFaces(), clock), clock), this,
                 ServicePriority.Normal);
 
         metrics = UsageMetrics.start(this, settings, config.getBoolean("scan.enabled"),

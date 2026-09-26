@@ -5,7 +5,7 @@ command:
   no-permission: "<prefix><red>This action is not permitted.</red>"
   player-only: "<prefix><red>This command can only be run by a player.</red>"
   failed: "<prefix><red>The request failed: <reason></red>"
-  usage: "<prefix><gray>Usage: /vis [status | review [count] | show <id> | tp <id> | confirm <id> | falsealarm <id> | scan [world|stop]]</gray>"
+  usage: "<prefix><gray>Usage: /vis [status | review [count] | show <id> | tp <id> | confirm <id> | falsealarm <id> | stats | scan [world|stop] | export]</gray>"
   id-missing: "<prefix><red>A finding ID is required, for example /vis <subcommand> 12.</red>"
   count-invalid: "<prefix><red>The count must be a positive number.</red>"
   finding-missing: "<prefix><red>Finding #<id> was not found.</red>"
@@ -43,6 +43,16 @@ scan:
   failed: "<prefix><red>Scan #<id> of <world> was stopped by an error: <findings> findings were created, <failures> tiles failed.</red>"
   bar-progress: "<white>Fullscan of <world>: <percent>, <findings> findings</white>"
   bar-done: "<white>Fullscan of <world> is done: <findings> findings</white>"
+
+stats:
+  header: "<prefix><gray>Precision per source from reviewed findings:</gray>"
+  line: "<prefix><gray><source>: <precision> (<confirmed> confirmed, <false_alarms> false alarms).</gray>"
+  unreviewed: "<prefix><gray><source>: no findings have been reviewed.</gray>"
+
+export:
+  started: "<prefix><gray>The reviewed findings are being exported.</gray>"
+  done: "<prefix><gray><count> reviewed findings were exported to <directory>.</gray>"
+  skipped: "<prefix><gray><count> reviewed findings have no stored scene and were skipped.</gray>"
 
 pack:
   prompt: "<gray>The vistructum review menu and scan bar are displayed with this resource pack.</gray>"

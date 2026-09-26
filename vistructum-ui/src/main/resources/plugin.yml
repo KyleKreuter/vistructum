@@ -8,15 +8,15 @@ depend: [vistructum]
 commands:
   vis:
     description: Findings, reviews and scans
-    usage: /vis [status|review|show|tp|confirm|falsealarm|scan]
+    usage: /vis [status|review|show|tp|confirm|falsealarm|stats|scan|export]
     aliases: [vistructum]
     permission: vistructum.staff
 permissions:
   vistructum.staff:
-    description: Receives findings in chat, lists, views and reviews them
+    description: Receives findings in chat, lists, views and reviews them, shows the precision per source
     default: op
   vistructum.admin:
-    description: Starts and stops surface scans
+    description: Starts and stops surface scans, exports reviewed findings as training data
     default: op
     children:
       vistructum.staff: true

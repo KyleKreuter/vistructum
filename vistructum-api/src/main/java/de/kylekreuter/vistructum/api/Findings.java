@@ -1,5 +1,6 @@
 package de.kylekreuter.vistructum.api;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -86,4 +87,25 @@ public interface Findings {
      *         this identifier; the returned array is owned by the caller
      */
     CompletableFuture<Optional<byte[]>> previewPng(long id);
+
+    /**
+     * Counts the verdicts of all reviewed findings per detection path.
+     *
+     * @return a future completing with one entry per {@link Source}, in declaration order of the enum; paths without
+     *         reviewed findings are included with zero counts
+     * @see SourcePrecision
+     */
+    CompletableFuture<List<SourcePrecision>> precision();
+
+    /**
+     * Writes all reviewed findings as training data into a new directory below the data folder of the core plugin.
+     *
+     * <p>Every finding with a verdict and a stored model input scene is written, ordered by ascending identifier.
+     * The directory name is derived from the server clock. Files are written off the main thread; the returned
+     * future completes once all files are closed.
+     *
+     * @return a future completing with the location and size of the export
+     * @see TrainingExport
+     */
+    CompletableFuture<TrainingExport> exportTraining();
 }

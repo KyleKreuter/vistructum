@@ -5,9 +5,13 @@ import de.kylekreuter.vistructum.api.FindingCandidate;
 import de.kylekreuter.vistructum.api.PlayerFace;
 import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Source;
+import de.kylekreuter.vistructum.core.alert.DetectedCandidate;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
+import de.kylekreuter.vistructum.core.alert.ModelInput;
 import de.kylekreuter.vistructum.core.store.Database;
 import de.kylekreuter.vistructum.core.store.TestDatabase;
+import de.kylekreuter.vistructum.inference.ModelKind;
+import de.kylekreuter.vistructum.inference.SurfaceScene;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,9 +53,10 @@ class FaceStoreTest {
 
     @Test
     void deleteUnreferencedKeepsFacesOfPlayersInFindings() throws Exception {
-        new FindingStore(database).insertUnlessDuplicate(new FindingCandidate(Source.MASK, "world",
+        new FindingStore(database).insertUnlessDuplicate(new DetectedCandidate(new FindingCandidate(Source.MASK, "world",
                 new BlockBox(0, 60, 0, 10, 62, 10), 0.97, 2, Set.of(BUILDER, HELPER), "Achse Y", "bf-mask-2",
-                new Preview(1, 1, new byte[]{40})), NOW, Duration.ofDays(14)).get();
+                new Preview(1, 1, new byte[]{40})), new ModelInput(ModelKind.MASK,
+                SurfaceScene.maskOnly(1, 1, new byte[]{1}), 0, 0, 64, 64)), NOW, Duration.ofDays(14)).get();
         for (UUID player : List.of(BUILDER, HELPER, BYSTANDER)) {
             store.save(new PlayerFace(player, Optional.empty(), List.of()), NOW).get();
         }

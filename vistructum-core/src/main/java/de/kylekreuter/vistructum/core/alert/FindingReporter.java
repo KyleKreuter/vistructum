@@ -35,14 +35,15 @@ public final class FindingReporter {
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
-    public CompletableFuture<Optional<Finding>> report(FindingCandidate candidate) {
+    public CompletableFuture<Optional<Finding>> report(DetectedCandidate detected) {
+        FindingCandidate candidate = detected.candidate();
         Instant now = clock.instant();
         return store.isDuplicate(candidate, now, dedupe)
                 .thenCompose(duplicate -> duplicate
                         ? CompletableFuture.completedFuture(false)
                         : mainThread.supply(() -> admitted(candidate)))
                 .thenCompose(admitted -> admitted
-                        ? store.insertUnlessDuplicate(candidate, now, dedupe)
+                        ? store.insertUnlessDuplicate(detected, now, dedupe)
                         : CompletableFuture.completedFuture(Optional.<Finding>empty()))
                 .thenCompose(stored -> stored.isEmpty()
                         ? CompletableFuture.completedFuture(stored)
@@ -52,9 +53,9 @@ public final class FindingReporter {
                         }));
     }
 
-    public CompletableFuture<Integer> reportAll(List<FindingCandidate> candidates) {
+    public CompletableFuture<Integer> reportAll(List<DetectedCandidate> candidates) {
         CompletableFuture<Integer> reported = CompletableFuture.completedFuture(0);
-        for (FindingCandidate candidate : candidates) {
+        for (DetectedCandidate candidate : candidates) {
             reported = reported.thenCompose(count -> report(candidate)
                     .thenApply(stored -> count + (stored.isPresent() ? 1 : 0)));
         }

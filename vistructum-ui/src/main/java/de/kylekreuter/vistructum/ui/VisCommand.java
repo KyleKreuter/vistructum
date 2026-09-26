@@ -4,6 +4,8 @@ import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.ReviewState;
 import de.kylekreuter.vistructum.api.InferenceStatus;
+import de.kylekreuter.vistructum.api.SourcePrecision;
+import de.kylekreuter.vistructum.api.TrainingExport;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.api.VistructumStatus;
@@ -27,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.OptionalDouble;
 import java.util.OptionalLong;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -39,7 +42,9 @@ public final class VisCommand implements TabExecutor {
 
     private static final int DEFAULT_REVIEW_LIMIT = 10;
     private static final int MAX_REVIEW_LIMIT = 50;
-    private static final List<String> STAFF_SUBCOMMANDS = List.of("status", "review", "show", "tp", "confirm", "falsealarm");
+    private static final List<String> STAFF_SUBCOMMANDS = List.of("status", "review", "show", "tp", "confirm", "falsealarm",
+            "stats");
+    private static final List<String> ADMIN_SUBCOMMANDS = List.of("scan", "export");
 
     private final Vistructum vistructum;
     private final ReviewMenus menus;
@@ -61,7 +66,7 @@ public final class VisCommand implements TabExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         String sub = args.length == 0 ? "review" : args[0].toLowerCase();
-        if (!sender.hasPermission(sub.equals("scan") ? adminPermission : staffPermission)) {
+        if (!sender.hasPermission(ADMIN_SUBCOMMANDS.contains(sub) ? adminPermission : staffPermission)) {
             reply(sender, Message.COMMAND_NO_PERMISSION);
             return true;
         }
@@ -72,7 +77,9 @@ public final class VisCommand implements TabExecutor {
             case "tp" -> withId(sender, args, id -> teleport(sender, id));
             case "confirm" -> withId(sender, args, id -> judge(sender, id, Verdict.CONFIRMED));
             case "falsealarm" -> withId(sender, args, id -> judge(sender, id, Verdict.FALSE_ALARM));
+            case "stats" -> stats(sender);
             case "scan" -> scan(sender, args);
+            case "export" -> export(sender);
             default -> reply(sender, Message.COMMAND_USAGE);
         }
         return true;
@@ -86,7 +93,7 @@ public final class VisCommand implements TabExecutor {
                 options.addAll(STAFF_SUBCOMMANDS);
             }
             if (sender.hasPermission(adminPermission)) {
-                options.add("scan");
+                options.addAll(ADMIN_SUBCOMMANDS);
             }
             return options.stream().filter(option -> option.startsWith(args[0].toLowerCase())).toList();
         }
@@ -196,6 +203,37 @@ public final class VisCommand implements TabExecutor {
         when(sender, messages, vistructum.scans().request(world.getName()), job -> sender.sendMessage(job
                 .map(queued -> messages.chat(Message.SCAN_QUEUED, ScanText.values(queued)))
                 .orElseGet(() -> messages.chat(Message.SCAN_ALREADY_RUNNING, text("world", world.getName())))));
+    }
+
+    private void stats(CommandSender sender) {
+        when(sender, messages, vistructum.findings().precision(), sources -> {
+            reply(sender, Message.STATS_HEADER);
+            sources.forEach(source -> sender.sendMessage(statsLine(source)));
+        });
+    }
+
+    private Component statsLine(SourcePrecision source) {
+        String name = messages.source(source.source());
+        OptionalDouble precision = source.precision();
+        if (precision.isEmpty()) {
+            return messages.chat(Message.STATS_UNREVIEWED, text("source", name));
+        }
+        return messages.chat(Message.STATS_LINE, text("source", name),
+                text("precision", Messages.probability(precision.getAsDouble())),
+                number("confirmed", source.confirmed()), number("false_alarms", source.falseAlarms()));
+    }
+
+    private void export(CommandSender sender) {
+        reply(sender, Message.EXPORT_STARTED);
+        when(sender, messages, vistructum.findings().exportTraining(), export -> exported(sender, export));
+    }
+
+    private void exported(CommandSender sender, TrainingExport export) {
+        reply(sender, Message.EXPORT_DONE, number("count", export.total()),
+                text("directory", export.directory().toString()));
+        if (export.skipped() > 0) {
+            reply(sender, Message.EXPORT_SKIPPED, number("count", export.skipped()));
+        }
     }
 
     private void withFinding(CommandSender sender, long id, Consumer<Finding> action) {

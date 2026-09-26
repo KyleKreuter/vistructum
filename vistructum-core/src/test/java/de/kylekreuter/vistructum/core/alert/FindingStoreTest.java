@@ -7,15 +7,19 @@ import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.ReviewState;
 import de.kylekreuter.vistructum.api.Source;
+import de.kylekreuter.vistructum.api.SourcePrecision;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.core.store.Database;
 import de.kylekreuter.vistructum.core.store.TestDatabase;
+import de.kylekreuter.vistructum.inference.ModelKind;
+import de.kylekreuter.vistructum.inference.SurfaceScene;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -54,10 +58,19 @@ class FindingStoreTest {
                 new Preview(2, 1, new byte[]{40, (byte) 235}));
     }
 
+    private static DetectedCandidate detected(String world, BlockBox box) {
+        return detected(candidate(world, box));
+    }
+
+    private static DetectedCandidate detected(FindingCandidate candidate) {
+        return new DetectedCandidate(candidate, new ModelInput(ModelKind.MASK,
+                SurfaceScene.maskOnly(2, 1, new byte[]{1, 0}), 0, 0, 64, 64));
+    }
+
     @Test
     void storedFindingRoundTrips() throws Exception {
         FindingCandidate candidate = candidate("world", new BlockBox(0, 60, 0, 10, 62, 10));
-        Finding stored = store.insertUnlessDuplicate(candidate, NOW, DEDUPE).get().orElseThrow();
+        Finding stored = store.insertUnlessDuplicate(detected(candidate), NOW, DEDUPE).get().orElseThrow();
 
         assertEquals(candidate.box(), stored.box());
         assertEquals(candidate.players(), stored.players());
@@ -69,23 +82,23 @@ class FindingStoreTest {
 
     @Test
     void overlappingFindingWithinDedupeWindowIsDropped() throws Exception {
-        store.insertUnlessDuplicate(candidate("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get();
+        store.insertUnlessDuplicate(detected("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get();
 
-        assertTrue(store.insertUnlessDuplicate(candidate("world", new BlockBox(5, 61, 5, 15, 61, 15)), NOW, DEDUPE).get()
+        assertTrue(store.insertUnlessDuplicate(detected("world", new BlockBox(5, 61, 5, 15, 61, 15)), NOW, DEDUPE).get()
                 .isEmpty());
-        assertTrue(store.insertUnlessDuplicate(candidate("other", new BlockBox(5, 61, 5, 15, 61, 15)), NOW, DEDUPE).get()
+        assertTrue(store.insertUnlessDuplicate(detected("other", new BlockBox(5, 61, 5, 15, 61, 15)), NOW, DEDUPE).get()
                 .isPresent());
-        assertTrue(store.insertUnlessDuplicate(candidate("world", new BlockBox(5, 61, 5, 15, 61, 15)),
+        assertTrue(store.insertUnlessDuplicate(detected("world", new BlockBox(5, 61, 5, 15, 61, 15)),
                 NOW.plus(DEDUPE).plusSeconds(1), DEDUPE).get().isPresent());
     }
 
     @Test
     void deleteReviewedBeforeKeepsOpenAndRecentlyReviewedFindings() throws Exception {
-        Finding old = store.insertUnlessDuplicate(candidate("a", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
+        Finding old = store.insertUnlessDuplicate(detected("a", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
                 .orElseThrow();
-        Finding recent = store.insertUnlessDuplicate(candidate("b", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
+        Finding recent = store.insertUnlessDuplicate(detected("b", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
                 .orElseThrow();
-        Finding open = store.insertUnlessDuplicate(candidate("c", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
+        Finding open = store.insertUnlessDuplicate(detected("c", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
                 .orElseThrow();
         store.review(old.id(), Verdict.CONFIRMED, "Staff", NOW).get();
         store.review(recent.id(), Verdict.FALSE_ALARM, "Staff", NOW.plus(Duration.ofDays(30))).get();
@@ -98,7 +111,7 @@ class FindingStoreTest {
 
     @Test
     void reviewClosesAFinding() throws Exception {
-        Finding stored = store.insertUnlessDuplicate(candidate("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE)
+        Finding stored = store.insertUnlessDuplicate(detected("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE)
                 .get().orElseThrow();
         assertEquals(1L, store.count(FindingQuery.open()).get());
 
@@ -117,17 +130,17 @@ class FindingStoreTest {
     void duplicateCheckMatchesInsertRule() throws Exception {
         FindingCandidate first = candidate("world", new BlockBox(0, 60, 0, 10, 62, 10));
         assertFalse(store.isDuplicate(first, NOW, DEDUPE).get());
-        store.insertUnlessDuplicate(first, NOW, DEDUPE).get();
+        store.insertUnlessDuplicate(detected(first), NOW, DEDUPE).get();
         assertTrue(store.isDuplicate(candidate("world", new BlockBox(5, 61, 5, 15, 61, 15)), NOW, DEDUPE).get());
     }
 
     @Test
     void queryPagesNewestFirstWithoutGaps() throws Exception {
         for (int i = 0; i < 5; i++) {
-            store.insertUnlessDuplicate(candidate("world", new BlockBox(i * 100, 60, 0, i * 100 + 10, 62, 10)), NOW,
+            store.insertUnlessDuplicate(detected("world", new BlockBox(i * 100, 60, 0, i * 100 + 10, 62, 10)), NOW,
                     DEDUPE).get();
         }
-        store.insertUnlessDuplicate(candidate("other", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get();
+        store.insertUnlessDuplicate(detected("other", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get();
 
         FindingQuery query = FindingQuery.all().world("world").limit(2);
         FindingSlice first = store.query(query).get();
@@ -153,5 +166,96 @@ class FindingStoreTest {
         assertEquals(Optional.empty(), store.find(42).get());
         assertEquals(Optional.empty(), store.review(42, Verdict.CONFIRMED, "Staff", NOW).get());
         assertEquals(Optional.empty(), store.preview(42).get());
+    }
+
+    @Test
+    void reviewedScenesReturnTheStoredModelInputInIdOrder() throws Exception {
+        SurfaceScene scene = new SurfaceScene(3, 2, new short[]{1, 2, SurfaceScene.UNKNOWN, 4, 5, 6},
+                new short[]{-64, 70, 0, 319, 64, 65}, new byte[]{0, 12, (byte) 128, (byte) 255, 7, 9},
+                new byte[]{0, 1, 0, 1, 1, 0});
+        FindingCandidate surface = new FindingCandidate(Source.FULLSCAN, "world", new BlockBox(0, 60, 0, 2, 64, 1),
+                0.8, 3, Set.of(), "Kachel 0,0", "bf-scan-2", new Preview(1, 1, new byte[]{12}));
+        Finding first = store.insertUnlessDuplicate(new DetectedCandidate(surface,
+                new ModelInput(ModelKind.FULLSCAN, scene, -2, 1, 62, 65)), NOW, DEDUPE).get().orElseThrow();
+        Finding open = store.insertUnlessDuplicate(detected("world", new BlockBox(100, 60, 0, 110, 62, 10)), NOW, DEDUPE)
+                .get().orElseThrow();
+        Finding second = store.insertUnlessDuplicate(detected("world", new BlockBox(200, 60, 0, 210, 62, 10)), NOW,
+                DEDUPE).get().orElseThrow();
+        store.review(second.id(), Verdict.FALSE_ALARM, "Staff", NOW).get();
+        store.review(first.id(), Verdict.CONFIRMED, "Staff", NOW).get();
+
+        List<ReviewedScene> all = store.reviewedScenes(0, 10).get();
+        assertEquals(List.of(first.id(), second.id()), all.stream().map(ReviewedScene::findingId).toList());
+        ReviewedScene stored = all.getFirst();
+        assertEquals(Source.FULLSCAN, stored.source());
+        assertEquals(Verdict.CONFIRMED, stored.verdict());
+        assertEquals("bf-scan-2", stored.modelVersion());
+        assertEquals(ModelKind.FULLSCAN, stored.input().kind());
+        assertEquals(List.of(-2, 1, 62, 65), List.of(stored.input().top(), stored.input().left(),
+                stored.input().bottom(), stored.input().right()));
+        assertSceneEquals(scene, stored.input().scene());
+        assertEquals(Verdict.FALSE_ALARM, all.get(1).verdict());
+        assertEquals(List.of(second.id()), store.reviewedScenes(first.id(), 10).get().stream()
+                .map(ReviewedScene::findingId).toList());
+        assertEquals(1, store.reviewedScenes(0, 1).get().size());
+        assertTrue(store.reviewedScenes(second.id(), 10).get().isEmpty());
+        assertTrue(open.open());
+    }
+
+    @Test
+    void precisionCountsVerdictsPerSource() throws Exception {
+        for (int i = 0; i < 4; i++) {
+            Finding finding = store.insertUnlessDuplicate(detected("world", new BlockBox(i * 100, 60, 0, i * 100 + 10,
+                    62, 10)), NOW, DEDUPE).get().orElseThrow();
+            if (i < 3) {
+                store.review(finding.id(), i == 0 ? Verdict.FALSE_ALARM : Verdict.CONFIRMED, "Staff", NOW).get();
+            }
+        }
+
+        List<SourcePrecision> precision = store.precision().get();
+        assertEquals(List.of(new SourcePrecision(Source.MASK, 2, 1), new SourcePrecision(Source.FULLSCAN, 0, 0)),
+                precision);
+        assertEquals(2.0 / 3, precision.getFirst().precision().orElseThrow(), 1e-9);
+        assertTrue(precision.get(1).precision().isEmpty());
+    }
+
+    @Test
+    void reviewedFindingsWithoutSceneAreCountedAndSkipped() throws Exception {
+        Finding withScene = store.insertUnlessDuplicate(detected("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW,
+                DEDUPE).get().orElseThrow();
+        Finding withoutScene = store.insertUnlessDuplicate(detected("world", new BlockBox(100, 60, 0, 110, 62, 10)),
+                NOW, DEDUPE).get().orElseThrow();
+        database.transaction(connection -> connection.createStatement()
+                .executeUpdate("DELETE FROM finding_scenes WHERE finding_id = " + withoutScene.id())).get();
+        store.review(withScene.id(), Verdict.CONFIRMED, "Staff", NOW).get();
+        store.review(withoutScene.id(), Verdict.CONFIRMED, "Staff", NOW).get();
+
+        assertEquals(1L, store.countReviewedWithoutScene().get());
+        assertEquals(List.of(withScene.id()), store.reviewedScenes(0, 10).get().stream()
+                .map(ReviewedScene::findingId).toList());
+    }
+
+    @Test
+    void retentionDeletesTheStoredScene() throws Exception {
+        Finding finding = store.insertUnlessDuplicate(detected("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE)
+                .get().orElseThrow();
+        store.review(finding.id(), Verdict.CONFIRMED, "Staff", NOW).get();
+
+        assertEquals(1, store.deleteReviewedBefore(NOW.plusSeconds(1)).get());
+        long scenes = database.transaction(connection -> {
+            try (ResultSet rows = connection.createStatement().executeQuery("SELECT count(*) FROM finding_scenes")) {
+                return rows.getLong(1);
+            }
+        }).get();
+        assertEquals(0L, scenes);
+    }
+
+    static void assertSceneEquals(SurfaceScene expected, SurfaceScene actual) {
+        assertEquals(expected.width(), actual.width());
+        assertEquals(expected.height(), actual.height());
+        assertArrayEquals(expected.blocks(), actual.blocks());
+        assertArrayEquals(expected.heights(), actual.heights());
+        assertArrayEquals(expected.luminance(), actual.luminance());
+        assertArrayEquals(expected.modified(), actual.modified());
     }
 }

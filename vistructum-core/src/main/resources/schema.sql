@@ -41,6 +41,18 @@ CREATE INDEX IF NOT EXISTS findings_by_world_time ON findings (world, created_at
 
 CREATE INDEX IF NOT EXISTS findings_by_verdict ON findings (verdict, created_at);
 
+CREATE TABLE IF NOT EXISTS finding_scenes (
+    finding_id    INTEGER PRIMARY KEY REFERENCES findings (id) ON DELETE CASCADE,
+    kind          TEXT    NOT NULL,
+    width         INTEGER NOT NULL,
+    height        INTEGER NOT NULL,
+    window_top    INTEGER NOT NULL,
+    window_left   INTEGER NOT NULL,
+    window_bottom INTEGER NOT NULL,
+    window_right  INTEGER NOT NULL,
+    channels      BLOB    NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS scan_jobs (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     world       TEXT    NOT NULL,

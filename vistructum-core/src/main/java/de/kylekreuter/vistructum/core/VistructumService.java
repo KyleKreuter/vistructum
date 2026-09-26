@@ -12,9 +12,12 @@ import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.ScanCause;
 import de.kylekreuter.vistructum.api.ScanJob;
 import de.kylekreuter.vistructum.api.Scans;
+import de.kylekreuter.vistructum.api.SourcePrecision;
+import de.kylekreuter.vistructum.api.TrainingExport;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.api.VistructumStatus;
+import de.kylekreuter.vistructum.core.alert.FindingExporter;
 import de.kylekreuter.vistructum.core.alert.FindingSlice;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
 import de.kylekreuter.vistructum.core.alert.PreviewImage;
@@ -40,6 +43,7 @@ public final class VistructumService implements Vistructum {
     private final MainThread mainThread;
     private final BlockChangeStore changes;
     private final FindingStore findingStore;
+    private final FindingExporter exporter;
     private final ScanStore scanStore;
     private final WorldScanner scanner;
     private final Inference inference;
@@ -50,11 +54,12 @@ public final class VistructumService implements Vistructum {
     private final Players players = new CachedPlayers();
 
     public VistructumService(MainThread mainThread, BlockChangeStore changes, FindingStore findingStore,
-                             ScanStore scanStore, WorldScanner scanner, Inference inference, FaceCache faces,
+                             FindingExporter exporter, ScanStore scanStore, WorldScanner scanner, Inference inference, FaceCache faces,
                              Clock clock) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.changes = Objects.requireNonNull(changes, "changes");
         this.findingStore = Objects.requireNonNull(findingStore, "findingStore");
+        this.exporter = Objects.requireNonNull(exporter, "exporter");
         this.scanStore = Objects.requireNonNull(scanStore, "scanStore");
         this.scanner = Objects.requireNonNull(scanner, "scanner");
         this.inference = Objects.requireNonNull(inference, "inference");
@@ -127,6 +132,16 @@ public final class VistructumService implements Vistructum {
         public CompletableFuture<Optional<byte[]>> previewPng(long id) {
             return mainThread.handOff(findingStore.preview(id)
                     .thenApply(preview -> preview.map(p -> PreviewImage.png(p, PREVIEW_SCALE))));
+        }
+
+        @Override
+        public CompletableFuture<List<SourcePrecision>> precision() {
+            return mainThread.handOff(findingStore.precision());
+        }
+
+        @Override
+        public CompletableFuture<TrainingExport> exportTraining() {
+            return mainThread.handOff(exporter.export());
         }
     }
 

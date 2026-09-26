@@ -6,10 +6,12 @@ import de.kylekreuter.vistructum.api.FindingCandidate;
 import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Review;
+import de.kylekreuter.vistructum.api.SourcePrecision;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.core.store.Binder;
 import de.kylekreuter.vistructum.core.store.Database;
+import de.kylekreuter.vistructum.inference.ModelKind;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -20,7 +22,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -41,6 +45,22 @@ public final class FindingStore {
                 model_version, preview_width, preview_height, preview, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
+    private static final String INSERT_SCENE = """
+            INSERT INTO finding_scenes (finding_id, kind, width, height, window_top, window_left, window_bottom,
+                window_right, channels)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+    private static final String REVIEWED_SCENES = """
+            SELECT f.id, f.source, f.verdict, f.model_version, s.kind, s.width, s.height, s.window_top, s.window_left,
+                s.window_bottom, s.window_right, s.channels
+            FROM findings f JOIN finding_scenes s ON s.finding_id = f.id
+            WHERE f.verdict IS NOT NULL AND f.id > ?
+            ORDER BY f.id LIMIT ?
+            """;
+    private static final String REVIEWED_WITHOUT_SCENE = """
+            SELECT count(*) FROM findings f
+            WHERE f.verdict IS NOT NULL AND NOT EXISTS (SELECT 1 FROM finding_scenes s WHERE s.finding_id = f.id)
+            """;
 
     private final Database database;
 
@@ -48,12 +68,16 @@ public final class FindingStore {
         this.database = Objects.requireNonNull(database, "database");
     }
 
-    public CompletableFuture<Optional<Finding>> insertUnlessDuplicate(FindingCandidate candidate, Instant now, Duration dedupe) {
+    public CompletableFuture<Optional<Finding>> insertUnlessDuplicate(DetectedCandidate detected, Instant now,
+                                                                     Duration dedupe) {
+        FindingCandidate candidate = detected.candidate();
+        byte[] channels = SceneBlob.encode(detected.input().scene());
         return database.transaction(connection -> {
             if (overlapsRecent(connection, candidate, now.minus(dedupe))) {
                 return Optional.empty();
             }
             long id = insert(connection, candidate, now);
+            insertScene(connection, id, detected.input(), channels);
             return select(connection, id);
         });
     }
@@ -154,6 +178,51 @@ public final class FindingStore {
         });
     }
 
+    public CompletableFuture<List<SourcePrecision>> precision() {
+        return database.transaction(connection -> {
+            Map<Source, long[]> counts = new EnumMap<>(Source.class);
+            for (Source source : Source.values()) {
+                counts.put(source, new long[Verdict.values().length]);
+            }
+            try (PreparedStatement select = connection.prepareStatement(
+                    "SELECT source, verdict, count(*) FROM findings WHERE verdict IS NOT NULL GROUP BY source, verdict");
+                 ResultSet rows = select.executeQuery()) {
+                while (rows.next()) {
+                    counts.get(Source.valueOf(rows.getString(1)))[Verdict.valueOf(rows.getString(2)).ordinal()]
+                            = rows.getLong(3);
+                }
+            }
+            return counts.entrySet().stream().map(entry -> new SourcePrecision(entry.getKey(),
+                    entry.getValue()[Verdict.CONFIRMED.ordinal()], entry.getValue()[Verdict.FALSE_ALARM.ordinal()]))
+                    .toList();
+        });
+    }
+
+    public CompletableFuture<List<ReviewedScene>> reviewedScenes(long afterId, int limit) {
+        return database.transaction(connection -> {
+            List<ReviewedScene> scenes = new ArrayList<>();
+            try (PreparedStatement select = connection.prepareStatement(REVIEWED_SCENES)) {
+                select.setLong(1, afterId);
+                select.setInt(2, limit);
+                try (ResultSet rows = select.executeQuery()) {
+                    while (rows.next()) {
+                        scenes.add(readScene(rows));
+                    }
+                }
+            }
+            return scenes;
+        });
+    }
+
+    public CompletableFuture<Long> countReviewedWithoutScene() {
+        return database.transaction(connection -> {
+            try (PreparedStatement select = connection.prepareStatement(REVIEWED_WITHOUT_SCENE);
+                 ResultSet rows = select.executeQuery()) {
+                return rows.getLong(1);
+            }
+        });
+    }
+
     public CompletableFuture<Integer> deleteReviewedBefore(Instant cutoff) {
         return database.transaction(connection -> {
             try (PreparedStatement delete = connection.prepareStatement(
@@ -207,6 +276,33 @@ public final class FindingStore {
                 return keys.getLong(1);
             }
         }
+    }
+
+    private static void insertScene(Connection connection, long id, ModelInput input, byte[] channels)
+            throws SQLException {
+        try (PreparedStatement insert = connection.prepareStatement(INSERT_SCENE)) {
+            insert.setLong(1, id);
+            insert.setString(2, input.kind().id());
+            insert.setInt(3, input.scene().width());
+            insert.setInt(4, input.scene().height());
+            insert.setInt(5, input.top());
+            insert.setInt(6, input.left());
+            insert.setInt(7, input.bottom());
+            insert.setInt(8, input.right());
+            insert.setBytes(9, channels);
+            insert.executeUpdate();
+        }
+    }
+
+    private static ReviewedScene readScene(ResultSet rows) throws SQLException {
+        long id = rows.getLong(1);
+        String kind = rows.getString(5);
+        ModelKind modelKind = ModelKind.byId(kind)
+                .orElseThrow(() -> new SQLException("unknown model kind " + kind + " for finding " + id));
+        ModelInput input = new ModelInput(modelKind, SceneBlob.decode(rows.getInt(6), rows.getInt(7), rows.getBytes(12)),
+                rows.getInt(8), rows.getInt(9), rows.getInt(10), rows.getInt(11));
+        return new ReviewedScene(id, Source.valueOf(rows.getString(2)), Verdict.valueOf(rows.getString(3)),
+                rows.getString(4), input);
     }
 
     private static Optional<Finding> select(Connection connection, long id) throws SQLException {

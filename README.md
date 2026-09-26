@@ -107,12 +107,16 @@ docker compose up -d sidecar
 | `/vis tp <id>` | Teleports to a finding |
 | `/vis confirm <id>` | Marks a finding as confirmed |
 | `/vis falsealarm <id>` | Marks a finding as a false alarm |
+| `/vis stats` | Shows the precision per source: confirmed findings divided by all reviewed findings |
 | `/vis scan [world\|stop]` | Starts a fullscan or stops all scans |
+| `/vis export` | Exports all reviewed findings as training data to `plugins/vistructum/exports/` |
 
 | Permission | Default | Grants |
 |---|---|---|
-| `vistructum.staff` | op | Chat alerts, list, detail view, and reviews |
-| `vistructum.admin` | op | `vistructum.staff` and `/vis scan` |
+| `vistructum.staff` | op | Chat alerts, list, detail view, reviews, and `/vis stats` |
+| `vistructum.admin` | op | `vistructum.staff`, `/vis scan`, and `/vis export` |
+
+`/vis export` writes one `<kind>.jsonl` file per model kind with the model input scene, the detection window, and the verdict of each reviewed finding. Retention deletes reviewed findings after `retention.reviewed-days`, so export them before. Convert a file into a training split with `python ml/train/findings.py mask.jsonl --out <data-dir>`; run it with `ml` and `ml/train` on `PYTHONPATH`.
 
 ## Configuration
 

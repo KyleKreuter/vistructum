@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/KyleKreuter/vistructum/actions/workflows/build.yml"><img src="https://github.com/KyleKreuter/vistructum/actions/workflows/build.yml/badge.svg" alt="Build"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License: GPL-3.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--only-blue" alt="License: GPL-3.0-only"></a>
   <img src="https://img.shields.io/badge/Paper-1.21.4-green" alt="Paper 1.21.4">
   <img src="https://img.shields.io/badge/Java-21-orange" alt="Java 21">
 </p>
@@ -162,4 +162,4 @@ Read [Contributing](https://github.com/KyleKreuter/vistructum/wiki/Contributing)
 
 ## License
 
-Vistructum is licensed under the [GNU General Public License v3.0](LICENSE). You can use it on any server, including commercial ones. If you distribute a modified version, you must publish its source code under the same license.
+Vistructum is licensed under the [GNU General Public License v3.0 only](LICENSE). You can use it on any server, including commercial ones. If you distribute a modified version, you must publish its source code under the same license.

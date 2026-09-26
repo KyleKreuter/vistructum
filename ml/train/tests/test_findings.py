@@ -108,6 +108,23 @@ def test_convert_writes_a_loadable_split(tmp_path):
     assert raw["subtype"].tolist() == ["finding-mask-confirmed", "finding-fullscan-false-alarm"]
 
 
+def test_convert_holds_out_a_stratified_val_split(tmp_path):
+    lines = [line(i, "mask", mask_scene(64, 64, seed=i), (0, 0, 64, 64), "CONFIRMED" if i % 2 else "FALSE_ALARM")
+             for i in range(1, 21)]
+    source = write(tmp_path / "mask.jsonl", lines)
+    target, kind, positives, negatives = convert([source], tmp_path / "data", "mask", val_fraction=0.2, seed=3)
+    assert (target.name, kind, positives, negatives) == ("mask-train.npz", "mask", 10, 10)
+    val = np.load(tmp_path / "data" / "mask-val.npz")
+    train = np.load(target)
+    assert sorted((val["y"] == POSITIVE).tolist()) == [False, False, True, True]
+    assert len(train["y"]) == 16
+    assert not set(val["finding"].tolist()) & set(train["finding"].tolist())
+    convert([source], tmp_path / "again", "mask", val_fraction=0.2, seed=3)
+    assert np.load(tmp_path / "again" / "mask-val.npz")["finding"].tolist() == val["finding"].tolist()
+    with pytest.raises(ValueError, match="val_fraction"):
+        convert([source], tmp_path / "bad", "mask", val_fraction=1.0)
+
+
 def test_convert_rejects_mixed_kinds_and_empty_input(tmp_path):
     mixed = write(tmp_path / "mixed.jsonl", [
         line(1, "mask", mask_scene(64, 64), (0, 0, 64, 64)),

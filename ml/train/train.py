@@ -5,10 +5,10 @@ from pathlib import Path
 
 import torch
 from config import add_config_args, load_config
-from data import d4_augment, load_split, make_loader
 from model import SymbolNet
 from torch import nn
 
+from data import d4_augment, findings_split, load_split, make_loader
 from vistructum_ml.gates import GATES, metrics_at, select_threshold
 
 
@@ -106,7 +106,8 @@ def fit(model, cfg, device, checkpoint_path, resume, log_every=1):
     gate = GATES[cfg.kind]
     torch.manual_seed(cfg.seed)
     generator = torch.Generator().manual_seed(cfg.seed)
-    train_loader = make_loader(cfg.data_dir, "train", cfg.batch, shuffle=True, generator=generator)
+    train_loader = make_loader(cfg.data_dir, "train", cfg.batch, shuffle=True, generator=generator,
+                               extra=findings_split(cfg, "train"), repeat=cfg.findings_repeat)
     val_x, val_y = load_split(cfg.data_dir, "val")
     optimizer = build_optimizer(model, cfg)
     scheduler = build_scheduler(optimizer, cfg)

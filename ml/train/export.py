@@ -6,9 +6,9 @@ from pathlib import Path
 import onnx
 import onnxruntime as ort
 import torch
-from data import load_split
 from model import ExportNet, SymbolNet
 
+from data import load_split
 from vistructum_ml import scoring
 from vistructum_ml.contract import (
     FEATURE_SPEC,

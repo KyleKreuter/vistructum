@@ -1,5 +1,7 @@
 kind: fullscan
 data_dir: runs/data/scan-v1
+findings_dir: ../data/findings/2b2t-ring1
+findings_repeat: 40
 out_dir: runs/scan-v1
 widths: [24, 48, 64, 96, 128]
 dropout: 0.15

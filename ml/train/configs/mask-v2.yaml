@@ -1,5 +1,7 @@
 kind: mask
 data_dir: runs/data/mask-v2
+findings_dir: ../data/findings/2b2t-ring1
+findings_repeat: 10
 out_dir: runs/mask-v2
 widths: [24, 48, 64, 96, 128]
 depths: [1, 2, 2, 2, 1]

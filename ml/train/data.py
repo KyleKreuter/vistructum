@@ -12,8 +12,21 @@ def load_split(data_dir, name):
     return x, y
 
 
-def make_loader(data_dir, name, batch, shuffle, generator=None):
+def findings_split(cfg, name):
+    if not cfg.findings_dir:
+        return None
+    split = f"{cfg.kind}-{name}"
+    if not (Path(cfg.findings_dir) / f"{split}.npz").is_file():
+        raise FileNotFoundError(f"findings_dir {cfg.findings_dir} has no {split}.npz")
+    return cfg.findings_dir, split
+
+
+def make_loader(data_dir, name, batch, shuffle, generator=None, extra=None, repeat=1):
     x, y = load_split(data_dir, name)
+    if extra is not None:
+        extra_x, extra_y = load_split(*extra)
+        x = torch.cat([x] + [extra_x] * repeat)
+        y = torch.cat([y] + [extra_y] * repeat)
     drop_last = len(y) > batch and len(y) % batch == 1
     return DataLoader(TensorDataset(x, y), batch_size=batch, shuffle=shuffle, generator=generator, drop_last=drop_last)
 

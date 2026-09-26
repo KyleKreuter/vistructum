@@ -3,6 +3,8 @@ package de.kylekreuter.vistructum.core.region;
 import net.jpountz.lz4.LZ4BlockInputStream;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -154,7 +156,20 @@ public final class RegionFile {
             return Optional.empty();
         }
         try (stream) {
-            return Optional.of(stream.readAllBytes());
+            return Optional.of(readUntilTrailer(stream));
         }
+    }
+
+    private static byte[] readUntilTrailer(InputStream stream) throws IOException {
+        ByteArrayOutputStream inflated = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        try {
+            for (int read = stream.read(buffer); read >= 0; read = stream.read(buffer)) {
+                inflated.write(buffer, 0, read);
+            }
+        } catch (EOFException missingTrailer) {
+            return inflated.toByteArray();
+        }
+        return inflated.toByteArray();
     }
 }

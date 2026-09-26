@@ -62,6 +62,16 @@ class RegionFileTest {
     }
 
     @Test
+    void readsPayloadsWhoseLengthOmitsTheTypeByte() throws IOException {
+        byte[] nbt = NbtWriter.root(Map.of("DataVersion", 4189));
+        Path file = dir.resolve("r.0.0.mca");
+        byte[] frame = frame(2, deflate(nbt));
+        ByteBuffer.wrap(frame).putInt(0, frame.length - 5);
+        writeRegion(file, Map.of(0, frame));
+        assertArrayEquals(nbt, RegionFile.read(file).getFirst().nbt().orElseThrow());
+    }
+
+    @Test
     void decodesChunkColumns() throws IOException {
         int[] indices = new int[Section.VOLUME];
         indices[Section.index(1, 2, 3)] = 1;

@@ -15,14 +15,14 @@
 
 ## What it does
 
-Vistructum watches block changes and scans world surfaces with two small neural networks. When it finds a swastika, it stores a **finding** and alerts staff in chat. Staff review the finding in a menu and mark it as confirmed or as a false alarm.
+Vistructum watches block changes and scans whole worlds with two small neural networks. When it finds a swastika, it stores a **finding** and alerts staff in chat. Staff review the finding in a menu and mark it as confirmed or as a false alarm.
 
 Vistructum never kicks, bans, or rolls back on its own. Every decision stays with your staff.
 
 ## Features
 
 - **Live check:** Detects symbols shortly after players finish building them, including rotated, mirrored, irregular, and carved variants from 5×5 blocks upward.
-- **Fullscan:** Scans the surface of whole worlds daily or on demand, with a progress bar for staff.
+- **Fullscan:** Scans whole worlds daily or on demand, including the Nether and the End, with a progress bar for staff. It checks the surface and also finds symbols built underground or hidden inside terrain.
 - **Review menu:** Lists open findings with preview images. The detail view shows the scene, the builder's face, location, probability, and source.
 - **Chat alerts:** Staff get a message with **[Open]** and **[TP]** buttons for every new finding.
 - **Local or remote inference:** Runs the models inside the server process, or on a separate sidecar with a local fallback.
@@ -59,7 +59,9 @@ flowchart TB
 ```
 
 - **Live check:** The core records every placed and broken block in SQLite. Every few seconds it groups nearby changes into clusters. A cluster that has been quiet for `tracking.quiet-seconds` becomes a mask and goes to the mask model.
-- **Fullscan:** The scanner walks the world in 256×256 tiles, samples the surface height and brightness, and sends each tile to the fullscan model.
+- **Fullscan:** The scanner reads the region files directly, without loading chunks on the server, and walks the world in 256×256 tiles. For each tile, it runs two checks:
+  - **Surface:** Samples the surface height and brightness and sends the tile to the fullscan model.
+  - **Volume:** Finds clusters of blocks that are rare in their surroundings, keeps the flat or evenly extruded ones, and sends their outlines to the mask model.
 - **Findings:** Both paths hand detections to the same reporter. It removes duplicates, fires `FindingCreateEvent`, stores the finding, and fires `FindingCreatedEvent`.
 - **UI:** `vistructum-ui` uses only the public API. You can replace it with your own plugin.
 
@@ -116,7 +118,7 @@ docker compose up -d sidecar
 
 | File | Content |
 |---|---|
-| `plugins/vistructum/config.yml` | Inference mode, model updates, sidecar address, live check timing, daily fullscan, retention |
+| `plugins/vistructum/config.yml` | Inference mode, model updates, sidecar address, live check timing, daily fullscan worlds and scan threads, retention |
 | `plugins/vistructum-ui/config.yml` | Resource pack port and public URL, map previews in the list |
 | `plugins/vistructum-ui/messages.yml` | All chat and menu texts in MiniMessage format |
 

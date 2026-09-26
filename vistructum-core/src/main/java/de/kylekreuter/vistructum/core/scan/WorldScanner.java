@@ -3,7 +3,6 @@ package de.kylekreuter.vistructum.core.scan;
 import com.google.gson.JsonObject;
 import de.kylekreuter.vistructum.api.BlockBox;
 import de.kylekreuter.vistructum.api.FindingCandidate;
-import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.ScanCause;
 import de.kylekreuter.vistructum.api.ScanFinishedEvent;
 import de.kylekreuter.vistructum.api.ScanJob;
@@ -15,6 +14,13 @@ import de.kylekreuter.vistructum.core.MainThread;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
 import de.kylekreuter.vistructum.core.alert.PreviewCrop;
 import de.kylekreuter.vistructum.core.inference.Inference;
+import de.kylekreuter.vistructum.core.region.ChunkColumn;
+import de.kylekreuter.vistructum.core.region.RegionChunk;
+import de.kylekreuter.vistructum.core.region.RegionFile;
+import de.kylekreuter.vistructum.core.scene.BlockPos;
+import de.kylekreuter.vistructum.core.volume.VolumeSettings;
+import de.kylekreuter.vistructum.core.volume.VolumeShape;
+import de.kylekreuter.vistructum.core.volume.VolumeShapes;
 import de.kylekreuter.vistructum.inference.Detection;
 import de.kylekreuter.vistructum.inference.InferResult;
 import de.kylekreuter.vistructum.inference.ModelKind;
@@ -25,13 +31,14 @@ import org.bukkit.ChunkSnapshot;
 import org.bukkit.World;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -42,43 +49,52 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 public final class WorldScanner {
-
-    private static final Pattern REGION_FILE = Pattern.compile("r\\.(-?\\d+)\\.(-?\\d+)\\.mca");
 
     private final MainThread mainThread;
     private final ScanStore scans;
     private final Inference inference;
     private final FindingReporter reporter;
     private final int chunksPerTick;
+    private final VolumeSettings volume;
     private final Clock clock;
     private final Logger logger;
-    private final ExecutorService sampler = Executors.newSingleThreadExecutor(r -> new Thread(r, "vistructum-scan"));
+    private final ExecutorService workers;
 
     private BukkitTask task;
     private long generation;
     private boolean waiting;
     private ScanJob job;
     private World world;
-    private Deque<int[]> regions;
-    private Set<Long> chunks;
+    private PaperBlockStates states;
+    private int dataVersion;
     private ScanPlan.Tile tile;
-    private Deque<int[]> pendingLoads;
+    private Map<Long, ChunkColumn> columns;
     private Map<Long, ChunkSnapshot> snapshots;
+    private Deque<Long> pendingLoads;
     private int awaitedLoads;
 
     public WorldScanner(MainThread mainThread, ScanStore scans, Inference inference, FindingReporter reporter,
-                        int chunksPerTick, Clock clock) {
+                        int chunksPerTick, int workerCount, VolumeSettings volume, Clock clock) {
+        if (workerCount < 1) {
+            throw new IllegalArgumentException("workerCount must be >= 1, got " + workerCount);
+        }
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.scans = Objects.requireNonNull(scans, "scans");
         this.inference = Objects.requireNonNull(inference, "inference");
         this.reporter = Objects.requireNonNull(reporter, "reporter");
         this.chunksPerTick = chunksPerTick;
+        this.volume = Objects.requireNonNull(volume, "volume");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.logger = mainThread.plugin().getLogger();
+        this.workers = Executors.newFixedThreadPool(workerCount, r -> {
+            Thread thread = new Thread(r, "vistructum-scan");
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
     public void start() {
@@ -105,7 +121,7 @@ public final class WorldScanner {
     public void close() {
         stopTimer();
         reset();
-        sampler.shutdownNow();
+        workers.shutdownNow();
     }
 
     private void tick() {
@@ -115,13 +131,13 @@ public final class WorldScanner {
         if (job == null) {
             await(scans.next(), next -> next.ifPresentOrElse(this::begin, this::stopTimer));
         } else if (job.status() == ScanStatus.QUEUED) {
-            planStep();
+            plan();
         } else if (tile == null) {
-            await(scans.nextTile(job.id()), next -> next.ifPresentOrElse(this::loadTile, () -> finish(ScanStatus.DONE)));
+            await(scans.nextTile(job.id()), next -> next.ifPresentOrElse(this::readTile, () -> finish(ScanStatus.DONE)));
         } else if (!pendingLoads.isEmpty()) {
             requestLoads();
         } else if (awaitedLoads == 0) {
-            infer();
+            process();
         }
     }
 
@@ -133,101 +149,210 @@ public final class WorldScanner {
             finish(ScanStatus.FAILED);
             return;
         }
-        if (next.status() == ScanStatus.QUEUED) {
-            regions = regionsOf(world);
-            chunks = new LinkedHashSet<>();
-            for (Chunk chunk : world.getLoadedChunks()) {
-                chunks.add(SurfaceSampler.chunkKey(chunk.getX(), chunk.getZ()));
-            }
-            logger.info("fullscan #" + next.id() + " of " + world.getName() + " started, " + regions.size()
-                    + " region files");
-        } else {
+        states = new PaperBlockStates();
+        dataVersion = Bukkit.getUnsafe().getDataVersion();
+        if (next.status() != ScanStatus.QUEUED) {
             logger.info("fullscan #" + next.id() + " of " + world.getName() + " resumed at tile " + next.tilesDone()
                     + "/" + next.tilesTotal());
         }
     }
 
-    private void planStep() {
-        int[] region = regions.poll();
-        if (region != null) {
-            for (int cx = region[0] << 5; cx < (region[0] + 1) << 5; cx++) {
-                for (int cz = region[1] << 5; cz < (region[1] + 1) << 5; cz++) {
-                    if (world.isChunkGenerated(cx, cz)) {
-                        chunks.add(SurfaceSampler.chunkKey(cx, cz));
-                    }
+    private void plan() {
+        ScanJob planning = job;
+        Path folder = regionFolder(world);
+        Set<Long> chunks = new HashSet<>();
+        for (Chunk chunk : world.getLoadedChunks()) {
+            chunks.add(ChunkKey.of(chunk.getX(), chunk.getZ()));
+        }
+        CompletableFuture<ScanJob> planned = CompletableFuture.supplyAsync(() -> {
+            List<Path> files = regionFiles(folder);
+            logger.info("fullscan #" + planning.id() + " of " + planning.world() + " started, " + files.size()
+                    + " region files");
+            for (Path file : files) {
+                try {
+                    RegionFile.present(file).forEach(chunk -> chunks.add(ChunkKey.of(chunk[0], chunk[1])));
+                } catch (IOException e) {
+                    logger.warning("fullscan #" + planning.id() + ": cannot read " + file.getFileName() + ": " + e);
                 }
             }
-            return;
-        }
-        List<int[]> coords = new ArrayList<>(chunks.size());
-        chunks.forEach(key -> coords.add(new int[]{(int) (key >> 32), (int) (long) key}));
-        int chunkCount = chunks.size();
-        regions = null;
-        chunks = null;
-        await(scans.plan(job.id(), ScanPlan.tiles(coords)), planned -> {
-            job = planned;
-            logger.info("fullscan #" + planned.id() + " of " + planned.world() + ": " + chunkCount + " chunks in "
-                    + planned.tilesTotal() + " tiles");
-            Bukkit.getPluginManager().callEvent(new ScanStartedEvent(planned));
+            return chunks.stream().map(key -> new int[]{ChunkKey.x(key), ChunkKey.z(key)}).toList();
+        }, workers).thenCompose(coords -> scans.plan(planning.id(), ScanPlan.tiles(coords)).thenApply(stored -> {
+            logger.info("fullscan #" + stored.id() + " of " + stored.world() + ": " + coords.size() + " chunks in "
+                    + stored.tilesTotal() + " tiles");
+            return stored;
+        }));
+        await(planned, stored -> {
+            job = stored;
+            Bukkit.getPluginManager().callEvent(new ScanStartedEvent(stored));
         });
     }
 
-    private void loadTile(ScanPlan.Tile next) {
+    private void readTile(ScanPlan.Tile next) {
         tile = next;
-        pendingLoads = new ArrayDeque<>();
-        int minCx = next.originX() >> 4;
-        int minCz = next.originZ() >> 4;
+        int minChunkX = next.originX() >> 4;
+        int minChunkZ = next.originZ() >> 4;
         int span = ScanPlan.TILE_SIZE >> 4;
-        for (int cx = minCx; cx < minCx + span; cx++) {
-            for (int cz = minCz; cz < minCz + span; cz++) {
-                if (world.isChunkGenerated(cx, cz)) {
-                    pendingLoads.add(new int[]{cx, cz});
+        Map<Long, ChunkSnapshot> loaded = new ConcurrentHashMap<>();
+        for (int chunkX = minChunkX; chunkX < minChunkX + span; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ < minChunkZ + span; chunkZ++) {
+                if (world.isChunkLoaded(chunkX, chunkZ)) {
+                    loaded.put(ChunkKey.of(chunkX, chunkZ),
+                            world.getChunkAt(chunkX, chunkZ).getChunkSnapshot(true, false, false));
                 }
             }
         }
-        snapshots = new HashMap<>();
-        awaitedLoads = 0;
+        Path folder = regionFolder(world);
+        int serverVersion = dataVersion;
+        CompletableFuture<TileRead> read = CompletableFuture.supplyAsync(() ->
+                readRegions(folder, minChunkX, minChunkZ, span, loaded.keySet(), serverVersion), workers);
+        await(read, result -> {
+            columns = result.columns();
+            snapshots = loaded;
+            pendingLoads = result.fallback();
+            awaitedLoads = 0;
+            if (pendingLoads.isEmpty()) {
+                process();
+            }
+        });
+    }
+
+    private record TileRead(Map<Long, ChunkColumn> columns, Deque<Long> fallback) {
+    }
+
+    private static TileRead readRegions(Path folder, int minChunkX, int minChunkZ, int span, Set<Long> loaded,
+                                        int serverVersion) {
+        Map<Long, ChunkColumn> columns = new ConcurrentHashMap<>();
+        Deque<Long> fallback = new ArrayDeque<>();
+        int maxChunkX = minChunkX + span - 1;
+        int maxChunkZ = minChunkZ + span - 1;
+        for (int regionX = Math.floorDiv(minChunkX, RegionFile.SIDE); regionX <= Math.floorDiv(maxChunkX, RegionFile.SIDE);
+             regionX++) {
+            for (int regionZ = Math.floorDiv(minChunkZ, RegionFile.SIDE);
+                 regionZ <= Math.floorDiv(maxChunkZ, RegionFile.SIDE); regionZ++) {
+                Path file = folder.resolve("r." + regionX + "." + regionZ + ".mca");
+                if (!Files.isRegularFile(file)) {
+                    continue;
+                }
+                List<RegionChunk> chunks;
+                try {
+                    chunks = RegionFile.read(file, (x, z) -> x >= minChunkX && x <= maxChunkX && z >= minChunkZ
+                            && z <= maxChunkZ && !loaded.contains(ChunkKey.of(x, z)));
+                } catch (IOException e) {
+                    chunks = List.of();
+                }
+                for (RegionChunk chunk : chunks) {
+                    long key = ChunkKey.of(chunk.chunkX(), chunk.chunkZ());
+                    Optional<ChunkColumn> column = decode(chunk);
+                    if (column.isEmpty() || column.get().dataVersion() < serverVersion) {
+                        fallback.add(key);
+                    } else if (column.get().dataVersion() == serverVersion && column.get().full()) {
+                        columns.put(key, column.get());
+                    }
+                }
+            }
+        }
+        return new TileRead(columns, fallback);
+    }
+
+    private static Optional<ChunkColumn> decode(RegionChunk chunk) {
+        if (chunk.nbt().isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(ChunkColumn.decode(chunk.chunkX(), chunk.chunkZ(), chunk.nbt().get()));
+        } catch (IOException | RuntimeException e) {
+            return Optional.empty();
+        }
     }
 
     private void requestLoads() {
         Map<Long, ChunkSnapshot> target = snapshots;
         for (int i = 0; i < chunksPerTick && !pendingLoads.isEmpty(); i++) {
-            int[] chunk = pendingLoads.poll();
+            long key = pendingLoads.poll();
             awaitedLoads++;
-            world.getChunkAtAsync(chunk[0], chunk[1], false, loaded -> {
+            world.getChunkAtAsync(ChunkKey.x(key), ChunkKey.z(key), false, loaded -> {
                 if (target != snapshots) {
                     return;
                 }
                 if (loaded != null) {
-                    target.put(SurfaceSampler.chunkKey(chunk[0], chunk[1]), loaded.getChunkSnapshot(true, false, false));
+                    target.put(key, loaded.getChunkSnapshot(true, false, false));
                 }
                 awaitedLoads--;
             });
         }
     }
 
-    private void infer() {
+    private void process() {
         ScanJob running = job;
         ScanPlan.Tile current = tile;
+        Map<Long, ChunkColumn> read = columns;
         Map<Long, ChunkSnapshot> taken = snapshots;
-        SurfaceSampler surface = new SurfaceSampler(world.getMinHeight());
-        CompletableFuture<Integer> reported = CompletableFuture
-                .supplyAsync(() -> surface.sample(taken, current.originX(), current.originZ(), ScanPlan.TILE_SIZE,
-                        ScanPlan.TILE_SIZE), sampler)
-                .thenCompose(scene -> inference.infer(ModelKind.FULLSCAN, scene, context(running, current))
-                        .thenCompose(result -> reporter.reportAll(candidates(running.world(), current, scene, result))));
-        CompletableFuture<ScanJob> completed = reported.handle((count, error) -> {
+        PaperBlockStates blockStates = states;
+        int minY = world.getMinHeight();
+        int maxY = world.getMaxHeight();
+        int version = dataVersion;
+        CompletableFuture<Integer> reported = CompletableFuture.supplyAsync(() -> {
+            taken.forEach((key, snapshot) -> read.put(key, SnapshotColumns.of(snapshot, minY, maxY, version)));
+            return read;
+        }, workers).thenCompose(tileColumns -> tileColumns.values().stream().noneMatch(ChunkColumn::hasBlocks)
+                ? CompletableFuture.completedFuture(List.<FindingCandidate>of())
+                : surface(running, current, tileColumns, minY, blockStates)
+                        .thenCombine(volume(running, tileColumns, blockStates), (surface, volumes) -> {
+                            List<FindingCandidate> all = new ArrayList<>(surface);
+                            all.addAll(volumes);
+                            return all;
+                        })).thenCompose(reporter::reportAll);
+        CompletableFuture<TileProgress> completed = reported.handle((count, error) -> {
             if (error != null) {
                 logger.warning("fullscan #" + running.id() + " tile " + current + " failed: " + error);
             }
             return scans.completeTile(running.id(), current, count == null ? 0 : count, error != null);
-        }).thenCompose(stored -> stored);
-        await(completed, progressed -> {
+        }).thenCompose(stored -> stored).thenCompose(stored -> scans.nextTile(stored.id())
+                .thenApply(next -> new TileProgress(stored, next)));
+        await(completed, progress -> {
             tile = null;
+            columns = null;
             snapshots = null;
-            job = progressed;
-            Bukkit.getPluginManager().callEvent(new ScanProgressEvent(progressed));
+            pendingLoads = null;
+            job = progress.job();
+            Bukkit.getPluginManager().callEvent(new ScanProgressEvent(progress.job()));
+            progress.next().ifPresentOrElse(this::readTile, () -> finish(ScanStatus.DONE));
         });
+    }
+
+    private record TileProgress(ScanJob job, Optional<ScanPlan.Tile> next) {
+    }
+
+    private CompletableFuture<List<FindingCandidate>> surface(ScanJob running, ScanPlan.Tile current,
+                                                              Map<Long, ChunkColumn> tileColumns, int minY,
+                                                              BlockStates blockStates) {
+        return CompletableFuture.supplyAsync(() -> new ColumnSurface(minY, blockStates).sample(tileColumns,
+                        current.originX(), current.originZ(), ScanPlan.TILE_SIZE, ScanPlan.TILE_SIZE), workers)
+                .thenCompose(scene -> inference.infer(ModelKind.FULLSCAN, scene, context(running, current))
+                        .thenApply(result -> candidates(running.world(), current, scene, result)));
+    }
+
+    private CompletableFuture<List<FindingCandidate>> volume(ScanJob running, Map<Long, ChunkColumn> tileColumns,
+                                                             PaperBlockStates blockStates) {
+        VolumeShapes shapes = new VolumeShapes(volume, blockStates::solid);
+        return CompletableFuture.supplyAsync(() -> shapes.candidates(tileColumns.values()), workers)
+                .thenCompose(byMaterial -> {
+                    List<CompletableFuture<List<FindingCandidate>>> checks = new ArrayList<>();
+                    byMaterial.forEach((material, positions) -> checks.add(CompletableFuture
+                            .supplyAsync(() -> shapes.shapes(material, positions), workers)
+                            .thenCompose(found -> checkShapes(running, found))));
+                    return CompletableFuture.allOf(checks.toArray(CompletableFuture[]::new))
+                            .thenApply(done -> checks.stream().flatMap(check -> check.join().stream()).toList());
+                });
+    }
+
+    private CompletableFuture<List<FindingCandidate>> checkShapes(ScanJob running, List<VolumeShape> found) {
+        List<CompletableFuture<List<FindingCandidate>>> checks = found.stream()
+                .map(shape -> inference.infer(ModelKind.MASK, shape.projection().scene(), context(running, shape))
+                        .thenApply(result -> candidates(running.world(), shape, result)))
+                .toList();
+        return CompletableFuture.allOf(checks.toArray(CompletableFuture[]::new))
+                .thenApply(done -> checks.stream().flatMap(check -> check.join().stream()).toList());
     }
 
     private void finish(ScanStatus status) {
@@ -262,11 +387,11 @@ public final class WorldScanner {
         waiting = false;
         job = null;
         world = null;
-        regions = null;
-        chunks = null;
+        states = null;
         tile = null;
-        pendingLoads = null;
+        columns = null;
         snapshots = null;
+        pendingLoads = null;
         awaitedLoads = 0;
     }
 
@@ -275,6 +400,19 @@ public final class WorldScanner {
             task.cancel();
             task = null;
         }
+    }
+
+    private static List<FindingCandidate> candidates(String worldName, VolumeShape shape, InferResult result) {
+        if (!result.flagged()) {
+            return List.of();
+        }
+        SurfaceScene scene = shape.projection().scene();
+        return result.detections().stream().map(detection -> new FindingCandidate(Source.FULLSCAN, worldName,
+                shape.projection().toWorld(detection.top(), detection.left(), detection.bottom(), detection.right()),
+                detection.score(), detection.votes(), Set.of(),
+                "Volumen " + shape.material().replace("minecraft:", "") + ", Achse " + shape.projection().axis(),
+                result.modelVersion(), PreviewCrop.ofMask(scene.modified(), scene.width(), scene.height(),
+                detection.top(), detection.left(), detection.bottom(), detection.right()))).toList();
     }
 
     private static List<FindingCandidate> candidates(String worldName, ScanPlan.Tile tile, SurfaceScene scene,
@@ -321,23 +459,34 @@ public final class WorldScanner {
         return context;
     }
 
-    private static Deque<int[]> regionsOf(World world) {
-        Deque<int[]> regions = new ArrayDeque<>();
-        File[] files = new File(world.getWorldFolder(), regionFolder(world)).listFiles();
-        for (File file : files == null ? new File[0] : files) {
-            Matcher m = REGION_FILE.matcher(file.getName());
-            if (m.matches()) {
-                regions.add(new int[]{Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))});
-            }
-        }
-        return regions;
+    private static JsonObject context(ScanJob job, VolumeShape shape) {
+        JsonObject context = new JsonObject();
+        context.addProperty("source", Source.MASK.modelKind());
+        context.addProperty("world", job.world());
+        context.addProperty("axis", shape.projection().axis().name());
+        BlockPos min = shape.min();
+        context.addProperty("min_x", min.x());
+        context.addProperty("min_y", min.y());
+        context.addProperty("min_z", min.z());
+        context.addProperty("blocks", shape.blocks());
+        context.addProperty("material", shape.material());
+        return context;
     }
 
-    private static String regionFolder(World world) {
+    private static List<Path> regionFiles(Path folder) {
+        try (Stream<Path> files = Files.list(folder)) {
+            return files.filter(file -> RegionFile.coordinates(file).isPresent()).sorted().toList();
+        } catch (IOException e) {
+            return List.of();
+        }
+    }
+
+    private static Path regionFolder(World world) {
+        Path root = world.getWorldFolder().toPath();
         return switch (world.getEnvironment()) {
-            case NETHER -> "DIM-1/region";
-            case THE_END -> "DIM1/region";
-            default -> "region";
+            case NETHER -> root.resolve("DIM-1").resolve("region");
+            case THE_END -> root.resolve("DIM1").resolve("region");
+            default -> root.resolve("region");
         };
     }
 }

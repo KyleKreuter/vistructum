@@ -17,6 +17,7 @@ import de.kylekreuter.vistructum.core.mask.MaskMonitor;
 import de.kylekreuter.vistructum.core.scan.DailySchedule;
 import de.kylekreuter.vistructum.core.scan.ScanStore;
 import de.kylekreuter.vistructum.core.scan.WorldScanner;
+import de.kylekreuter.vistructum.core.volume.VolumeSettings;
 import de.kylekreuter.vistructum.core.scene.MaskProjector;
 import de.kylekreuter.vistructum.core.sidecar.SidecarClient;
 import de.kylekreuter.vistructum.core.store.Database;
@@ -38,6 +39,9 @@ import java.time.LocalTime;
 import java.util.logging.Level;
 
 public final class VistructumCore extends JavaPlugin {
+
+    private static final double VOLUME_PRISM_FILL = 0.9;
+    private static final int VOLUME_MIN_SIDE = 5;
 
     private Database database;
     private Inference inference;
@@ -84,7 +88,11 @@ public final class VistructumCore extends JavaPlugin {
         maskMonitor = new MaskMonitor(mainThread, changes, clusterSettings, new MaskProjector(), inference, reporter, clock);
         maskMonitor.start(20L * config.getLong("tracking.poll-seconds"));
 
-        scanner = new WorldScanner(mainThread, scans, inference, reporter, config.getInt("scan.chunks-per-tick"), clock);
+        VolumeSettings volume = new VolumeSettings(config.getDouble("scan.volume.filler-share"),
+                clusterSettings.linkDistance(), clusterSettings.minBlocks(), clusterSettings.maxExtent(),
+                VOLUME_PRISM_FILL, VOLUME_MIN_SIDE);
+        scanner = new WorldScanner(mainThread, scans, inference, reporter, config.getInt("scan.chunks-per-tick"),
+                config.getInt("scan.workers"), volume, clock);
         scanner.start();
         if (config.getBoolean("scan.enabled")) {
             schedule = new DailySchedule(mainThread, scans, scanner, LocalTime.parse(config.getString("scan.daily-at")),

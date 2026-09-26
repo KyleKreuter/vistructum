@@ -47,7 +47,25 @@ def sample(line):
     return padded[:, top:top + GRID, left:left + GRID].astype(np.uint8)
 
 
-def convert(paths, out_dir, split):
+def held_out(labels, fraction, seed):
+    rng = np.random.default_rng(seed)
+    mask = np.zeros(len(labels), dtype=bool)
+    for label in np.unique(labels):
+        index = np.flatnonzero(labels == label)
+        rng.shuffle(index)
+        mask[index[:int(round(len(index) * fraction))]] = True
+    return mask
+
+
+def save(out, name, x, y, subtype, finding):
+    target = out / f"{name}.npz"
+    np.savez_compressed(target, x=x, y=y, subtype=subtype, finding=finding)
+    return target
+
+
+def convert(paths, out_dir, split, val_fraction=0.0, seed=0):
+    if not 0.0 <= val_fraction < 1.0:
+        raise ValueError(f"val_fraction must be in [0, 1), got {val_fraction}")
     lines = list(read_lines(paths))
     if not lines:
         raise ValueError("no findings in " + ", ".join(str(path) for path in paths))
@@ -63,8 +81,12 @@ def convert(paths, out_dir, split):
     finding = np.array([int(line["finding"]) for line in lines], dtype=np.int64)
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    target = out / f"{split}.npz"
-    np.savez_compressed(target, x=x, y=y, subtype=subtype, finding=finding)
+    if val_fraction == 0.0:
+        target = save(out, split, x, y, subtype, finding)
+        return target, kind, int((y == POSITIVE).sum()), int((y != POSITIVE).sum())
+    val = held_out(y, val_fraction, seed)
+    save(out, f"{split}-val", x[val], y[val], subtype[val], finding[val])
+    target = save(out, f"{split}-train", x[~val], y[~val], subtype[~val], finding[~val])
     return target, kind, int((y == POSITIVE).sum()), int((y != POSITIVE).sum())
 
 
@@ -73,8 +95,11 @@ def main():
     parser.add_argument("inputs", nargs="+", help="<kind>.jsonl files of one model kind")
     parser.add_argument("--out", required=True)
     parser.add_argument("--split", default="findings")
+    parser.add_argument("--val-fraction", type=float, default=0.0,
+                        help="hold out this share of each label as <split>-val, the rest becomes <split>-train")
+    parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
-    target, kind, positives, negatives = convert(args.inputs, args.out, args.split)
+    target, kind, positives, negatives = convert(args.inputs, args.out, args.split, args.val_fraction, args.seed)
     print(f"{target}: kind {kind}, {positives} confirmed, {negatives} false alarms", file=sys.stderr)
 
 

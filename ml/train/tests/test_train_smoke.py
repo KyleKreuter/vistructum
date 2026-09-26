@@ -104,3 +104,26 @@ def test_skip_scan_then_scan_stage_completes_the_manifest(tmp_path):
     assert manifest["scan_pending"] is False
     assert set(manifest["scan"]) == {"calib", "scan", "scan-holdout"}
     assert (run_dir / "calib.json").exists()
+
+
+def test_findings_join_training_and_get_their_own_report_split(tmp_path):
+    data_dir = tmp_path / "data"
+    make_dataset(data_dir, "mask")
+    findings_dir = tmp_path / "findings"
+    findings_dir.mkdir()
+    make_split(findings_dir, "mask-train", "mask", 5, 5, seed=5)
+    make_split(findings_dir, "mask-val", "mask", 3, 3, seed=6)
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, "mask", data_dir)
+    with config_path.open("a") as config:
+        config.write(f"findings_dir: {findings_dir}\nfindings_repeat: 3\n")
+    runs_dir = tmp_path / "runs"
+    env = dict(os.environ, PYTHONPATH=str(SIDECAR_DIR))
+    result = subprocess.run([sys.executable, "run.py", "--config", str(config_path), "--runs-dir", str(runs_dir),
+                             "--allow-dirty", "--skip-scan"], cwd=TRAIN_DIR, capture_output=True, text=True,
+                            env=env, timeout=60, check=False)
+    assert result.returncode == 0, result.stdout + result.stderr
+    manifest = json.loads(next(runs_dir.glob("*/manifest.json")).read_text())
+    findings = manifest["metrics"]["splits"]["findings"]
+    assert set(findings["subtypes"]) == {"by_mode", "by_shape"}
+    assert "verdict" in findings

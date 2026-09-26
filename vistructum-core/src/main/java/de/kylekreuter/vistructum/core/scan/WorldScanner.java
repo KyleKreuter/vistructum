@@ -20,6 +20,7 @@ import de.kylekreuter.vistructum.core.region.ChunkColumn;
 import de.kylekreuter.vistructum.core.region.RegionChunk;
 import de.kylekreuter.vistructum.core.region.RegionFile;
 import de.kylekreuter.vistructum.core.scene.BlockPos;
+import de.kylekreuter.vistructum.core.volume.ShapeFilter;
 import de.kylekreuter.vistructum.core.volume.VolumeSettings;
 import de.kylekreuter.vistructum.core.volume.VolumeShape;
 import de.kylekreuter.vistructum.core.volume.VolumeShapes;
@@ -412,7 +413,9 @@ public final class WorldScanner {
             return List.of();
         }
         SurfaceScene scene = shape.projection().scene();
-        return result.detections().stream().map(detection -> new DetectedCandidate(
+        return result.detections().stream().filter(detection -> !ShapeFilter.implausible(scene.modified(),
+                scene.width(), scene.height(), detection.top(), detection.left(), detection.bottom(),
+                detection.right())).map(detection -> new DetectedCandidate(
                 new FindingCandidate(Source.FULLSCAN, worldName,
                         shape.projection().toWorld(detection.top(), detection.left(), detection.bottom(), detection.right()),
                         detection.score(), detection.votes(), Set.of(),

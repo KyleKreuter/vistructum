@@ -91,8 +91,12 @@ jobs:
       - name: publish
         run: |
           modrinth() { curl -sS --fail-with-body -H "Authorization: $MODRINTH_TOKEN" -H "User-Agent: $AGENT" "$@"; }
-          project=$(modrinth "$API/project/$MODRINTH_PROJECT" | jq -r .id)
-          if modrinth "$API/project/$project/version" | jq -e --arg v "$VERSION" 'any(.[]; .version_number == $v)' > /dev/null; then
+          query() { modrinth --retry 5 --retry-delay 5 --retry-all-errors "$@"; }
+          project=$(query "$API/project/$MODRINTH_PROJECT")
+          project=$(jq -er .id <<< "$project")
+          versions=$(query "$API/project/$project/version")
+          jq -e 'type == "array"' <<< "$versions" > /dev/null
+          if jq -e --arg v "$VERSION" 'any(.[]; .version_number == $v)' <<< "$versions" > /dev/null; then
             echo "Modrinth already has $VERSION"
             exit 0
           fi

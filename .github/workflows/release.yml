@@ -73,7 +73,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
       MODRINTH_PROJECT: vistructum
-      GAME_VERSIONS: '["1.21.4"]'
+      GAME_LINE: "1.21"
       LOADERS: '["paper"]'
       API: https://api.modrinth.com/v2
       AGENT: KyleKreuter/vistructum (release workflow)
@@ -94,6 +94,10 @@ jobs:
           query() { modrinth --retry 5 --retry-delay 5 --retry-all-errors "$@"; }
           project=$(query "$API/project/$MODRINTH_PROJECT")
           project=$(jq -er .id <<< "$project")
+          games=$(query "$API/tag/game_version")
+          games=$(jq -ec --arg line "$GAME_LINE" \
+            '[.[] | select(.version_type == "release" and (.version == $line or (.version | startswith($line + "."))))
+              | .version] | select(length > 0)' <<< "$games")
           versions=$(query "$API/project/$project/version")
           jq -e 'type == "array"' <<< "$versions" > /dev/null
           if jq -e --arg v "$VERSION" 'any(.[]; .version_number == $v)' <<< "$versions" > /dev/null; then
@@ -106,7 +110,7 @@ jobs:
             *) type=release ;;
           esac
           jq -n --arg project "$project" --arg version "$VERSION" --arg type "$type" \
-            --rawfile changelog changelog.md --argjson games "$GAME_VERSIONS" --argjson loaders "$LOADERS" '{
+            --rawfile changelog changelog.md --argjson games "$games" --argjson loaders "$LOADERS" '{
               project_id: $project,
               version_number: $version,
               name: ("Vistructum " + $version),

@@ -17,6 +17,7 @@ import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RegionFileTest {
@@ -72,6 +73,14 @@ class RegionFileTest {
         assertEquals(4189, column.dataVersion());
         assertEquals(2, column.sections().size());
         assertEquals(1, column.sections().get(1).indices()[Section.index(1, 2, 3)]);
+    }
+
+    @Test
+    void columnWithOnlyAirHasNoBlocks() throws IOException {
+        byte[] air = NbtWriter.chunk(4189, ChunkColumn.FULL, List.of(NbtWriter.section(0, List.of("minecraft:air"), new long[0])));
+        byte[] stone = NbtWriter.chunk(4189, ChunkColumn.FULL, List.of(NbtWriter.section(0, List.of("minecraft:stone"), new long[0])));
+        assertFalse(ChunkColumn.decode(0, 0, air).hasBlocks());
+        assertTrue(ChunkColumn.decode(0, 0, stone).hasBlocks());
     }
 
     @Test

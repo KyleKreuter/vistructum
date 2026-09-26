@@ -210,6 +210,9 @@ public final class WorldScanner {
             snapshots = loaded;
             pendingLoads = result.fallback();
             awaitedLoads = 0;
+            if (pendingLoads.isEmpty()) {
+                process();
+            }
         });
     }
 
@@ -291,26 +294,33 @@ public final class WorldScanner {
         CompletableFuture<Integer> reported = CompletableFuture.supplyAsync(() -> {
             taken.forEach((key, snapshot) -> read.put(key, SnapshotColumns.of(snapshot, minY, maxY, version)));
             return read;
-        }, workers).thenCompose(tileColumns -> surface(running, current, tileColumns, minY, blockStates)
-                .thenCombine(volume(running, tileColumns, blockStates), (surface, volumes) -> {
-                    List<FindingCandidate> all = new ArrayList<>(surface);
-                    all.addAll(volumes);
-                    return all;
-                })).thenCompose(reporter::reportAll);
-        CompletableFuture<ScanJob> completed = reported.handle((count, error) -> {
+        }, workers).thenCompose(tileColumns -> tileColumns.values().stream().noneMatch(ChunkColumn::hasBlocks)
+                ? CompletableFuture.completedFuture(List.<FindingCandidate>of())
+                : surface(running, current, tileColumns, minY, blockStates)
+                        .thenCombine(volume(running, tileColumns, blockStates), (surface, volumes) -> {
+                            List<FindingCandidate> all = new ArrayList<>(surface);
+                            all.addAll(volumes);
+                            return all;
+                        })).thenCompose(reporter::reportAll);
+        CompletableFuture<TileProgress> completed = reported.handle((count, error) -> {
             if (error != null) {
                 logger.warning("fullscan #" + running.id() + " tile " + current + " failed: " + error);
             }
             return scans.completeTile(running.id(), current, count == null ? 0 : count, error != null);
-        }).thenCompose(stored -> stored);
-        await(completed, progressed -> {
+        }).thenCompose(stored -> stored).thenCompose(stored -> scans.nextTile(stored.id())
+                .thenApply(next -> new TileProgress(stored, next)));
+        await(completed, progress -> {
             tile = null;
             columns = null;
             snapshots = null;
             pendingLoads = null;
-            job = progressed;
-            Bukkit.getPluginManager().callEvent(new ScanProgressEvent(progressed));
+            job = progress.job();
+            Bukkit.getPluginManager().callEvent(new ScanProgressEvent(progress.job()));
+            progress.next().ifPresentOrElse(this::readTile, () -> finish(ScanStatus.DONE));
         });
+    }
+
+    private record TileProgress(ScanJob job, Optional<ScanPlan.Tile> next) {
     }
 
     private CompletableFuture<List<FindingCandidate>> surface(ScanJob running, ScanPlan.Tile current,

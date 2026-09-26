@@ -25,6 +25,10 @@ public record ChunkColumn(int chunkX, int chunkZ, int dataVersion, String status
         return FULL.equals(status);
     }
 
+    public boolean hasBlocks() {
+        return sections.stream().anyMatch(section -> section.palette().stream().anyMatch(entry -> !entry.air()));
+    }
+
     public static ChunkColumn decode(int chunkX, int chunkZ, byte[] nbt) throws IOException {
         Map<String, Object> root = Nbt.read(nbt, SKIPPED);
         int dataVersion = root.get("DataVersion") instanceof Integer version ? version : 0;

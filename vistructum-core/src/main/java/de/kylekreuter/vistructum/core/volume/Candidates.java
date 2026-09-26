@@ -9,12 +9,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Predicate;
 
 public final class Candidates {
-
-    private static final Set<String> AIR = Set.of("minecraft:air", "minecraft:cave_air", "minecraft:void_air");
 
     private final double fillerShare;
     private final Predicate<String> accepted;
@@ -45,9 +42,9 @@ public final class Candidates {
             String[] names = new String[palette.size()];
             boolean any = false;
             for (int i = 0; i < palette.size(); i++) {
-                String name = palette.get(i).name();
-                if (!AIR.contains(name) && accepted.test(name)) {
-                    names[i] = name;
+                PaletteEntry entry = palette.get(i);
+                if (!entry.air() && accepted.test(entry.name())) {
+                    names[i] = entry.name();
                     any = true;
                 }
             }

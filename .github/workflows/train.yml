@@ -1,0 +1,122 @@
+name: train
+run-name: train ${{ inputs.configs }} at ${{ inputs.ref || github.sha }}${{ inputs.attach && ' (attach)' || '' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      configs:
+        description: "Comma-separated configs under ml/train"
+        required: true
+        default: "configs/mask-v2.yaml,configs/scan-v1.yaml"
+      ref:
+        description: "Commit to train (full sha); empty trains the commit this workflow runs on"
+        required: false
+        default: ""
+      attach:
+        description: "Attach to the kernel that is already running instead of pushing a new one"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kaggle-train
+  cancel-in-progress: false
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/ml:${{ github.workspace }}/ml/train
+  KAGGLE_USERNAME: ${{ vars.KAGGLE_USERNAME }}
+  KERNEL: ${{ vars.KAGGLE_USERNAME }}/vistructum-train
+
+jobs:
+  kaggle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    permissions:
+      contents: write
+    outputs:
+      label: ${{ steps.watch.outputs.label }}
+      runs: ${{ steps.watch.outputs.runs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ml/train/requirements-kaggle.txt
+      - run: pip install -r ml/train/requirements-kaggle.txt
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: push kernel
+        if: ${{ !inputs.attach }}
+        working-directory: ml/train
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          CONFIGS: ${{ inputs.configs }}
+          REF: ${{ inputs.ref || github.sha }}
+        run: |
+          [[ "$CONFIGS" =~ ^[A-Za-z0-9._/,-]+$ ]] || { echo "::error::configs must be comma-separated paths"; exit 1; }
+          ./kaggle_push.sh "$CONFIGS" "$REF"
+      - name: wait for the kernel
+        id: watch
+        working-directory: ml/train
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+        run: |
+          set +e
+          python kaggle_watch.py watch "$KERNEL" --out "$RUNNER_TEMP/kaggle" --max-hours 5.5
+          code=$?
+          (( code <= 1 )) || { echo "::error::kernel still running or unreadable, rerun with attach"; exit "$code"; }
+          (( code == 0 )) || echo "::warning::the kernel did not complete, see its log in the kaggle-output artifact"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kaggle-output
+          path: ${{ runner.temp }}/kaggle
+          retention-days: 30
+
+  scan:
+    needs: kaggle
+    if: ${{ needs.kaggle.outputs.runs != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        run: ${{ fromJSON(needs.kaggle.outputs.runs) }}
+    uses: ./.github/workflows/scan-stage.yml
+    with:
+      run: ${{ matrix.run }}
+      shards: "8"
+
+  report:
+    needs: [kaggle, scan]
+    if: ${{ !cancelled() && needs.kaggle.result == 'success' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - uses: actions/download-artifact@v4
+        with:
+          name: kaggle-output
+          path: ${{ runner.temp }}/kaggle
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: result-*
+          path: ${{ runner.temp }}/scan-results
+      - name: report and publish
+        working-directory: ml/train
+        env:
+          LABEL: ${{ needs.kaggle.outputs.label }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/scan-results"
+          python kaggle_watch.py report --out "$RUNNER_TEMP/kaggle" --label "$LABEL" \
+            --scan-results "$RUNNER_TEMP/scan-results" --publish

@@ -15,6 +15,7 @@ SPLITS = ("train", "val", "test", "holdout")
 SEED = int(os.environ.get("VISTRUCTUM_SEED", "0"))
 DEVICE = os.environ.get("VISTRUCTUM_DEVICE", "cuda")
 SCAN_ON_KERNEL = os.environ.get("VISTRUCTUM_SCAN", "0") == "1"
+CPUS = int(os.environ.get("VISTRUCTUM_CPUS") or os.cpu_count() or 4)
 
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
@@ -50,7 +51,7 @@ def read_config(path):
 
 def generate(train_dir, cfg, data_dir, seed, env):
     command = [sys.executable, "-m", "generator.build", "--kind", cfg["kind"], "--out", str(data_dir),
-               "--seed", str(seed), "--workers", str(os.cpu_count() or 4)]
+               "--seed", str(seed), "--workers", str(CPUS)]
     for split in SPLITS:
         size = os.environ.get(f"VISTRUCTUM_{split.upper()}_N") or cfg.get(f"gen_{split}")
         if size:
@@ -112,7 +113,7 @@ def main():
     env = dict(os.environ, PYTHONPATH=f"{repo_dir / 'ml'}:{train_dir}")
     configs = [c.strip() for c in CONFIGS.split(",") if c.strip()]
     gpus = gpu_count() if DEVICE == "cuda" else 1
-    print(json.dumps({"ref": REPO_REF, "configs": configs, "gpus": gpus, "cpus": os.cpu_count()}), flush=True)
+    print(json.dumps({"ref": REPO_REF, "configs": configs, "gpus": gpus, "cpus": CPUS}), flush=True)
     if gpus == 0:
         raise SystemExit("no CUDA device visible; select the GPU T4 x2 accelerator")
     runs_dir = OUTPUT / "runs"
@@ -130,7 +131,7 @@ def main():
             generate(train_dir, cfg, data_dir, SEED + 1000 * len(datasets), env)
             datasets[key] = data_dir
         jobs.append((config, datasets[key]))
-    threads = max(1, (os.cpu_count() or 4) // min(len(jobs), gpus))
+    threads = max(1, CPUS // min(len(jobs), gpus))
     exit_codes = {}
     for start in range(0, len(jobs), gpus):
         batch = jobs[start:start + gpus]

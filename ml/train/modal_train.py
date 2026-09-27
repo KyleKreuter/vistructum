@@ -13,7 +13,8 @@ from bootstrap import combine
 TRAIN_DIR = Path(__file__).resolve().parent
 REMOTE_BOOTSTRAP = "/root/bootstrap.py"
 REMOTE_OUTPUT = Path("/root/output")
-TIMEOUT_HOURS = 4
+TIMEOUT_HOURS = 6
+CPUS = 8
 
 image = (modal.Image.debian_slim(python_version="3.12")
          .apt_install("git")
@@ -26,11 +27,11 @@ def log_name(config):
     return f"modal-{Path(config).stem}.log"
 
 
-@app.function(gpu="T4", cpu=8.0, memory=32768, timeout=TIMEOUT_HOURS * 3600)
+@app.function(gpu="T4", cpu=float(CPUS), memory=32768, timeout=TIMEOUT_HOURS * 3600)
 def train(ref, config):
     REMOTE_OUTPUT.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, VISTRUCTUM_REF=ref, VISTRUCTUM_CONFIGS=config, VISTRUCTUM_OUTPUT=str(REMOTE_OUTPUT),
-               VISTRUCTUM_SCRATCH="/tmp/vistructum")
+               VISTRUCTUM_SCRATCH="/tmp/vistructum", VISTRUCTUM_CPUS=str(CPUS))
     with open(REMOTE_OUTPUT / log_name(config), "w") as log:
         subprocess.run([sys.executable, REMOTE_BOOTSTRAP], env=env, stdout=log, stderr=subprocess.STDOUT, check=False)
     buffer = io.BytesIO()

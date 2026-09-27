@@ -12,6 +12,7 @@ import torch
 from config import add_config_args, load_config
 
 import train as train_mod
+from data import findings_split
 
 
 def git_info():
@@ -69,6 +70,9 @@ def main():
     session, meta = evaluate_mod.load_session(onnx_path)
     report = evaluate_mod.build_report(session, meta, cfg.data_dir, args.splits)
     report["model_bytes"] = onnx_path.stat().st_size
+    findings_val = findings_split(cfg, "val")
+    if findings_val is not None:
+        report["splits"]["findings"] = evaluate_mod.evaluate_split(session, meta, *findings_val)
     scan_wanted = cfg.scan_negatives > 0
     scan = scan_stage(onnx_path, asdict(cfg), run_dir) if scan_wanted and not args.skip_scan else {}
 

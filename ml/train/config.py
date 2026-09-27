@@ -38,6 +38,8 @@ class TrainConfig:
     gen_val: int = 12500
     gen_test: int = 12500
     gen_holdout: int = 12500
+    findings_dir: str = ""
+    findings_repeat: int = 1
 
 
 VALID_KEYS = {f.name for f in fields(TrainConfig)}
@@ -77,6 +79,8 @@ def load_config(path, overrides=None):
         raise ValueError(f"unknown kind {cfg.kind!r}, expected one of {sorted(KINDS)}")
     if cfg.optimizer not in ("adam", "adamw"):
         raise ValueError(f"unknown optimizer {cfg.optimizer!r}")
+    if cfg.findings_repeat < 1:
+        raise ValueError("findings_repeat must be at least 1")
     if cfg.device not in ("cpu", "cuda", "mps"):
         raise ValueError(f"unknown device {cfg.device!r}")
     return cfg

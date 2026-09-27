@@ -22,6 +22,7 @@ public final class GitHubReleases implements ReleaseSource {
 
     public static final String TAG_PREFIX = "models-";
     public static final String MANIFEST = "models.json";
+    public static final String PLUGIN_TAG_PREFIX = "v";
 
     private static final Duration TIMEOUT = Duration.ofSeconds(60);
 
@@ -46,13 +47,10 @@ public final class GitHubReleases implements ReleaseSource {
 
     @Override
     public Optional<ModelRelease> latest() throws IOException {
-        JsonArray releases = parse(fetch(api.resolve("repos/" + repository + "/releases?per_page=30"),
-                "application/vnd.github+json")).getAsJsonArray();
-        for (JsonElement element : releases) {
+        for (JsonElement element : releases()) {
             JsonObject release = element.getAsJsonObject();
             String tag = release.get("tag_name").getAsString();
-            if (release.get("draft").getAsBoolean() || release.get("prerelease").getAsBoolean()
-                    || !tag.startsWith(TAG_PREFIX)) {
+            if (!published(release) || !tag.startsWith(TAG_PREFIX)) {
                 continue;
             }
             Map<String, URI> found = new HashMap<>();
@@ -70,6 +68,22 @@ public final class GitHubReleases implements ReleaseSource {
         return Optional.empty();
     }
 
+    public Optional<String> latestPluginVersion() throws IOException {
+        for (JsonElement element : releases()) {
+            JsonObject release = element.getAsJsonObject();
+            String tag = release.get("tag_name").getAsString();
+            if (published(release) && tag.startsWith(PLUGIN_TAG_PREFIX) && tag.length() > 1
+                    && Character.isDigit(tag.charAt(1))) {
+                return Optional.of(tag.substring(PLUGIN_TAG_PREFIX.length()));
+            }
+        }
+        return Optional.empty();
+    }
+
+    public URI releasePage(String tag) {
+        return URI.create("https://github.com/" + repository + "/releases/tag/" + tag);
+    }
+
     @Override
     public byte[] download(ModelRelease release, ModelRelease.Entry entry) throws IOException {
         URI uri = release.assets().get(entry.file());
@@ -77,6 +91,15 @@ public final class GitHubReleases implements ReleaseSource {
             throw new IOException("release " + release.tag() + " has no asset " + entry.file());
         }
         return fetch(uri, "application/octet-stream");
+    }
+
+    private JsonArray releases() throws IOException {
+        return parse(fetch(api.resolve("repos/" + repository + "/releases?per_page=30"),
+                "application/vnd.github+json")).getAsJsonArray();
+    }
+
+    private static boolean published(JsonObject release) {
+        return !release.get("draft").getAsBoolean() && !release.get("prerelease").getAsBoolean();
     }
 
     private byte[] fetch(URI uri, String accept) throws IOException {

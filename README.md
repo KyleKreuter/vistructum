@@ -26,7 +26,7 @@ Vistructum never kicks, bans, or rolls back on its own. Every decision stays wit
 - **Review menu:** Lists open findings with preview images. The detail view shows the scene, the builder's face, location, probability, and source.
 - **Chat alerts:** Staff get a message with **[Open]** and **[TP]** buttons for every new finding.
 - **Local or remote inference:** Runs the models inside the server process, or on a separate sidecar with a local fallback.
-- **Model updates:** Downloads new models from GitHub Releases automatically.
+- **Update notices:** Checks GitHub Releases daily and logs when a new plugin version or model is available. New models install automatically only after you set `updates.auto-update-models: true` (`MODELS_AUTO_UPDATE=true` for the sidecar).
 - **Plugin API:** Query findings, submit reviews, start scans, and listen to events from your own plugin.
 - **Stateless design:** All state lives in SQLite. After a restart, running scans continue where they stopped.
 
@@ -122,7 +122,7 @@ docker compose up -d sidecar
 
 | File | Content |
 |---|---|
-| `plugins/vistructum/config.yml` | Inference mode, model updates, sidecar address, live check timing, daily fullscan worlds and scan threads, retention |
+| `plugins/vistructum/config.yml` | Inference mode, update checks, sidecar address, live check timing, daily fullscan worlds and scan threads, retention |
 | `plugins/vistructum-ui/config.yml` | Resource pack port and public URL, map previews in the list |
 | `plugins/vistructum-ui/messages.yml` | All chat and menu texts in MiniMessage format |
 

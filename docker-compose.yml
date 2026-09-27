@@ -10,7 +10,7 @@ services:
       - sidecar-models:/models
     environment:
       ORT_THREADS: "${ORT_THREADS:-1}"
-      MODELS_UPDATE: "${MODELS_UPDATE:-auto}"
+      MODELS_AUTO_UPDATE: "${MODELS_AUTO_UPDATE:-false}"
       MODELS_REPOSITORY: "${MODELS_REPOSITORY:-KyleKreuter/vistructum}"
       MODELS_CHECK_HOURS: "${MODELS_CHECK_HOURS:-24}"
 

@@ -19,13 +19,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class InferenceSettingsTest {
 
     @Test
-    void defaultConfigRunsLocallyWithDailyUpdates() throws Exception {
+    void defaultConfigRunsLocallyWithDailyUpdateChecks() throws Exception {
         InferenceSettings settings = InferenceSettings.from(defaults(), Map.of());
 
         assertEquals(InferenceMode.LOCAL, settings.mode());
         assertFalse(settings.localFallback());
         assertTrue(settings.runsLocalModels());
-        assertTrue(settings.autoUpdate());
+        assertFalse(settings.autoUpdate());
         assertEquals("KyleKreuter/vistructum", settings.repository());
         assertEquals(Duration.ofHours(24), settings.checkInterval());
     }
@@ -62,7 +62,7 @@ class InferenceSettingsTest {
     @Test
     void unknownValuesAreRejected() throws Exception {
         for (String[] invalid : new String[][] {{"inference.mode", "cloud"}, {"inference.fallback", "remote"},
-                {"models.update", "weekly"}}) {
+                {"updates.auto-update-models", "auto"}}) {
             YamlConfiguration config = defaults();
             config.set(invalid[0], invalid[1]);
             assertThrows(IllegalArgumentException.class, () -> InferenceSettings.from(config, Map.of()),
@@ -71,9 +71,17 @@ class InferenceSettingsTest {
     }
 
     @Test
+    void modelAutoUpdateCanBeTurnedOn() throws Exception {
+        YamlConfiguration config = defaults();
+        config.set("updates.auto-update-models", true);
+
+        assertTrue(InferenceSettings.from(config, Map.of()).autoUpdate());
+    }
+
+    @Test
     void nonPositiveIntervalsAreRejected() throws Exception {
         YamlConfiguration config = defaults();
-        config.set("models.check-hours", 0);
+        config.set("updates.check-hours", 0);
 
         assertThrows(IllegalArgumentException.class, () -> InferenceSettings.from(config, Map.of()));
     }

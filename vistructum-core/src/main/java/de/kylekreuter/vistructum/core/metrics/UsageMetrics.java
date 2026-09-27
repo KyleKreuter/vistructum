@@ -20,7 +20,7 @@ public final class UsageMetrics {
         Metrics metrics = new Metrics(plugin, PLUGIN_ID);
         BooleanSupplier uiInstalled = () -> plugin.getServer().getPluginManager().isPluginEnabled(UI_PLUGIN);
         metrics.addCustomChart(new SimplePie("inference_mode", () -> inferenceMode(settings)));
-        metrics.addCustomChart(new SimplePie("model_updates", () -> onOff(settings.autoUpdate(), "auto", "off")));
+        metrics.addCustomChart(new SimplePie("model_updates", () -> onOff(settings.autoUpdate(), "auto", "notify")));
         metrics.addCustomChart(new SimplePie("daily_scan", () -> onOff(dailyScan, "on", "off")));
         metrics.addCustomChart(new SimplePie("scan_worlds", () -> String.valueOf(scanWorlds)));
         metrics.addCustomChart(new SimplePie("ui_installed", () -> onOff(uiInstalled.getAsBoolean(), "yes", "no")));

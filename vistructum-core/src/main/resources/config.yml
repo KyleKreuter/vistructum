@@ -6,8 +6,10 @@ inference:
   fallback: none
   threads: 1
 
-models:
-  update: auto
+# Looks for new plugin and model releases every check-hours and logs when one is available.
+# Set auto-update-models to true to download and activate new models automatically.
+updates:
+  auto-update-models: false
   repository: KyleKreuter/vistructum
   check-hours: 24
 

@@ -13,6 +13,7 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -87,6 +88,22 @@ class GitHubReleasesTest {
         route("/repos/owner/repo/releases?per_page=30", "[" + release("v1.0.0", false, "plugin.jar") + "]");
 
         assertTrue(releases().latest().isEmpty());
+    }
+
+    @Test
+    void picksTheNewestPublishedPluginRelease() throws IOException {
+        route("/repos/owner/repo/releases?per_page=30", "[" + release("models-abc", false, "models.json") + ","
+                + release("v1.2.0", true, "plugin.jar") + "," + release("v1.1.0", false, "plugin.jar") + ","
+                + release("v1.0.0", false, "plugin.jar") + "]");
+
+        assertEquals(Optional.of("1.1.0"), releases().latestPluginVersion());
+    }
+
+    @Test
+    void reportsNoPluginVersionWhenOnlyModelsAreReleased() throws IOException {
+        route("/repos/owner/repo/releases?per_page=30", "[" + release("models-abc", false, "models.json") + "]");
+
+        assertTrue(releases().latestPluginVersion().isEmpty());
     }
 
     @Test

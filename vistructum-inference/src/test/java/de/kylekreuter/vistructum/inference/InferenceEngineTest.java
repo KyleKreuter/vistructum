@@ -61,6 +61,24 @@ class InferenceEngineTest {
     }
 
     @Test
+    void reportsANewerModelWithoutInstallingIt() {
+        try (InferenceEngine engine = InferenceEngine.start(new ModelFiles(directory), 1, LOGGER)) {
+            FakeReleases releases = new FakeReleases()
+                    .offer("mask", TestModels.testMask(), Contract.FEATURE_SPEC)
+                    .offer("fullscan", TestModels.bundled(ModelKind.FULLSCAN), Contract.FEATURE_SPEC);
+            String active = engine.models().join().get(ModelKind.MASK).version();
+
+            List<ModelUpdate> available = engine.available(releases).join();
+
+            assertEquals(List.of(ModelKind.MASK), available.stream().map(ModelUpdate::kind).toList());
+            assertEquals(active, available.getFirst().currentVersion());
+            assertEquals(0, releases.downloads);
+            assertEquals(active, engine.models().join().get(ModelKind.MASK).version());
+            assertFalse(Files.exists(directory.resolve("mask.onnx")));
+        }
+    }
+
+    @Test
     void skipsModelsThatAreAlreadyActive() {
         try (InferenceEngine engine = InferenceEngine.start(new ModelFiles(directory), 1, LOGGER)) {
             FakeReleases releases = new FakeReleases()

@@ -23,21 +23,20 @@ public record InferenceSettings(InferenceMode mode, boolean localFallback, int t
             case "local" -> true;
             default -> throw new IllegalArgumentException("inference.fallback must be none or local");
         };
-        boolean autoUpdate = switch (lower(config.getString("models.update"))) {
-            case "auto" -> true;
-            case "off" -> false;
-            default -> throw new IllegalArgumentException("models.update must be auto or off");
-        };
+        if (!config.isBoolean("updates.auto-update-models")) {
+            throw new IllegalArgumentException("updates.auto-update-models must be true or false");
+        }
+        boolean autoUpdate = config.getBoolean("updates.auto-update-models");
         int threads = config.getInt("inference.threads");
-        long checkHours = config.getLong("models.check-hours");
+        long checkHours = config.getLong("updates.check-hours");
         if (threads < 1 || checkHours < 1) {
-            throw new IllegalArgumentException("inference.threads and models.check-hours must be at least 1");
+            throw new IllegalArgumentException("inference.threads and updates.check-hours must be at least 1");
         }
         String host = Objects.requireNonNullElse(env.get("SIDECAR_HOST"), config.getString("sidecar.host"));
         int port = env.get("SIDECAR_PORT") != null ? Integer.parseInt(env.get("SIDECAR_PORT"))
                 : config.getInt("sidecar.port");
         return new InferenceSettings(mode, localFallback, threads, autoUpdate,
-                Objects.requireNonNull(config.getString("models.repository"), "models.repository"),
+                Objects.requireNonNull(config.getString("updates.repository"), "updates.repository"),
                 Duration.ofHours(checkHours), host, port,
                 Duration.ofSeconds(config.getLong("sidecar.connect-timeout-seconds")),
                 Duration.ofSeconds(config.getLong("sidecar.request-timeout-seconds")));

@@ -12,7 +12,7 @@ RUN mvn -q -B -pl vistructum-sidecar -am package
 
 FROM eclipse-temurin:21-jre
 
-ENV MODEL_DIR=/models PORT=8000 ORT_THREADS=1 MODELS_UPDATE=auto MODELS_CHECK_HOURS=24
+ENV MODEL_DIR=/models PORT=8000 ORT_THREADS=1 MODELS_AUTO_UPDATE=false MODELS_CHECK_HOURS=24
 
 RUN groupadd --system sidecar && useradd --system --gid sidecar --home-dir /app sidecar \
     && mkdir -p /app /models && chown -R sidecar:sidecar /app /models

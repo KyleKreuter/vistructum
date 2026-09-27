@@ -13,6 +13,7 @@ import de.kylekreuter.vistructum.inference.InferenceEngine;
 import de.kylekreuter.vistructum.inference.ModelFiles;
 import de.kylekreuter.vistructum.inference.ModelInfo;
 import de.kylekreuter.vistructum.inference.ModelKind;
+import de.kylekreuter.vistructum.inference.ModelUpdate;
 import de.kylekreuter.vistructum.inference.ReleaseSource;
 import de.kylekreuter.vistructum.inference.SceneCodec;
 import de.kylekreuter.vistructum.inference.SurfaceScene;
@@ -74,15 +75,30 @@ public final class SidecarServer implements AutoCloseable {
         http.createContext("/infer", exchange -> sidecar.handle(exchange, "POST", sidecar::infer));
         http.setExecutor(sidecar.handlers);
         http.start();
-        if (settings.autoUpdate()) {
-            long hours = settings.checkInterval().toHours();
-            sidecar.updates.scheduleAtFixedRate(() -> engine.update(releases).whenComplete((installed, error) -> {
+        long hours = settings.checkInterval().toHours();
+        sidecar.updates.scheduleAtFixedRate(() -> checkModels(engine, releases, settings.autoUpdate()), 0, hours,
+                TimeUnit.HOURS);
+        return sidecar;
+    }
+
+    private static void checkModels(InferenceEngine engine, ReleaseSource releases, boolean autoUpdate) {
+        if (autoUpdate) {
+            engine.update(releases).whenComplete((installed, error) -> {
                 if (error != null) {
                     LOGGER.warning("model update check failed: " + rootMessage(error));
                 }
-            }), 0, hours, TimeUnit.HOURS);
+            });
+            return;
         }
-        return sidecar;
+        engine.available(releases).whenComplete((updates, error) -> {
+            if (error != null) {
+                LOGGER.warning("model update check failed: " + rootMessage(error));
+                return;
+            }
+            for (ModelUpdate update : updates) {
+                LOGGER.info(update.describe() + ", set MODELS_AUTO_UPDATE=true to install it");
+            }
+        });
     }
 
     public int port() {

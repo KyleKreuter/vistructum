@@ -63,8 +63,12 @@ public final class InferenceEngine implements AutoCloseable {
 
     public CompletableFuture<List<ModelInfo>> update(ReleaseSource source) {
         return models()
-                .thenApplyAsync(current -> fetch(source, current), downloads)
+                .thenApplyAsync(current -> fetch(source, newer(source, current)), downloads)
                 .thenApplyAsync(this::install, executor);
+    }
+
+    public CompletableFuture<List<ModelUpdate>> available(ReleaseSource source) {
+        return models().thenApplyAsync(current -> newer(source, current), downloads);
     }
 
     @Override
@@ -115,7 +119,7 @@ public final class InferenceEngine implements AutoCloseable {
         return model;
     }
 
-    private List<Download> fetch(ReleaseSource source, Map<ModelKind, ModelInfo> current) {
+    private List<ModelUpdate> newer(ReleaseSource source, Map<ModelKind, ModelInfo> current) {
         Optional<ModelRelease> release;
         try {
             release = source.latest();
@@ -125,7 +129,7 @@ public final class InferenceEngine implements AutoCloseable {
         if (release.isEmpty()) {
             return List.of();
         }
-        List<Download> downloadsFound = new ArrayList<>();
+        List<ModelUpdate> updates = new ArrayList<>();
         for (ModelRelease.Entry entry : release.get().models()) {
             Optional<ModelKind> kind = ModelKind.byId(entry.kind());
             if (kind.isEmpty()) {
@@ -141,15 +145,26 @@ public final class InferenceEngine implements AutoCloseable {
             if (loaded != null && loaded.sha256().equalsIgnoreCase(entry.sha256())) {
                 continue;
             }
+            updates.add(new ModelUpdate(kind.get(), release.get(), entry,
+                    loaded != null ? loaded.version() : null));
+        }
+        return updates;
+    }
+
+    private List<Download> fetch(ReleaseSource source, List<ModelUpdate> updates) {
+        List<Download> downloadsFound = new ArrayList<>();
+        for (ModelUpdate update : updates) {
+            ModelRelease release = update.release();
+            ModelRelease.Entry entry = update.entry();
             try {
-                byte[] bytes = source.download(release.get(), entry);
+                byte[] bytes = source.download(release, entry);
                 String actual = Model.sha256(bytes);
                 if (!actual.equalsIgnoreCase(entry.sha256())) {
                     throw new IOException("sha256 " + actual + " != " + entry.sha256());
                 }
-                downloadsFound.add(new Download(kind.get(), release.get().tag(), bytes));
+                downloadsFound.add(new Download(update.kind(), release.tag(), bytes));
             } catch (IOException e) {
-                logger.warning("cannot download " + entry.file() + " from " + release.get().tag() + ": "
+                logger.warning("cannot download " + entry.file() + " from " + release.tag() + ": "
                         + e.getMessage());
             }
         }

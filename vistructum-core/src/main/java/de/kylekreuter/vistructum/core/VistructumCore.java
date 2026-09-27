@@ -26,6 +26,7 @@ import de.kylekreuter.vistructum.core.store.Database;
 import de.kylekreuter.vistructum.core.tracking.BlockChangeListener;
 import de.kylekreuter.vistructum.core.tracking.BlockChangeStore;
 import de.kylekreuter.vistructum.core.tracking.ClusterSettings;
+import de.kylekreuter.vistructum.core.update.UpdateCheck;
 import de.kylekreuter.vistructum.inference.GitHubReleases;
 import de.kylekreuter.vistructum.inference.InferenceEngine;
 import de.kylekreuter.vistructum.inference.ModelFiles;
@@ -81,7 +82,12 @@ public final class VistructumCore extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
-        inference = createInference(settings);
+        InferenceEngine engine = settings.runsLocalModels()
+                ? InferenceEngine.start(new ModelFiles(getDataFolder().toPath().resolve("models")), settings.threads(),
+                        getLogger())
+                : null;
+        inference = createInference(settings, engine);
+        scheduleUpdateChecks(settings, engine);
 
         Duration dedupe = Duration.ofDays(config.getLong("alerts.dedupe-days"));
         FindingReporter reporter = new FindingReporter(mainThread, findings, getLogger(), dedupe, clock);
@@ -154,16 +160,8 @@ public final class VistructumCore extends JavaPlugin {
         }
     }
 
-    private Inference createInference(InferenceSettings settings) {
-        LocalInference local = null;
-        if (settings.runsLocalModels()) {
-            InferenceEngine engine = InferenceEngine.start(new ModelFiles(getDataFolder().toPath().resolve("models")),
-                    settings.threads(), getLogger());
-            local = new LocalInference(engine);
-            if (settings.autoUpdate()) {
-                scheduleModelUpdates(engine, settings);
-            }
-        }
+    private Inference createInference(InferenceSettings settings, InferenceEngine engine) {
+        LocalInference local = engine != null ? new LocalInference(engine) : null;
         if (settings.mode() == InferenceMode.LOCAL) {
             getLogger().info("inference runs locally");
             return local;
@@ -175,14 +173,10 @@ public final class VistructumCore extends JavaPlugin {
         return local != null ? new FallbackInference(remote, local, getLogger()) : remote;
     }
 
-    private void scheduleModelUpdates(InferenceEngine engine, InferenceSettings settings) {
-        GitHubReleases releases = GitHubReleases.of(settings.repository());
+    private void scheduleUpdateChecks(InferenceSettings settings, InferenceEngine engine) {
+        UpdateCheck check = new UpdateCheck(GitHubReleases.of(settings.repository()),
+                getPluginMeta().getVersion(), engine, settings.autoUpdate(), getLogger());
         long period = settings.checkInterval().toSeconds() * 20L;
-        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> engine.update(releases)
-                .whenComplete((installed, error) -> {
-                    if (error != null) {
-                        getLogger().warning("model update check failed: " + error.getMessage());
-                    }
-                }), 0L, period);
+        getServer().getScheduler().runTaskTimerAsynchronously(this, check, 0L, period);
     }
 }

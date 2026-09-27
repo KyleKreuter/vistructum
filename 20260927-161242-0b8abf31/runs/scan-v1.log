@@ -1,0 +1,733 @@
+{"epoch": 1, "train_loss": 0.67971, "val_loss": 0.6542405334472656, "recall": 0.0, "threshold": 0.47}
+/usr/local/lib/python3.12/site-packages/torch/optim/lr_scheduler.py:240: UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible. Please use `scheduler.step()` to step the scheduler. During the deprecation, if epoch is different from None, the closed form is used instead of the new chainable form, where available. Please open an issue if you are unable to replicate your use case: https://github.com/pytorch/pytorch/issues/new/choose.
+  warnings.warn(EPOCH_DEPRECATION_WARNING, UserWarning)
+{"epoch": 2, "train_loss": 0.60141, "val_loss": 0.5706022424316406, "recall": 0.0, "threshold": 0.39}
+{"epoch": 3, "train_loss": 0.49038, "val_loss": 0.5286222601318359, "recall": 0.0096, "threshold": 0.44}
+{"epoch": 4, "train_loss": 0.43559, "val_loss": 0.43095575439453127, "recall": 0.0568, "threshold": 0.81}
+{"epoch": 5, "train_loss": 0.40649, "val_loss": 0.3614555499267578, "recall": 0.0664, "threshold": 0.97}
+{"epoch": 6, "train_loss": 0.389, "val_loss": 0.3307506121826172, "recall": 0.1344, "threshold": 0.98}
+{"epoch": 7, "train_loss": 0.37478, "val_loss": 0.31073044494628904, "recall": 0.0872, "threshold": 0.99}
+{"epoch": 8, "train_loss": 0.36451, "val_loss": 0.29769456176757814, "recall": 0.2368, "threshold": 0.98}
+{"epoch": 9, "train_loss": 0.35537, "val_loss": 0.2896637536621094, "recall": 0.2696, "threshold": 0.98}
+{"epoch": 10, "train_loss": 0.34944, "val_loss": 0.2820987518310547, "recall": 0.2852, "threshold": 0.98}
+{"epoch": 11, "train_loss": 0.34227, "val_loss": 0.2760181457519531, "recall": 0.3076, "threshold": 0.98}
+{"epoch": 12, "train_loss": 0.33692, "val_loss": 0.2680270672607422, "recall": 0.3172, "threshold": 0.98}
+{"epoch": 13, "train_loss": 0.33417, "val_loss": 0.2643285211181641, "recall": 0.322, "threshold": 0.98}
+{"epoch": 14, "train_loss": 0.32806, "val_loss": 0.26025725677490236, "recall": 0.328, "threshold": 0.98}
+{"epoch": 15, "train_loss": 0.32504, "val_loss": 0.25661349578857423, "recall": 0.1788, "threshold": 0.99}
+{"epoch": 16, "train_loss": 0.32112, "val_loss": 0.25152820556640626, "recall": 0.1828, "threshold": 0.99}
+{"epoch": 17, "train_loss": 0.3174, "val_loss": 0.2488002947998047, "recall": 0.1912, "threshold": 0.99}
+{"epoch": 18, "train_loss": 0.3157, "val_loss": 0.2436700454711914, "recall": 0.3364, "threshold": 0.98}
+{"epoch": 19, "train_loss": 0.31227, "val_loss": 0.24258901733398439, "recall": 0.34, "threshold": 0.98}
+{"epoch": 20, "train_loss": 0.30909, "val_loss": 0.24001909088134765, "recall": 0.3424, "threshold": 0.98}
+{"epoch": 21, "train_loss": 0.30649, "val_loss": 0.2383002310180664, "recall": 0.3428, "threshold": 0.98}
+{"epoch": 22, "train_loss": 0.30335, "val_loss": 0.23651979583740235, "recall": 0.3468, "threshold": 0.98}
+{"epoch": 23, "train_loss": 0.30154, "val_loss": 0.2344830728149414, "recall": 0.3396, "threshold": 0.98}
+{"epoch": 24, "train_loss": 0.29965, "val_loss": 0.23336107849121093, "recall": 0.3416, "threshold": 0.98}
+{"epoch": 25, "train_loss": 0.29655, "val_loss": 0.23159747100830078, "recall": 0.3408, "threshold": 0.98}
+{"epoch": 26, "train_loss": 0.29449, "val_loss": 0.23037015838623046, "recall": 0.3452, "threshold": 0.98}
+{"epoch": 27, "train_loss": 0.29206, "val_loss": 0.2296097555541992, "recall": 0.3456, "threshold": 0.98}
+{"epoch": 28, "train_loss": 0.29011, "val_loss": 0.22867076904296876, "recall": 0.344, "threshold": 0.98}
+{"epoch": 29, "train_loss": 0.28781, "val_loss": 0.22721427093505858, "recall": 0.346, "threshold": 0.98}
+{"epoch": 30, "train_loss": 0.28647, "val_loss": 0.22625131164550782, "recall": 0.3468, "threshold": 0.98}
+{"epoch": 31, "train_loss": 0.28393, "val_loss": 0.22573669952392578, "recall": 0.348, "threshold": 0.98}
+{"epoch": 32, "train_loss": 0.28417, "val_loss": 0.22488549102783204, "recall": 0.1864, "threshold": 0.99}
+{"epoch": 33, "train_loss": 0.28198, "val_loss": 0.22392030700683593, "recall": 0.1808, "threshold": 0.99}
+{"epoch": 34, "train_loss": 0.28171, "val_loss": 0.22399335357666014, "recall": 0.186, "threshold": 0.99}
+{"epoch": 35, "train_loss": 0.28081, "val_loss": 0.2236625454711914, "recall": 0.186, "threshold": 0.99}
+{"epoch": 36, "train_loss": 0.27947, "val_loss": 0.2234381051635742, "recall": 0.3536, "threshold": 0.98}
+{"epoch": 37, "train_loss": 0.27898, "val_loss": 0.22303923065185546, "recall": 0.3548, "threshold": 0.98}
+{"epoch": 38, "train_loss": 0.27878, "val_loss": 0.22261599700927734, "recall": 0.3584, "threshold": 0.98}
+{"epoch": 39, "train_loss": 0.27923, "val_loss": 0.22283688751220704, "recall": 0.3556, "threshold": 0.98}
+{"epoch": 40, "train_loss": 0.27846, "val_loss": 0.22294079162597658, "recall": 0.1892, "threshold": 0.99}
+WARNING:root:Please consider to run pre-processing before quantization. Refer to example: https://github.com/microsoft/onnxruntime-inference-examples/blob/main/quantization/image_classification/cpu/ReadMe.md 
+{
+  "config": "scan-v1",
+  "kind": "fullscan",
+  "commit": "0b8abf312064006e6967c6a3e7cb3c594166e0bf",
+  "dirty": false,
+  "config_values": {
+    "kind": "fullscan",
+    "data_dir": "/tmp/vistructum/data/scan-v1",
+    "out_dir": "/root/output/runs/scan-v1-0b8abf31",
+    "widths": [
+      24,
+      48,
+      64,
+      96,
+      128
+    ],
+    "depths": [],
+    "dropout": 0.15,
+    "epochs": 40,
+    "batch": 128,
+    "optimizer": "adamw",
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "warmup_epochs": 2,
+    "label_smoothing": 0.05,
+    "focal_gamma": 0.0,
+    "ema_decay": 0.999,
+    "pos_weight": 1.0,
+    "augment_d4": true,
+    "device": "cuda",
+    "seed": 42,
+    "num_threads": 24,
+    "quantize": true,
+    "tta": true,
+    "scan_negatives": 2500,
+    "scan_positives": 500,
+    "scan_workers": 24,
+    "gen_train": 120000,
+    "gen_val": 12500,
+    "gen_test": 12500,
+    "gen_holdout": 12500,
+    "findings_dir": "",
+    "findings_repeat": 1
+  },
+  "data_manifest_sha256": "f7f34b794e365428a935097416a444c0aa67cdce08efc760888fe9d62eed8b18",
+  "export": {
+    "onnx_path": "/root/output/runs/scan-v1-0b8abf31/fullscan.onnx",
+    "kind": "fullscan",
+    "threshold": 0.98,
+    "commit": "0b8abf312064006e6967c6a3e7cb3c594166e0bf",
+    "quantize": {
+      "applied": false,
+      "disagreement": 0.00408
+    }
+  },
+  "metrics": {
+    "kind": "fullscan",
+    "version": "bf-scan-2",
+    "threshold": 0.98,
+    "latency_seconds_per_window_b1": 0.0006713028499916618,
+    "latency_seconds_per_window_b32": 0.00013086780468718473,
+    "splits": {
+      "val": {
+        "metrics": {
+          "threshold": 0.98,
+          "precision": 0.9984326018808778,
+          "recall": 0.2548,
+          "fp_rate": 0.0001,
+          "false_positives": 1,
+          "flagged": 638,
+          "positives": 2500,
+          "negatives": 10000
+        },
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.2548 < 0.6"
+        ],
+        "subtypes": {
+          "by_shape": {
+            "neg-farm": {
+              "n": 190,
+              "fp_rate": 0.0
+            },
+            "neg-fence": {
+              "n": 194,
+              "fp_rate": 0.0
+            },
+            "neg-hard-celtic-cross": {
+              "n": 414,
+              "fp_rate": 0.0
+            },
+            "neg-hard-fylfot-mirror": {
+              "n": 461,
+              "fp_rate": 0.0
+            },
+            "neg-hard-greek-cross": {
+              "n": 477,
+              "fp_rate": 0.0
+            },
+            "neg-hard-hash-grid": {
+              "n": 492,
+              "fp_rate": 0.0
+            },
+            "neg-hard-iron-cross": {
+              "n": 484,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-alt-hooks": {
+              "n": 481,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-partial-hooks": {
+              "n": 494,
+              "fp_rate": 0.0
+            },
+            "neg-hard-l-shapes-d4": {
+              "n": 480,
+              "fp_rate": 0.0
+            },
+            "neg-hard-latin-cross": {
+              "n": 448,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-alt-hooks": {
+              "n": 418,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-partial-hooks": {
+              "n": 474,
+              "fp_rate": 0.00211
+            },
+            "neg-hard-spiral": {
+              "n": 454,
+              "fp_rate": 0.0
+            },
+            "neg-hard-square-spiral": {
+              "n": 490,
+              "fp_rate": 0.0
+            },
+            "neg-hard-t-shapes-d4": {
+              "n": 477,
+              "fp_rate": 0.0
+            },
+            "neg-hard-tetris": {
+              "n": 484,
+              "fp_rate": 0.0
+            },
+            "neg-house": {
+              "n": 171,
+              "fp_rate": 0.0
+            },
+            "neg-pixelart": {
+              "n": 169,
+              "fp_rate": 0.0
+            },
+            "neg-platform": {
+              "n": 189,
+              "fp_rate": 0.0
+            },
+            "neg-plaza": {
+              "n": 184,
+              "fp_rate": 0.0
+            },
+            "neg-pool": {
+              "n": 178,
+              "fp_rate": 0.0
+            },
+            "neg-railway": {
+              "n": 188,
+              "fp_rate": 0.0
+            },
+            "neg-road": {
+              "n": 178,
+              "fp_rate": 0.0
+            },
+            "neg-terrain": {
+              "n": 994,
+              "fp_rate": 0.0
+            },
+            "neg-tower": {
+              "n": 179,
+              "fp_rate": 0.0
+            },
+            "neg-village": {
+              "n": 158,
+              "fp_rate": 0.0
+            },
+            "pos": {
+              "n": 1217,
+              "recall": 0.3016
+            },
+            "pos-irregular": {
+              "n": 1283,
+              "recall": 0.2104
+            }
+          },
+          "by_mode": {
+            "neg:carved": {
+              "n": 536,
+              "fp_rate": 0.0
+            },
+            "neg:flush-diff": {
+              "n": 1274,
+              "fp_rate": 0.0
+            },
+            "neg:flush-same-lum": {
+              "n": 564,
+              "fp_rate": 0.00177
+            },
+            "neg:mixed": {
+              "n": 554,
+              "fp_rate": 0.0
+            },
+            "neg:outlined": {
+              "n": 576,
+              "fp_rate": 0.0
+            },
+            "neg:plain": {
+              "n": 2972,
+              "fp_rate": 0.0
+            },
+            "neg:raised": {
+              "n": 2305,
+              "fp_rate": 0.0
+            },
+            "neg:raised-diff": {
+              "n": 671,
+              "fp_rate": 0.0
+            },
+            "neg:raised-same": {
+              "n": 548,
+              "fp_rate": 0.0
+            },
+            "pos:carved": {
+              "n": 199,
+              "recall": 0.1508
+            },
+            "pos:flush-diff": {
+              "n": 427,
+              "recall": 0.2974
+            },
+            "pos:flush-same-lum": {
+              "n": 194,
+              "recall": 0.2216
+            },
+            "pos:mixed": {
+              "n": 201,
+              "recall": 0.1692
+            },
+            "pos:outlined": {
+              "n": 183,
+              "recall": 0.2787
+            },
+            "pos:raised": {
+              "n": 861,
+              "recall": 0.3043
+            },
+            "pos:raised-diff": {
+              "n": 244,
+              "recall": 0.3689
+            },
+            "pos:raised-same": {
+              "n": 191,
+              "recall": 0.0
+            }
+          }
+        }
+      },
+      "test": {
+        "metrics": {
+          "threshold": 0.98,
+          "precision": 0.9957924263674615,
+          "recall": 0.284,
+          "fp_rate": 0.0003,
+          "false_positives": 3,
+          "flagged": 713,
+          "positives": 2500,
+          "negatives": 10000
+        },
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.2840 < 0.6"
+        ],
+        "subtypes": {
+          "by_shape": {
+            "neg-farm": {
+              "n": 206,
+              "fp_rate": 0.0
+            },
+            "neg-fence": {
+              "n": 210,
+              "fp_rate": 0.0
+            },
+            "neg-hard-celtic-cross": {
+              "n": 431,
+              "fp_rate": 0.0
+            },
+            "neg-hard-fylfot-mirror": {
+              "n": 462,
+              "fp_rate": 0.0
+            },
+            "neg-hard-greek-cross": {
+              "n": 455,
+              "fp_rate": 0.0
+            },
+            "neg-hard-hash-grid": {
+              "n": 468,
+              "fp_rate": 0.0
+            },
+            "neg-hard-iron-cross": {
+              "n": 440,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-alt-hooks": {
+              "n": 470,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-partial-hooks": {
+              "n": 475,
+              "fp_rate": 0.00632
+            },
+            "neg-hard-l-shapes-d4": {
+              "n": 477,
+              "fp_rate": 0.0
+            },
+            "neg-hard-latin-cross": {
+              "n": 434,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-alt-hooks": {
+              "n": 462,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-partial-hooks": {
+              "n": 463,
+              "fp_rate": 0.0
+            },
+            "neg-hard-spiral": {
+              "n": 457,
+              "fp_rate": 0.0
+            },
+            "neg-hard-square-spiral": {
+              "n": 462,
+              "fp_rate": 0.0
+            },
+            "neg-hard-t-shapes-d4": {
+              "n": 458,
+              "fp_rate": 0.0
+            },
+            "neg-hard-tetris": {
+              "n": 466,
+              "fp_rate": 0.0
+            },
+            "neg-house": {
+              "n": 201,
+              "fp_rate": 0.0
+            },
+            "neg-pixelart": {
+              "n": 171,
+              "fp_rate": 0.0
+            },
+            "neg-platform": {
+              "n": 184,
+              "fp_rate": 0.0
+            },
+            "neg-plaza": {
+              "n": 192,
+              "fp_rate": 0.0
+            },
+            "neg-pool": {
+              "n": 200,
+              "fp_rate": 0.0
+            },
+            "neg-railway": {
+              "n": 177,
+              "fp_rate": 0.0
+            },
+            "neg-road": {
+              "n": 165,
+              "fp_rate": 0.0
+            },
+            "neg-terrain": {
+              "n": 1040,
+              "fp_rate": 0.0
+            },
+            "neg-tower": {
+              "n": 200,
+              "fp_rate": 0.0
+            },
+            "neg-village": {
+              "n": 174,
+              "fp_rate": 0.0
+            },
+            "pos": {
+              "n": 1267,
+              "recall": 0.341
+            },
+            "pos-irregular": {
+              "n": 1233,
+              "recall": 0.2255
+            }
+          },
+          "by_mode": {
+            "neg:carved": {
+              "n": 544,
+              "fp_rate": 0.0
+            },
+            "neg:flush-diff": {
+              "n": 1275,
+              "fp_rate": 0.00078
+            },
+            "neg:flush-same-lum": {
+              "n": 486,
+              "fp_rate": 0.00206
+            },
+            "neg:mixed": {
+              "n": 558,
+              "fp_rate": 0.0
+            },
+            "neg:outlined": {
+              "n": 531,
+              "fp_rate": 0.0
+            },
+            "neg:plain": {
+              "n": 3120,
+              "fp_rate": 0.0
+            },
+            "neg:raised": {
+              "n": 2264,
+              "fp_rate": 0.00044
+            },
+            "neg:raised-diff": {
+              "n": 669,
+              "fp_rate": 0.0
+            },
+            "neg:raised-same": {
+              "n": 553,
+              "fp_rate": 0.0
+            },
+            "pos:carved": {
+              "n": 165,
+              "recall": 0.2242
+            },
+            "pos:flush-diff": {
+              "n": 475,
+              "recall": 0.3726
+            },
+            "pos:flush-same-lum": {
+              "n": 213,
+              "recall": 0.1925
+            },
+            "pos:mixed": {
+              "n": 207,
+              "recall": 0.1401
+            },
+            "pos:outlined": {
+              "n": 180,
+              "recall": 0.2944
+            },
+            "pos:raised": {
+              "n": 807,
+              "recall": 0.3321
+            },
+            "pos:raised-diff": {
+              "n": 256,
+              "recall": 0.4102
+            },
+            "pos:raised-same": {
+              "n": 197,
+              "recall": 0.0
+            }
+          }
+        }
+      },
+      "holdout": {
+        "metrics": {
+          "threshold": 0.98,
+          "precision": 1.0,
+          "recall": 0.2544,
+          "fp_rate": 0.0,
+          "false_positives": 0,
+          "flagged": 636,
+          "positives": 2500,
+          "negatives": 10000
+        },
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.2544 < 0.6"
+        ],
+        "subtypes": {
+          "by_shape": {
+            "neg-farm": {
+              "n": 176,
+              "fp_rate": 0.0
+            },
+            "neg-fence": {
+              "n": 186,
+              "fp_rate": 0.0
+            },
+            "neg-hard-celtic-cross": {
+              "n": 464,
+              "fp_rate": 0.0
+            },
+            "neg-hard-fylfot-mirror": {
+              "n": 477,
+              "fp_rate": 0.0
+            },
+            "neg-hard-greek-cross": {
+              "n": 421,
+              "fp_rate": 0.0
+            },
+            "neg-hard-hash-grid": {
+              "n": 416,
+              "fp_rate": 0.0
+            },
+            "neg-hard-iron-cross": {
+              "n": 442,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-alt-hooks": {
+              "n": 458,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-partial-hooks": {
+              "n": 435,
+              "fp_rate": 0.0
+            },
+            "neg-hard-l-shapes-d4": {
+              "n": 465,
+              "fp_rate": 0.0
+            },
+            "neg-hard-latin-cross": {
+              "n": 467,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-alt-hooks": {
+              "n": 422,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-partial-hooks": {
+              "n": 415,
+              "fp_rate": 0.0
+            },
+            "neg-hard-spiral": {
+              "n": 451,
+              "fp_rate": 0.0
+            },
+            "neg-hard-square-spiral": {
+              "n": 403,
+              "fp_rate": 0.0
+            },
+            "neg-hard-t-shapes-d4": {
+              "n": 434,
+              "fp_rate": 0.0
+            },
+            "neg-hard-tetris": {
+              "n": 402,
+              "fp_rate": 0.0
+            },
+            "neg-hard-windmill-3": {
+              "n": 470,
+              "fp_rate": 0.0
+            },
+            "neg-house": {
+              "n": 179,
+              "fp_rate": 0.0
+            },
+            "neg-pixelart": {
+              "n": 171,
+              "fp_rate": 0.0
+            },
+            "neg-platform": {
+              "n": 172,
+              "fp_rate": 0.0
+            },
+            "neg-plaza": {
+              "n": 170,
+              "fp_rate": 0.0
+            },
+            "neg-pool": {
+              "n": 173,
+              "fp_rate": 0.0
+            },
+            "neg-railway": {
+              "n": 191,
+              "fp_rate": 0.0
+            },
+            "neg-road": {
+              "n": 165,
+              "fp_rate": 0.0
+            },
+            "neg-terrain": {
+              "n": 1016,
+              "fp_rate": 0.0
+            },
+            "neg-tower": {
+              "n": 191,
+              "fp_rate": 0.0
+            },
+            "neg-village": {
+              "n": 168,
+              "fp_rate": 0.0
+            },
+            "pos": {
+              "n": 1281,
+              "recall": 0.3185
+            },
+            "pos-irregular": {
+              "n": 1219,
+              "recall": 0.187
+            }
+          },
+          "by_mode": {
+            "neg:carved": {
+              "n": 522,
+              "fp_rate": 0.0
+            },
+            "neg:flush-diff": {
+              "n": 1249,
+              "fp_rate": 0.0
+            },
+            "neg:flush-same-lum": {
+              "n": 541,
+              "fp_rate": 0.0
+            },
+            "neg:mixed": {
+              "n": 604,
+              "fp_rate": 0.0
+            },
+            "neg:outlined": {
+              "n": 534,
+              "fp_rate": 0.0
+            },
+            "neg:plain": {
+              "n": 2958,
+              "fp_rate": 0.0
+            },
+            "neg:raised": {
+              "n": 2326,
+              "fp_rate": 0.0
+            },
+            "neg:raised-diff": {
+              "n": 701,
+              "fp_rate": 0.0
+            },
+            "neg:raised-same": {
+              "n": 565,
+              "fp_rate": 0.0
+            },
+            "pos:carved": {
+              "n": 216,
+              "recall": 0.1667
+            },
+            "pos:flush-diff": {
+              "n": 423,
+              "recall": 0.2861
+            },
+            "pos:flush-same-lum": {
+              "n": 197,
+              "recall": 0.198
+            },
+            "pos:mixed": {
+              "n": 197,
+              "recall": 0.1117
+            },
+            "pos:outlined": {
+              "n": 186,
+              "recall": 0.2688
+            },
+            "pos:raised": {
+              "n": 839,
+              "recall": 0.3242
+            },
+            "pos:raised-diff": {
+              "n": 245,
+              "recall": 0.3918
+            },
+            "pos:raised-same": {
+              "n": 197,
+              "recall": 0.0
+            }
+          }
+        }
+      }
+    },
+    "model_bytes": 826950
+  },
+  "scan": {},
+  "scan_pending": true
+}

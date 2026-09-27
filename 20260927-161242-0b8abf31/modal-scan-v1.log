@@ -1,0 +1,66 @@
++ git clone https://github.com/KyleKreuter/vistructum.git /tmp/vistructum/repo
+Cloning into '/tmp/vistructum/repo'...
++ git fetch origin 0b8abf312064006e6967c6a3e7cb3c594166e0bf
+From https://github.com/KyleKreuter/vistructum
+ * branch            0b8abf312064006e6967c6a3e7cb3c594166e0bf -> FETCH_HEAD
++ git checkout --detach 0b8abf312064006e6967c6a3e7cb3c594166e0bf
+HEAD is now at 0b8abf3 Train scan-v1 without findings as a control run
++ /usr/local/bin/python -m pip install --quiet -r /tmp/vistructum/repo/ml/train/requirements.txt
+
+[notice] A new release of pip is available: 25.1.1 -> 26.2.1
+[notice] To update, run: pip install --upgrade pip
++ /usr/local/bin/python -m pip install --quiet --no-deps -e /tmp/vistructum/repo/ml
+
+[notice] A new release of pip is available: 25.1.1 -> 26.2.1
+[notice] To update, run: pip install --upgrade pip
+{"ref": "0b8abf312064006e6967c6a3e7cb3c594166e0bf", "configs": ["configs/scan-v1.yaml"], "gpus": 1, "cpus": 24}
++ /usr/local/bin/python -m generator.build --kind fullscan --out /tmp/vistructum/data/scan-v1 --seed 0 --workers 24 --train 120000 --val 12500 --test 12500 --holdout 12500
+building train: n=120000 kind=fullscan
+  120000 samples in 154.0s (779.2/s)
+building val: n=12500 kind=fullscan
+  12500 samples in 13.8s (904.0/s)
+building test: n=12500 kind=fullscan
+  12500 samples in 13.6s (918.4/s)
+building holdout: n=12500 kind=fullscan
+  12500 samples in 13.7s (911.8/s)
++ [gpu 0] /usr/local/bin/python run.py --config configs/scan-v1.yaml --runs-dir /root/output/runs --set data_dir=/tmp/vistructum/data/scan-v1 --set device=cuda --set num_threads=24 --set scan_workers=24 --skip-scan
+{
+  "ref": "0b8abf312064006e6967c6a3e7cb3c594166e0bf",
+  "exit_codes": {
+    "configs/scan-v1.yaml": 0
+  },
+  "models": {
+    "scan-v1": {
+      "val": {
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.2548 < 0.6"
+        ],
+        "precision": 0.9984326018808778,
+        "recall": 0.2548,
+        "fp_rate": 0.0001,
+        "threshold": 0.98
+      },
+      "test": {
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.2840 < 0.6"
+        ],
+        "precision": 0.9957924263674615,
+        "recall": 0.284,
+        "fp_rate": 0.0003,
+        "threshold": 0.98
+      },
+      "holdout": {
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.2544 < 0.6"
+        ],
+        "precision": 1.0,
+        "recall": 0.2544,
+        "fp_rate": 0.0,
+        "threshold": 0.98
+      }
+    }
+  }
+}

@@ -62,7 +62,7 @@ class FindingExporterTest {
 
     private Finding insert(Source source, int x, ModelInput input) throws Exception {
         FindingCandidate candidate = new FindingCandidate(source, "world", new BlockBox(x, 60, 0, x + 10, 62, 10), 0.9,
-                2, Set.of(), "d", input.kind() == ModelKind.MASK ? "bf-mask-3" : "bf-scan-2",
+                2, Set.of(), "d", input.kind() == ModelKind.MASK ? "bf-mask-4" : "bf-scan-2",
                 new Preview(1, 1, new byte[]{40}));
         return store.insertUnlessDuplicate(new DetectedCandidate(candidate, input), NOW, DEDUPE).get().orElseThrow();
     }
@@ -112,7 +112,7 @@ class FindingExporterTest {
         assertEquals(1, first.get("finding").getAsLong());
         assertEquals("mask", first.get("source").getAsString());
         assertEquals("FALSE_ALARM", first.get("verdict").getAsString());
-        assertEquals("bf-mask-3", first.get("model_version").getAsString());
+        assertEquals("bf-mask-4", first.get("model_version").getAsString());
         assertEquals("mask", first.get("kind").getAsString());
         assertEquals(6, first.getAsJsonObject("window").get("left").getAsInt());
         assertEquals(70, first.getAsJsonObject("window").get("right").getAsInt());

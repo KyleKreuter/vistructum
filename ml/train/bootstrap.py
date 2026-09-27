@@ -82,6 +82,25 @@ def collect(runs_dir, release_dir):
     return summary
 
 
+def combine(parts, out_dir, ref):
+    runs_dir = out_dir / "runs"
+    release_dir = out_dir / "release"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    release_dir.mkdir(parents=True, exist_ok=True)
+    exit_codes = {}
+    for config, part_dir in parts.items():
+        summary_path = part_dir / "release" / "summary.json"
+        part_codes = json.loads(summary_path.read_text())["exit_codes"] if summary_path.is_file() else {}
+        exit_codes[config] = part_codes.get(config, -1)
+        if (part_dir / "runs").is_dir():
+            shutil.copytree(part_dir / "runs", runs_dir, dirs_exist_ok=True)
+        for log_path in part_dir.glob("*.log"):
+            shutil.copy(log_path, out_dir / log_path.name)
+    summary = {"ref": ref, "exit_codes": exit_codes, "models": collect(runs_dir, release_dir)}
+    (release_dir / "summary.json").write_text(json.dumps(summary, indent=2))
+    return summary
+
+
 def main():
     if not SHA_RE.match(REPO_REF):
         raise SystemExit(f"VISTRUCTUM_REF must be a full 40-char commit sha, got {REPO_REF!r}")

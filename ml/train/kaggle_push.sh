@@ -7,9 +7,21 @@ if [[ -z "${KAGGLE_USERNAME:-}" ]]; then
 fi
 
 TRAIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+SLUG="${KERNEL_SLUG:-vistructum-train}"
+
+if [[ "${STAND_DOWN:-0}" == "1" ]]; then
+  STAGE="$(mktemp -d /tmp/kaggle-vistructum-XXXXXX)"
+  trap 'rm -rf "$STAGE"' EXIT
+  cp "$TRAIN_DIR/kaggle_kernel/stand_down.py" "$STAGE/stand_down.py"
+  sed -e "s/__KAGGLE_USER__/$KAGGLE_USERNAME/g" -e "s/__KERNEL_SLUG__/$SLUG/g" \
+    "$TRAIN_DIR/kaggle_kernel/stand-down-metadata.json" > "$STAGE/kernel-metadata.json"
+  ${KAGGLE_CMD:-python3 -m kaggle} kernels push -p "$STAGE"
+  echo "pushed a CPU-only $SLUG version that supersedes the queued training version"
+  exit 0
+fi
+
 CONFIGS="${1:-configs/mask-v2.yaml,configs/scan-v1.yaml}"
 REF="${2:-$(git -C "$TRAIN_DIR" rev-parse HEAD)}"
-SLUG="${KERNEL_SLUG:-vistructum-train}"
 
 if [[ ! "$REF" =~ ^[0-9a-f]{40}$ ]]; then
   echo "REF must be a full 40-char commit sha, got: $REF" >&2

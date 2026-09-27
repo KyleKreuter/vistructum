@@ -1,5 +1,5 @@
 name: train
-run-name: train ${{ inputs.configs }} at ${{ inputs.ref || github.sha }}${{ inputs.attach && ' (attach)' || '' }}
+run-name: train ${{ inputs.configs }} at ${{ inputs.ref || github.sha }} on ${{ inputs.backend }}${{ inputs.attach && ' (attach)' || '' }}
 
 on:
   workflow_dispatch:
@@ -12,8 +12,13 @@ on:
         description: "Commit to train (full sha); empty trains the commit this workflow runs on"
         required: false
         default: ""
+      backend:
+        description: "auto trains on Kaggle and switches to Modal if the kernel is still queued after 10 minutes"
+        type: choice
+        options: [auto, kaggle, modal]
+        default: auto
       attach:
-        description: "Attach to the kernel that is already running instead of pushing a new one"
+        description: "Attach to the Kaggle kernel that is already running instead of pushing a new one"
         type: boolean
         default: false
 
@@ -21,7 +26,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: kaggle-train
+  group: train
   cancel-in-progress: false
 
 env:
@@ -30,14 +35,14 @@ env:
   KERNEL: ${{ vars.KAGGLE_USERNAME }}/vistructum-train
 
 jobs:
-  kaggle:
+  train:
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     permissions:
       contents: write
     outputs:
-      label: ${{ steps.watch.outputs.label }}
-      runs: ${{ steps.watch.outputs.runs }}
+      label: ${{ steps.watch.outputs.label || steps.modal.outputs.label }}
+      runs: ${{ steps.watch.outputs.runs || steps.modal.outputs.runs }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,7 +57,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - name: push kernel
-        if: ${{ !inputs.attach }}
+        if: ${{ inputs.backend != 'modal' && !inputs.attach }}
         working-directory: ml/train
         env:
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
@@ -63,36 +68,68 @@ jobs:
           ./kaggle_push.sh "$CONFIGS" "$REF"
       - name: wait for the kernel
         id: watch
+        if: ${{ inputs.backend != 'modal' }}
         working-directory: ml/train
         env:
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          BACKEND: ${{ inputs.backend }}
         run: |
           set +e
-          python kaggle_watch.py watch "$KERNEL" --out "$RUNNER_TEMP/kaggle" --max-hours 5.5
+          queue_limit=()
+          [[ "$BACKEND" == auto ]] && queue_limit=(--queue-minutes 10)
+          python kaggle_watch.py watch "$KERNEL" --out "$RUNNER_TEMP/train-output" --max-hours 5.5 "${queue_limit[@]}"
           code=$?
+          if (( code == 3 )); then
+            echo "fallback=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::the kernel stayed queued, training moves to Modal"
+            exit 0
+          fi
           (( code <= 1 )) || { echo "::error::kernel still running or unreadable, rerun with attach"; exit "$code"; }
-          (( code == 0 )) || echo "::warning::the kernel did not complete, see its log in the kaggle-output artifact"
+          (( code == 0 )) || echo "::warning::the kernel did not complete, see its log in the train-output artifact"
+      - name: supersede the queued kernel
+        if: ${{ steps.watch.outputs.fallback == 'true' }}
+        working-directory: ml/train
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          STAND_DOWN: "1"
+        run: ./kaggle_push.sh || echo "::warning::could not supersede the queued kernel, it may still start on Kaggle"
+      - name: train on Modal
+        id: modal
+        if: ${{ inputs.backend == 'modal' || steps.watch.outputs.fallback == 'true' }}
+        working-directory: ml/train
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          CONFIGS: ${{ inputs.configs }}
+          REF: ${{ inputs.ref || github.sha }}
+        run: |
+          [[ "$CONFIGS" =~ ^[A-Za-z0-9._/,-]+$ ]] || { echo "::error::configs must be comma-separated paths"; exit 1; }
+          [[ "$REF" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::ref must be a full 40-char commit sha"; exit 1; }
+          pip install -r requirements-modal.txt
+          modal run modal_train.py --configs "$CONFIGS" --ref "$REF" --out "$RUNNER_TEMP/train-output"
+          python kaggle_watch.py handoff --out "$RUNNER_TEMP/train-output" \
+            || echo "::warning::Modal training did not complete, see its log in the train-output artifact"
       - uses: actions/upload-artifact@v4
         with:
-          name: kaggle-output
-          path: ${{ runner.temp }}/kaggle
+          name: train-output
+          path: ${{ runner.temp }}/train-output
           retention-days: 30
 
   scan:
-    needs: kaggle
-    if: ${{ needs.kaggle.outputs.runs != '[]' }}
+    needs: train
+    if: ${{ needs.train.outputs.runs != '[]' }}
     strategy:
       fail-fast: false
       matrix:
-        run: ${{ fromJSON(needs.kaggle.outputs.runs) }}
+        run: ${{ fromJSON(needs.train.outputs.runs) }}
     uses: ./.github/workflows/scan-stage.yml
     with:
       run: ${{ matrix.run }}
       shards: "8"
 
   report:
-    needs: [kaggle, scan]
-    if: ${{ !cancelled() && needs.kaggle.result == 'success' }}
+    needs: [train, scan]
+    if: ${{ !cancelled() && needs.train.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -106,8 +143,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - uses: actions/download-artifact@v4
         with:
-          name: kaggle-output
-          path: ${{ runner.temp }}/kaggle
+          name: train-output
+          path: ${{ runner.temp }}/train-output
       - uses: actions/download-artifact@v4
         with:
           pattern: result-*
@@ -115,8 +152,8 @@ jobs:
       - name: report and publish
         working-directory: ml/train
         env:
-          LABEL: ${{ needs.kaggle.outputs.label }}
+          LABEL: ${{ needs.train.outputs.label }}
         run: |
           mkdir -p "$RUNNER_TEMP/scan-results"
-          python kaggle_watch.py report --out "$RUNNER_TEMP/kaggle" --label "$LABEL" \
+          python kaggle_watch.py report --out "$RUNNER_TEMP/train-output" --label "$LABEL" \
             --scan-results "$RUNNER_TEMP/scan-results" --publish

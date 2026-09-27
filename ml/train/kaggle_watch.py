@@ -14,6 +14,7 @@ from bootstrap import collect
 
 TERMINAL = ("complete", "error", "cancel")
 MAX_UNKNOWN = 5
+QUEUE_TIMEOUT = 3
 SCAN_BRANCH = "scan-runs"
 RESULTS_BRANCH = "training-results"
 PUBLISH_PATTERNS = ("*.log", "report.md", "release/*.json", "release/*.onnx", "runs/*.log", "runs/*/*.log",
@@ -37,7 +38,7 @@ def status(cmd, slug):
     return (match.group(1).lower() if match else "unknown"), text
 
 
-def wait(cmd, slug, interval, max_hours):
+def wait(cmd, slug, interval, max_hours, queue_minutes=None):
     started = time.time()
     last = None
     unknown = 0
@@ -52,6 +53,9 @@ def wait(cmd, slug, interval, max_hours):
             return "unknown"
         if state in TERMINAL or state.startswith("cancel"):
             return state
+        if queue_minutes is not None and state == "queued" and time.time() - started > queue_minutes * 60:
+            log(f"still queued after {queue_minutes} min, giving up on Kaggle")
+            return "queue-timeout"
         if time.time() - started > max_hours * 3600:
             log(f"still {state} after {max_hours} h, giving up")
             return "timeout"
@@ -115,19 +119,29 @@ def label_for(out_dir):
     return f"{time.strftime('%Y%m%d-%H%M%S')}-{ref}"
 
 
-def run_watch(args):
-    state = wait(args.kaggle_cmd, args.slug, args.interval, args.max_hours)
-    if state in ("unknown", "timeout"):
-        return 2
-    download(args.kaggle_cmd, args.slug, args.out)
-    label = label_for(args.out)
-    pending = pending_runs(args.out)
+def handoff(out_dir, state):
+    label = label_for(out_dir)
+    pending = pending_runs(out_dir)
     if pending:
         files = {f"{label}/{run_dir.name}/{path.name}": path for run_dir in pending
                  for path in [run_dir / "manifest.json", *run_dir.glob("*.onnx")]}
         push_files(SCAN_BRANCH, files, f"scan input {label}")
     github_output(label=label, state=state, runs=json.dumps([f"{label}/{run_dir.name}" for run_dir in pending]))
     return 0 if state == "complete" else 1
+
+
+def run_watch(args):
+    state = wait(args.kaggle_cmd, args.slug, args.interval, args.max_hours, args.queue_minutes)
+    if state == "queue-timeout":
+        return QUEUE_TIMEOUT
+    if state in ("unknown", "timeout"):
+        return 2
+    download(args.kaggle_cmd, args.slug, args.out)
+    return handoff(args.out, state)
+
+
+def run_handoff(args):
+    return handoff(args.out, "complete" if (args.out / "release" / "summary.json").is_file() else "error")
 
 
 def number(value):
@@ -138,7 +152,7 @@ def report(out_dir, label):
     lines = [f"## Training {label}", ""]
     summary_path = out_dir / "release" / "summary.json"
     if not summary_path.is_file():
-        lines.append("No `release/summary.json`: the kernel failed before the end, see the kernel log.")
+        lines.append("No `release/summary.json`: training failed before the end, see its log.")
     else:
         summary = json.loads(summary_path.read_text())
         lines += [f"Commit `{summary['ref']}`, exit codes `{json.dumps(summary['exit_codes'])}`", "",
@@ -201,8 +215,9 @@ def run_report(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="the Kaggle half of the training workflow: wait for the kernel, "
-                                                 "pull its output, hand pending runs to the scan stage, report")
+    parser = argparse.ArgumentParser(description="the training half of the training workflow: wait for the Kaggle "
+                                                 "kernel or take the Modal output, hand pending runs to the scan "
+                                                 "stage, report")
     commands = parser.add_subparsers(dest="command", required=True)
     watch = commands.add_parser("watch", help="wait for the kernel, download its output and push runs that still "
                                               f"need the scan stage to the {SCAN_BRANCH} branch")
@@ -210,16 +225,20 @@ def main():
     watch.add_argument("--interval", type=int, default=120, help="seconds between status polls")
     watch.add_argument("--max-hours", type=float, default=5.5, help="give up after this long")
     watch.add_argument("--kaggle-cmd", default=f"{sys.executable} -m kaggle")
+    watch.add_argument("--queue-minutes", type=float, default=None,
+                       help=f"exit {QUEUE_TIMEOUT} if the kernel is still queued after this long")
+    handover = commands.add_parser("handoff", help="push runs of an output that is already on disk (Modal) that still "
+                                                   f"need the scan stage to the {SCAN_BRANCH} branch")
     summary = commands.add_parser("report", help="merge scan stage results into the output, write report.md and "
                                                  f"publish it to the {RESULTS_BRANCH} branch")
     summary.add_argument("--label", required=True)
     summary.add_argument("--scan-results", type=Path, default=None,
                          help="directory with one completed run directory per scanned run")
     summary.add_argument("--publish", action="store_true")
-    for command in (watch, summary):
-        command.add_argument("--out", type=Path, required=True, help="directory for the kernel output")
+    for command in (watch, handover, summary):
+        command.add_argument("--out", type=Path, required=True, help="directory for the training output")
     args = parser.parse_args()
-    return {"watch": run_watch, "report": run_report}[args.command](args)
+    return {"watch": run_watch, "handoff": run_handoff, "report": run_report}[args.command](args)
 
 
 if __name__ == "__main__":

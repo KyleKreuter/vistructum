@@ -11,6 +11,15 @@ on:
         description: "Parallel jobs per phase (1-16)"
         required: true
         default: "16"
+  workflow_call:
+    inputs:
+      run:
+        type: string
+        required: true
+      shards:
+        type: string
+        required: false
+        default: "16"
 
 permissions:
   contents: read
@@ -24,6 +33,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       shards: ${{ steps.shards.outputs.list }}
+      key: ${{ steps.shards.outputs.key }}
     steps:
       - name: validate inputs
         env:
@@ -32,7 +42,11 @@ jobs:
           [[ "$RUN" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]] || { echo "::error::run must be <label>/<run>"; exit 1; }
           [[ "$SHARDS" =~ ^[0-9]+$ ]] && (( SHARDS >= 1 && SHARDS <= 16 )) || { echo "::error::shards must be 1-16"; exit 1; }
       - id: shards
-        run: echo "list=[$(seq -s, 0 $((SHARDS - 1)))]" >> "$GITHUB_OUTPUT"
+        env:
+          RUN: ${{ inputs.run }}
+        run: |
+          echo "list=[$(seq -s, 0 $((SHARDS - 1)))]" >> "$GITHUB_OUTPUT"
+          echo "key=${RUN##*/}" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           ref: scan-runs
@@ -47,7 +61,7 @@ jobs:
           cp "scan-runs/$RUN/manifest.json" "scan-runs/$RUN"/*.onnx run/
       - uses: actions/upload-artifact@v4
         with:
-          name: run-input
+          name: input-${{ steps.shards.outputs.key }}
           path: run
           retention-days: 1
 
@@ -69,17 +83,17 @@ jobs:
       - run: pip install -r ml/train/requirements-scan.txt
       - uses: actions/download-artifact@v4
         with:
-          name: run-input
+          name: input-${{ needs.prepare.outputs.key }}
           path: run
       - run: python ml/train/scan_stage.py collect run --phase calib --shard "${{ matrix.shard }}/$SHARDS" --out "calib-${{ matrix.shard }}.pkl"
       - uses: actions/upload-artifact@v4
         with:
-          name: calib-${{ matrix.shard }}
+          name: calib-${{ needs.prepare.outputs.key }}-${{ matrix.shard }}
           path: calib-${{ matrix.shard }}.pkl
           retention-days: 1
 
   calibrate:
-    needs: calib
+    needs: [prepare, calib]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -93,11 +107,11 @@ jobs:
       - run: pip install -r ml/train/requirements-scan.txt
       - uses: actions/download-artifact@v4
         with:
-          name: run-input
+          name: input-${{ needs.prepare.outputs.key }}
           path: run
       - uses: actions/download-artifact@v4
         with:
-          pattern: calib-*
+          pattern: calib-${{ needs.prepare.outputs.key }}-*
           path: shards
           merge-multiple: true
       - run: |
@@ -108,7 +122,7 @@ jobs:
           (( code == 0 )) || echo "::warning::no threshold meets the scan gate on calib, the model keeps its threshold"
       - uses: actions/upload-artifact@v4
         with:
-          name: run-calibrated
+          name: calibrated-${{ needs.prepare.outputs.key }}
           path: run
           retention-days: 1
 
@@ -130,17 +144,17 @@ jobs:
       - run: pip install -r ml/train/requirements-scan.txt
       - uses: actions/download-artifact@v4
         with:
-          name: run-calibrated
+          name: calibrated-${{ needs.prepare.outputs.key }}
           path: run
       - run: python ml/train/scan_stage.py collect run --phase scan --shard "${{ matrix.shard }}/$SHARDS" --out "scan-${{ matrix.shard }}.pkl"
       - uses: actions/upload-artifact@v4
         with:
-          name: scan-${{ matrix.shard }}
+          name: scan-${{ needs.prepare.outputs.key }}-${{ matrix.shard }}
           path: scan-${{ matrix.shard }}.pkl
           retention-days: 1
 
   finish:
-    needs: scan
+    needs: [prepare, scan]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -154,11 +168,11 @@ jobs:
       - run: pip install -r ml/train/requirements-scan.txt
       - uses: actions/download-artifact@v4
         with:
-          name: run-calibrated
+          name: calibrated-${{ needs.prepare.outputs.key }}
           path: run
       - uses: actions/download-artifact@v4
         with:
-          pattern: scan-*
+          pattern: scan-${{ needs.prepare.outputs.key }}-*
           path: shards
           merge-multiple: true
       - env:
@@ -174,6 +188,6 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: scan-result
+          name: result-${{ needs.prepare.outputs.key }}
           path: run
           retention-days: 30

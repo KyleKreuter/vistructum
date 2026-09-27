@@ -1,0 +1,40 @@
+{
+  "ref": "ae89fa5f7d3f187ed0aa65e285d2dd71a2fce754",
+  "exit_codes": {
+    "configs/scan-v1.yaml": 0
+  },
+  "models": {
+    "scan-v1": {
+      "val": {
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.4192 < 0.6"
+        ],
+        "precision": 0.9971455756422455,
+        "recall": 0.4192,
+        "fp_rate": 0.0003,
+        "threshold": 0.97
+      },
+      "test": {
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.4504 < 0.6"
+        ],
+        "precision": 0.99822695035461,
+        "recall": 0.4504,
+        "fp_rate": 0.0002,
+        "threshold": 0.97
+      },
+      "holdout": {
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.4084 < 0.6"
+        ],
+        "precision": 0.9990215264187867,
+        "recall": 0.4084,
+        "fp_rate": 0.0001,
+        "threshold": 0.97
+      }
+    }
+  }
+}

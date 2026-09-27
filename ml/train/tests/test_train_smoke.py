@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -98,7 +99,8 @@ def test_skip_scan_then_scan_stage_completes_the_manifest(tmp_path):
     manifest = json.loads((run_dir / "manifest.json").read_text())
     assert manifest["scan_pending"] is True and manifest["scan"] == {}
 
-    result = subprocess.run([sys.executable, "scan_stage.py", str(run_dir), "--workers", "1"], check=False, **common)
+    result = subprocess.run([sys.executable, "scan_stage.py", "all", str(run_dir), "--workers", "1"], check=False,
+                            **common)
     assert result.returncode in (0, 1), result.stdout + result.stderr
     manifest = json.loads((run_dir / "manifest.json").read_text())
     assert manifest["scan_pending"] is False
@@ -127,3 +129,70 @@ def test_findings_join_training_and_get_their_own_report_split(tmp_path):
     findings = manifest["metrics"]["splits"]["findings"]
     assert set(findings["subtypes"]) == {"by_mode", "by_shape"}
     assert "verdict" in findings
+
+
+def without_seconds(report):
+    return {key: value for key, value in report.items() if key != "seconds"}
+
+
+def test_sharded_scan_stage_matches_the_whole_scan_stage(tmp_path):
+    data_dir = tmp_path / "data"
+    make_dataset(data_dir, "fullscan")
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, "fullscan", data_dir)
+    runs_dir = tmp_path / "runs"
+    env = dict(os.environ, PYTHONPATH=str(SIDECAR_DIR))
+    common = {"cwd": TRAIN_DIR, "capture_output": True, "text": True, "env": env, "timeout": 60}
+    result = subprocess.run([sys.executable, "run.py", "--config", str(config_path), "--runs-dir", str(runs_dir),
+                             "--allow-dirty", "--skip-scan"], check=False, **common)
+    assert result.returncode == 0, result.stdout + result.stderr
+    whole = next(runs_dir.glob("*/manifest.json")).parent
+    sharded = shutil.copytree(whole, tmp_path / "sharded")
+
+    result = subprocess.run([sys.executable, "scan_stage.py", "all", str(whole), "--workers", "1"], check=False,
+                            **common)
+    assert result.returncode in (0, 1), result.stdout + result.stderr
+    for phase in ("calib", "scan"):
+        shards = []
+        for index in range(3):
+            shard = tmp_path / f"{phase}-{index}.pkl"
+            result = subprocess.run([sys.executable, "scan_stage.py", "collect", str(sharded), "--phase", phase,
+                                     "--shard", f"{index}/3", "--workers", "1", "--out", str(shard)],
+                                    check=False, **common)
+            assert result.returncode == 0, result.stdout + result.stderr
+            shards.append(str(shard))
+        result = subprocess.run([sys.executable, "scan_stage.py", "merge", str(sharded), "--phase", phase, *shards],
+                                check=False, **common)
+        assert result.returncode in (0, 1), result.stdout + result.stderr
+
+    for name in ("calib.json", "scan.json", "scan-holdout.json"):
+        expected = json.loads((whole / name).read_text())
+        actual = json.loads((sharded / name).read_text())
+        assert without_seconds(actual) == without_seconds(expected), name
+    assert (sharded / "fullscan.onnx").read_bytes() == (whole / "fullscan.onnx").read_bytes()
+    manifest = json.loads((sharded / "manifest.json").read_text())
+    assert manifest["scan_pending"] is False
+    whole_scan = json.loads((whole / "manifest.json").read_text())["scan"]
+    assert set(manifest["scan"]) == set(whole_scan) == {"calib", "scan", "scan-holdout"}
+    for name, entry in manifest["scan"].items():
+        assert without_seconds(entry) == without_seconds(whole_scan[name]), name
+
+
+def test_merge_rejects_missing_shards(tmp_path):
+    data_dir = tmp_path / "data"
+    make_dataset(data_dir, "mask")
+    config_path = tmp_path / "config.yaml"
+    write_config(config_path, "mask", data_dir)
+    runs_dir = tmp_path / "runs"
+    env = dict(os.environ, PYTHONPATH=str(SIDECAR_DIR))
+    common = {"cwd": TRAIN_DIR, "capture_output": True, "text": True, "env": env, "timeout": 60}
+    subprocess.run([sys.executable, "run.py", "--config", str(config_path), "--runs-dir", str(runs_dir),
+                    "--allow-dirty", "--skip-scan"], check=True, **common)
+    run_dir = next(runs_dir.glob("*/manifest.json")).parent
+    shard = tmp_path / "calib-1.pkl"
+    subprocess.run([sys.executable, "scan_stage.py", "collect", str(run_dir), "--phase", "calib", "--shard", "1/2",
+                    "--workers", "1", "--out", str(shard)], check=True, **common)
+    result = subprocess.run([sys.executable, "scan_stage.py", "merge", str(run_dir), "--phase", "calib", str(shard)],
+                            check=False, **common)
+    assert result.returncode != 0
+    assert "one calib shard per index" in result.stderr

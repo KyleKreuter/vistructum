@@ -7,9 +7,9 @@ from pathlib import Path
 
 import evaluate as evaluate_mod
 import export as export_mod
-import scan_eval
 import torch
 from config import add_config_args, load_config
+from scan_stage import scan_stage
 
 import train as train_mod
 from data import findings_split
@@ -26,18 +26,6 @@ def data_manifest_hash(data_dir):
     if not manifest_path.exists():
         return None
     return hashlib.sha256(manifest_path.read_bytes()).hexdigest()
-
-
-def scan_stage(onnx_path, cfg, run_dir, workers=None):
-    workers = workers or cfg["scan_workers"]
-    scan = {"calib": scan_eval.run(onnx_path, "calib", cfg["scan_negatives"], cfg["scan_positives"], cfg["seed"],
-                                   workers, write=True)}
-    for scan_name, holdout in (("scan", False), ("scan-holdout", True)):
-        scan[scan_name] = scan_eval.run(onnx_path, "scan", cfg["scan_negatives"], cfg["scan_positives"],
-                                        cfg["seed"] + holdout, workers, holdout=holdout)
-    for scan_name, entry in scan.items():
-        (Path(run_dir) / f"{scan_name}.json").write_text(json.dumps(entry, indent=2))
-    return {key: {k: v for k, v in entry.items() if k != "sweep"} for key, entry in scan.items()}
 
 
 def main():

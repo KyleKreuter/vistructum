@@ -57,12 +57,21 @@ def _scan(task):
     return area
 
 
-def collect(model_path, kind, seed, split, negatives, positives, workers, holdout=False, size=None, full=False):
+def collect(model_path, kind, seed, split, negatives, positives, workers, holdout=False, size=None, full=False,
+            shard=(0, 1)):
     size = size or AREA_SIZE[kind]
     tasks = [(kind, seed, split, i, 0, holdout, size, full) for i in range(negatives)]
     tasks += [(kind, seed, split, negatives + i, 1 + i % 3, holdout, size, full) for i in range(positives)]
+    index, count = shard
     with Pool(workers, initializer=_init, initargs=(str(model_path),)) as pool:
-        return pool.map(_scan, tasks, chunksize=4)
+        return pool.map(_scan, tasks[index::count], chunksize=4)
+
+
+def interleave(parts):
+    merged = [None] * sum(len(part) for part in parts)
+    for index, part in enumerate(parts):
+        merged[index::len(parts)] = part
+    return merged
 
 
 def _covers(window, box, min_cover=0.5):
@@ -194,14 +203,19 @@ def model_kind(model_path):
 
 
 def run(model_path, split, negatives, positives, seed, workers, holdout=False, write=False):
+    started = time.time()
+    results = collect(model_path, model_kind(model_path)["kind"], seed, split, negatives, positives, workers, holdout,
+                      full=write)
+    return summarize(model_path, results, split, negatives, positives, seed, holdout, write, time.time() - started)
+
+
+def summarize(model_path, results, split, negatives, positives, seed, holdout, write, seconds):
     info = model_kind(model_path)
     kind = info["kind"]
     gate = SCAN_GATES[kind]
-    started = time.time()
-    results = collect(model_path, kind, seed, split, negatives, positives, workers, holdout, full=write)
     table = sweep(results, VOTES[kind])
     report = {"kind": kind, "split": split, "seed": seed, "holdout": holdout, "negative_areas": negatives,
-              "positive_areas": positives, "area_size": AREA_SIZE[kind], "seconds": round(time.time() - started, 1),
+              "positive_areas": positives, "area_size": AREA_SIZE[kind], "seconds": round(seconds, 1),
               "refined_fraction": refined_fraction(results)}
     if write:
         best = calibrate(table, gate)

@@ -66,3 +66,25 @@ def test_report_marks_runs_without_scan_stage(tmp_path):
     (run_dir / "manifest.json").write_text(json.dumps({"kind": "mask", "scan_pending": True}))
     assert "| mask-v2-0b8abf31 | – | scan stage missing |" in kaggle_watch.report(out, "label")
     assert "No `release/summary.json`" in kaggle_watch.report(out, "label")
+
+
+def test_a_kernel_that_stays_queued_gives_up_on_kaggle(monkeypatch):
+    clock = iter(range(0, 10_000, 300))
+    monkeypatch.setattr(kaggle_watch.time, "time", lambda: next(clock))
+    monkeypatch.setattr(kaggle_watch.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr(kaggle_watch, "status", lambda cmd, slug: ("queued", "queued"))
+    assert kaggle_watch.wait("kaggle", "owner/kernel", 60, 5.5, queue_minutes=10) == "queue-timeout"
+
+
+def test_a_running_kernel_is_not_cut_off_by_the_queue_limit(monkeypatch):
+    clock = iter(range(0, 100_000, 300))
+    states = iter(["queued", "running", "running", "running", "complete"])
+    monkeypatch.setattr(kaggle_watch.time, "time", lambda: next(clock))
+    monkeypatch.setattr(kaggle_watch.time, "sleep", lambda seconds: None)
+    monkeypatch.setattr(kaggle_watch, "status", lambda cmd, slug: (next(states), ""))
+    assert kaggle_watch.wait("kaggle", "owner/kernel", 60, 5.5, queue_minutes=10) == "complete"
+
+
+def test_handoff_without_summary_reports_an_error(tmp_path, monkeypatch):
+    monkeypatch.delenv("GITHUB_OUTPUT", raising=False)
+    assert kaggle_watch.run_handoff(argparse.Namespace(out=tmp_path)) == 1

@@ -250,8 +250,11 @@ def fylfot_mirror(rng, max_size=None):
     return canvas
 
 
+PARTIAL_HOOK_COUNTS = (0.1, 0.15, 0.25, 0.5)
+
+
 def irregular_partial_hooks(rng, max_size=None):
-    hooked = {int(i) for i in rng.choice(4, size=int(rng.integers(0, 4)), replace=False)}
+    hooked = {int(i) for i in rng.choice(4, size=int(rng.choice(4, p=PARTIAL_HOOK_COUNTS)), replace=False)}
     side = 1 if rng.random() < 0.5 else -1
     return build_irregular_mask(rng, tuple(side if arm in hooked else 0 for arm in range(4)))
 

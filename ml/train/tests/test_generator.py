@@ -305,3 +305,54 @@ def test_irregular_partial_hooks_cover_zero_to_three_hooks(monkeypatch):
     for _ in range(200):
         shapes.irregular_partial_hooks(rng)
     assert hook_counts == {0, 1, 2, 3}
+
+
+def _components(mask):
+    seen = np.zeros_like(mask)
+    count = 0
+    for start in map(tuple, np.argwhere(mask)):
+        if seen[start]:
+            continue
+        count += 1
+        stack = [start]
+        seen[start] = True
+        while stack:
+            r, c = stack.pop()
+            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                if 0 <= nr < mask.shape[0] and 0 <= nc < mask.shape[1] and mask[nr, nc] and not seen[nr, nc]:
+                    seen[nr, nc] = True
+                    stack.append((nr, nc))
+    return count
+
+
+def test_sloppy_removal_keeps_the_symbol_in_one_piece_and_thin_strokes_whole():
+    from generator.scenes import remove_cells_keeping_strokes
+    rng = np.random.default_rng(21)
+    for _ in range(200):
+        mask = build_irregular_symbol(rng, bool(rng.random() < 0.5))
+        kept = remove_cells_keeping_strokes(rng, mask, int(mask.sum() * 0.2))
+        assert _components(kept) == 1
+        assert kept.sum() >= mask.sum() - int(mask.sum() * 0.2)
+    thin = build_irregular_mask(np.random.default_rng(3), (1, 1, 1, 1))
+    thin_line = np.zeros((3, 12), dtype=bool)
+    thin_line[1, 1:11] = True
+    assert np.array_equal(remove_cells_keeping_strokes(rng, thin_line, 5), thin_line)
+    assert _components(remove_cells_keeping_strokes(rng, thin, int(thin.sum() * 0.2))) == 1
+
+
+def test_irregular_partial_hooks_favour_three_hooks(monkeypatch):
+    from generator import shapes
+    counts = []
+    monkeypatch.setattr(shapes, "build_irregular_mask", lambda rng, sides: counts.append(sum(map(bool, sides))))
+    rng = np.random.default_rng(13)
+    for _ in range(2000):
+        shapes.irregular_partial_hooks(rng)
+    assert 0.45 < counts.count(3) / len(counts) < 0.55
+
+
+def test_raised_same_is_the_most_frequent_positive_mode():
+    rng = np.random.default_rng(17)
+    subtypes = [make_fullscan_sample(rng, 1)[2] for _ in range(400)]
+    plain = [s for s in subtypes if not any(ctx in s for ctx in ("on-roof", "in-water", "in-snow", "on-plaza"))]
+    raised_same = sum("raised-same" in s for s in plain) / len(plain)
+    assert 0.17 < raised_same < 0.33

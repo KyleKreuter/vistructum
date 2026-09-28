@@ -62,6 +62,13 @@ def generate_terrain(rng, size, biome=None, amplitude=None):
     return blocks, heights, biome
 
 
+def raise_mounds(rng, heights):
+    size = heights.shape[0]
+    n = multi_octave(rng, size, size, octaves=2, base_cell=float(rng.uniform(4, 14)))
+    mounds = n > np.percentile(n, float(rng.uniform(75, 95)))
+    return np.where(mounds, heights + int(rng.integers(1, 4)), heights)
+
+
 def _apply_cliff(rng, heights):
     size = heights.shape[0]
     axis = int(rng.integers(0, 2))

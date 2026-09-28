@@ -14,7 +14,7 @@ from .symbol import (
     sanitize_negative_mask,
     visible_fraction,
 )
-from .terrain import generate_terrain
+from .terrain import generate_terrain, raise_mounds
 
 CANVAS = 96
 CROP = 64
@@ -32,7 +32,11 @@ IRREGULAR_SHARE = 0.5
 POS_BASE_MODES = (
     "raised", "raised-same", "flush-diff", "flush-same-lum", "carved", "mixed", "outlined",
 )
+POS_MODE_WEIGHTS = np.array([1, 2, 1, 1, 1, 1, 1]) / 8
 POS_CONTEXTS = ("plain", "on-roof", "in-water", "in-snow", "on-plaza")
+HARD_NEGATIVE_WEIGHTS = {"irregular-partial-hooks": 2.0}
+MOUND_SHARE = 0.3
+RING = ((-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1))
 
 _BUILD_POOL_NAMES = list(BUILD_FAMILIES) + ["village"]
 
@@ -219,7 +223,7 @@ def _stamp_shape(rng, blocks, heights, mask):
     context = str(rng.choice(POS_CONTEXTS, p=(0.55, 0.14, 0.11, 0.10, 0.10)))
     forced_mode, forced_delta = _context_box(rng, blocks, heights, context, top, left, h, w)
 
-    mode = forced_mode or POS_BASE_MODES[int(rng.integers(0, len(POS_BASE_MODES)))]
+    mode = forced_mode or str(rng.choice(POS_BASE_MODES, p=POS_MODE_WEIGHTS))
     ground_block_region = blocks[top:top + h, left:left + w]
     ground_id = int(np.bincount(ground_block_region.ravel().clip(min=0)).argmax()) if ground_block_region.size else 0
 
@@ -251,13 +255,9 @@ def _stamp_shape(rng, blocks, heights, mask):
     if sloppy:
         remove = float(rng.uniform(0.01, 0.05))
         add = float(rng.uniform(0.0, 0.03))
-        candidates = removable_cells(mask)
         n_cells = int(mask.sum())
-        n_remove = min(len(candidates), int(n_cells * remove)) if n_cells >= MIN_CELLS_FOR_REMOVAL else 0
-        stamp_mask = mask.copy()
-        if n_remove:
-            idx = rng.choice(len(candidates), size=n_remove, replace=False)
-            stamp_mask[candidates[idx, 0], candidates[idx, 1]] = False
+        n_remove = int(n_cells * remove) if n_cells >= MIN_CELLS_FOR_REMOVAL else 0
+        stamp_mask = remove_cells_keeping_strokes(rng, mask, n_remove)
         off = np.argwhere(~mask)
         n_add = int(len(off) * add)
         if n_add and len(off):
@@ -291,7 +291,8 @@ def _negative_pool(holdout):
 
 def _stamp_hard_negative(rng, blocks, heights, holdout):
     hard, _builds = _negative_pool(holdout)
-    name = hard[int(rng.integers(0, len(hard)))]
+    weights = np.array([HARD_NEGATIVE_WEIGHTS.get(k, 1.0) for k in hard])
+    name = str(rng.choice(hard, p=weights / weights.sum()))
     raw = HARD_NEGATIVE_FAMILIES[name](rng)
     raw = sanitize_negative_mask(raw, rng)
     rot_k = int(rng.integers(0, 4))
@@ -349,7 +350,9 @@ def make_fullscan_sample(rng, label, holdout=False):
     lum_jitter = 15 if holdout else 0
     decoy_mult = 2 if holdout else 1
 
-    blocks, heights, biome = generate_terrain(rng, CANVAS, amplitude=float(rng.uniform(0, amp_max)))
+    blocks, heights, biome = generate_terrain(rng, CANVAS, amplitude=amp_max * float(np.sqrt(rng.random())))
+    if rng.random() < MOUND_SHARE:
+        heights = raise_mounds(rng, heights)
     modified = np.zeros((CANVAS, CANVAS), dtype=bool)
 
     n_decoys = int(rng.integers(0, MAX_DECOYS + 1)) * decoy_mult
@@ -374,6 +377,41 @@ def removable_cells(mask):
     padded = np.pad(mask, 1)
     neighbours = (padded[:-2, 1:-1].astype(np.int8) + padded[2:, 1:-1] + padded[1:-1, :-2] + padded[1:-1, 2:])
     return np.argwhere(mask & (neighbours >= 2))
+
+
+def keeps_strokes_connected(mask, r, c):
+    h, w = mask.shape
+    ring = [0 <= r + dr < h and 0 <= c + dc < w and bool(mask[r + dr, c + dc]) for dr, dc in RING]
+    if sum(ring[1::2]) < 2:
+        return False
+    if all(ring):
+        return True
+    start = ring.index(False)
+    order = [(start + i) % 8 for i in range(8)]
+    runs_with_edge = 0
+    in_run = touches_edge = False
+    for i in order + [start]:
+        if ring[i]:
+            in_run = True
+            touches_edge |= i % 2 == 1
+        elif in_run:
+            runs_with_edge += touches_edge
+            in_run = touches_edge = False
+    return runs_with_edge == 1
+
+
+def remove_cells_keeping_strokes(rng, mask, n):
+    out = mask.copy()
+    if n <= 0:
+        return out
+    removed = 0
+    for r, c in rng.permutation(np.argwhere(mask)):
+        if keeps_strokes_connected(out, r, c):
+            out[r, c] = False
+            removed += 1
+            if removed == n:
+                break
+    return out
 
 
 def _apply_dropout(rng, footprint, keep_lo=0.85, keep_hi=1.0):

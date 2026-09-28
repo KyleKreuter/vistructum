@@ -32,7 +32,12 @@ IRREGULAR_SHARE = 0.5
 POS_BASE_MODES = (
     "raised", "raised-same", "flush-diff", "flush-same-lum", "carved", "mixed", "outlined",
 )
-POS_CONTEXTS = ("plain", "on-roof", "in-water", "in-snow", "on-plaza")
+POS_CONTEXTS = ("plain", "on-roof", "in-water", "in-snow", "on-plaza", "in-ice")
+POS_CONTEXT_WEIGHTS = (0.45, 0.12, 0.10, 0.08, 0.10, 0.15)
+WATER_IN_ICE_SHARE = 0.7
+FULLSCAN_AMPLITUDE = 4.0
+FULLSCAN_HOLDOUT_AMPLITUDE = 6.0
+RING = ((-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1))
 
 _BUILD_POOL_NAMES = list(BUILD_FAMILIES) + ["village"]
 
@@ -209,14 +214,38 @@ def _context_box(rng, blocks, heights, context, top, left, h, w):
             blocks[r0:r1, c0:c1] = block_id("snow_block")
             heights[r0:r1, c0:c1] = base
         return "raised-diff", int(rng.integers(1, 3))
+    if context == "in-ice":
+        sh = h + int(rng.integers(4, 12))
+        sw = w + int(rng.integers(4, 12))
+        itop, ileft = top - (sh - h) // 2, left - (sw - w) // 2
+        base = int(np.median(heights))
+        r0, r1 = max(0, itop), min(blocks.shape[0], itop + sh)
+        c0, c1 = max(0, ileft), min(blocks.shape[1], ileft + sw)
+        if r1 > r0 and c1 > c0:
+            blocks[r0:r1, c0:c1] = block_id("ice")
+            heights[r0:r1, c0:c1] = base
+            _break_ice(rng, blocks, r0, r1, c0, c1)
+        if rng.random() < WATER_IN_ICE_SHARE:
+            return "flush-water", 0
+        return "flush-diff", 0
     return None, None
+
+
+def _break_ice(rng, blocks, r0, r1, c0, c1):
+    water = block_id("water")
+    for _ in range(int(rng.integers(0, 6))):
+        cy, cx = int(rng.integers(r0, r1)), int(rng.integers(c0, c1))
+        radius = int(rng.integers(1, 4))
+        yy, xx = np.mgrid[max(r0, cy - radius):min(r1, cy + radius + 1), max(c0, cx - radius):min(c1, cx + radius + 1)]
+        hole = rng.random(yy.shape) < 0.7
+        blocks[yy[hole], xx[hole]] = water
 
 
 def _stamp_shape(rng, blocks, heights, mask):
     top, left, vis = _place_shape(rng, CANVAS, mask)
     h, w = mask.shape
 
-    context = str(rng.choice(POS_CONTEXTS, p=(0.55, 0.14, 0.11, 0.10, 0.10)))
+    context = str(rng.choice(POS_CONTEXTS, p=POS_CONTEXT_WEIGHTS))
     forced_mode, forced_delta = _context_box(rng, blocks, heights, context, top, left, h, w)
 
     mode = forced_mode or POS_BASE_MODES[int(rng.integers(0, len(POS_BASE_MODES)))]
@@ -224,18 +253,21 @@ def _stamp_shape(rng, blocks, heights, mask):
     ground_id = int(np.bincount(ground_block_region.ravel().clip(min=0)).argmax()) if ground_block_region.size else 0
 
     if mode in ("raised", "raised-diff"):
-        delta = forced_delta if forced_delta is not None else int(rng.integers(1, 4))
+        delta = forced_delta if forced_delta is not None else int(rng.integers(1, 3))
         block = np.full((h, w), block_id(BUILD_BLOCKS[int(rng.integers(0, len(BUILD_BLOCKS)))]), dtype=np.int32)
         delta_arr = np.full((h, w), delta, dtype=np.int32)
     elif mode == "raised-same":
         block = ground_block_region.copy()
-        delta_arr = np.full((h, w), int(rng.integers(1, 4)), dtype=np.int32)
+        delta_arr = np.full((h, w), int(rng.integers(1, 3)), dtype=np.int32)
+    elif mode == "flush-water":
+        block = np.full((h, w), block_id("water"), dtype=np.int32)
+        delta_arr = np.zeros((h, w), dtype=np.int32)
     elif mode == "flush-same-lum":
         block = np.full((h, w), _same_luminance_other_block(rng, ground_id), dtype=np.int32)
         delta_arr = np.zeros((h, w), dtype=np.int32)
     elif mode == "carved":
         block = np.full((h, w), block_id(BUILD_BLOCKS[int(rng.integers(0, len(BUILD_BLOCKS)))]), dtype=np.int32)
-        delta_arr = np.full((h, w), -int(rng.integers(1, 4)), dtype=np.int32)
+        delta_arr = np.full((h, w), -1, dtype=np.int32)
     elif mode == "mixed":
         block = _shape_block_and_delta(mask, rng, mixed=True)
         delta_arr = np.zeros((h, w), dtype=np.int32)
@@ -251,13 +283,9 @@ def _stamp_shape(rng, blocks, heights, mask):
     if sloppy:
         remove = float(rng.uniform(0.01, 0.05))
         add = float(rng.uniform(0.0, 0.03))
-        candidates = removable_cells(mask)
         n_cells = int(mask.sum())
-        n_remove = min(len(candidates), int(n_cells * remove)) if n_cells >= MIN_CELLS_FOR_REMOVAL else 0
-        stamp_mask = mask.copy()
-        if n_remove:
-            idx = rng.choice(len(candidates), size=n_remove, replace=False)
-            stamp_mask[candidates[idx, 0], candidates[idx, 1]] = False
+        n_remove = int(n_cells * remove) if n_cells >= MIN_CELLS_FOR_REMOVAL else 0
+        stamp_mask = remove_cells_keeping_strokes(rng, mask, n_remove)
         off = np.argwhere(~mask)
         n_add = int(len(off) * add)
         if n_add and len(off):
@@ -345,7 +373,7 @@ def _luminance_from_blocks(blocks, rng, jitter):
 
 
 def make_fullscan_sample(rng, label, holdout=False):
-    amp_max = 16.0 if holdout else 12.0
+    amp_max = FULLSCAN_HOLDOUT_AMPLITUDE if holdout else FULLSCAN_AMPLITUDE
     lum_jitter = 15 if holdout else 0
     decoy_mult = 2 if holdout else 1
 
@@ -374,6 +402,40 @@ def removable_cells(mask):
     padded = np.pad(mask, 1)
     neighbours = (padded[:-2, 1:-1].astype(np.int8) + padded[2:, 1:-1] + padded[1:-1, :-2] + padded[1:-1, 2:])
     return np.argwhere(mask & (neighbours >= 2))
+
+
+def keeps_strokes_connected(mask, r, c):
+    h, w = mask.shape
+    ring = [0 <= r + dr < h and 0 <= c + dc < w and bool(mask[r + dr, c + dc]) for dr, dc in RING]
+    if sum(ring[1::2]) < 2:
+        return False
+    if all(ring):
+        return True
+    start = ring.index(False)
+    runs_with_edge = 0
+    in_run = touches_edge = False
+    for i in [(start + k) % 8 for k in range(8)] + [start]:
+        if ring[i]:
+            in_run = True
+            touches_edge |= i % 2 == 1
+        elif in_run:
+            runs_with_edge += touches_edge
+            in_run = touches_edge = False
+    return runs_with_edge == 1
+
+
+def remove_cells_keeping_strokes(rng, mask, n):
+    out = mask.copy()
+    if n <= 0:
+        return out
+    removed = 0
+    for r, c in rng.permutation(np.argwhere(mask)):
+        if keeps_strokes_connected(out, r, c):
+            out[r, c] = False
+            removed += 1
+            if removed == n:
+                break
+    return out
 
 
 def _apply_dropout(rng, footprint, keep_lo=0.85, keep_hi=1.0):

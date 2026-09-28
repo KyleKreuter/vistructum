@@ -5,6 +5,8 @@ from vistructum_ml.scene import Scene
 from .scenes import (
     CANVAS,
     EXTRA_GAP,
+    FULLSCAN_AMPLITUDE,
+    FULLSCAN_HOLDOUT_AMPLITUDE,
     _apply_dropout,
     _box_hits,
     _luminance_from_blocks,
@@ -19,6 +21,7 @@ from .terrain import generate_terrain
 HARD_NEGATIVE_SHARE = 0.25
 RECENT_SHARE = 0.6
 MAX_PLACEMENT_TRIES = 20
+AMPLITUDE = {"fullscan": (FULLSCAN_AMPLITUDE, FULLSCAN_HOLDOUT_AMPLITUDE), "mask": (12.0, 16.0)}
 
 
 def _view(size, rng):
@@ -80,7 +83,7 @@ def _stamp_symbols(rng, blocks, heights, size, count, holdout):
 
 
 def make_area(rng, kind, size, n_symbols, holdout=False):
-    amplitude = float(rng.uniform(0, 16.0 if holdout else 12.0))
+    amplitude = float(rng.uniform(0, AMPLITUDE[kind][holdout]))
     blocks, heights, biome = generate_terrain(rng, size, amplitude=amplitude)
     background = _stamp_background(rng, blocks, heights, size, holdout, kind)
     symbols = _stamp_symbols(rng, blocks, heights, size, n_symbols, holdout)

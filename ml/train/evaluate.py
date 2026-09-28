@@ -41,7 +41,7 @@ def latency_per_window(session, x, batch, runs=LATENCY_RUNS):
     return (time.perf_counter() - start) / runs / batch
 
 
-MODES = sorted(set(POS_BASE_MODES) | {"raised-diff"}, key=len, reverse=True)
+MODES = sorted(set(POS_BASE_MODES) | {"raised-diff", "flush-water"}, key=len, reverse=True)
 FAMILIES = sorted(HARD_NEGATIVE_FAMILIES, key=len, reverse=True)
 
 

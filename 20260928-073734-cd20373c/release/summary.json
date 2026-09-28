@@ -1,0 +1,52 @@
+{
+  "ref": "cd20373caf4caef2a10c9272fc4cea0efa5a7dc5",
+  "exit_codes": {
+    "configs/scan-v2.yaml": 0
+  },
+  "models": {
+    "scan-v2": {
+      "val": {
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.5556 < 0.6"
+        ],
+        "precision": 0.9949856733524355,
+        "recall": 0.5556,
+        "fp_rate": 0.0007,
+        "threshold": 0.96
+      },
+      "test": {
+        "verdict": "FAIL",
+        "failures": [
+          "recall 0.5584 < 0.6"
+        ],
+        "precision": 0.9964311206281228,
+        "recall": 0.5584,
+        "fp_rate": 0.0005,
+        "threshold": 0.96
+      },
+      "holdout": {
+        "verdict": "FAIL",
+        "failures": [
+          "fp_rate 0.00110 > 0.001",
+          "recall 0.5324 < 0.6"
+        ],
+        "precision": 0.9918032786885246,
+        "recall": 0.5324,
+        "fp_rate": 0.0011,
+        "threshold": 0.96
+      },
+      "findings": {
+        "verdict": "FAIL",
+        "failures": [
+          "negatives 29 < 5000",
+          "recall 0.1250 < 0.6"
+        ],
+        "precision": 1.0,
+        "recall": 0.125,
+        "fp_rate": 0.0,
+        "threshold": 0.96
+      }
+    }
+  }
+}

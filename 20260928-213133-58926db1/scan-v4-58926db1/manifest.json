@@ -1,0 +1,749 @@
+{
+  "config": "scan-v4",
+  "kind": "fullscan",
+  "commit": "58926db179af12bdb9ffa5dc5a89e60a235007ab",
+  "dirty": false,
+  "config_values": {
+    "kind": "fullscan",
+    "data_dir": "/tmp/vistructum/data/scan-v4",
+    "out_dir": "/kaggle/working/runs/scan-v4-58926db1",
+    "widths": [
+      32,
+      64,
+      96,
+      128,
+      160
+    ],
+    "depths": [
+      1,
+      2,
+      2,
+      2,
+      1
+    ],
+    "dropout": 0.15,
+    "epochs": 60,
+    "batch": 128,
+    "optimizer": "adamw",
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "warmup_epochs": 2,
+    "label_smoothing": 0.05,
+    "focal_gamma": 0.0,
+    "ema_decay": 0.999,
+    "pos_weight": 1.0,
+    "augment_d4": true,
+    "device": "cuda",
+    "seed": 42,
+    "num_threads": 4,
+    "quantize": true,
+    "tta": true,
+    "scan_negatives": 2500,
+    "scan_positives": 500,
+    "scan_workers": 4,
+    "gen_train": 240000,
+    "gen_val": 12500,
+    "gen_test": 12500,
+    "gen_holdout": 12500,
+    "findings_dir": "../data/findings/2b2t-ring1",
+    "findings_repeat": 5
+  },
+  "data_manifest_sha256": "8543b51e1e3cf4c86d93b5a3b34bec200b47a3bbdf277241e6b049cd5652d568",
+  "export": {
+    "onnx_path": "/kaggle/working/runs/scan-v4-58926db1/fullscan.onnx",
+    "kind": "fullscan",
+    "threshold": 0.97,
+    "commit": "58926db179af12bdb9ffa5dc5a89e60a235007ab",
+    "quantize": {
+      "applied": false,
+      "disagreement": 0.00216
+    }
+  },
+  "metrics": {
+    "kind": "fullscan",
+    "version": "bf-scan-2",
+    "threshold": 0.97,
+    "latency_seconds_per_window_b1": 0.0019067865999204514,
+    "latency_seconds_per_window_b32": 0.001571411253127053,
+    "splits": {
+      "val": {
+        "metrics": {
+          "threshold": 0.97,
+          "precision": 0.9978106185002736,
+          "recall": 0.7292,
+          "fp_rate": 0.0004,
+          "false_positives": 4,
+          "flagged": 1827,
+          "positives": 2500,
+          "negatives": 10000
+        },
+        "verdict": "PASS",
+        "failures": [],
+        "subtypes": {
+          "by_shape": {
+            "neg-farm": {
+              "n": 187,
+              "fp_rate": 0.0
+            },
+            "neg-fence": {
+              "n": 206,
+              "fp_rate": 0.0
+            },
+            "neg-hard-celtic-cross": {
+              "n": 421,
+              "fp_rate": 0.0
+            },
+            "neg-hard-fylfot-mirror": {
+              "n": 436,
+              "fp_rate": 0.0
+            },
+            "neg-hard-greek-cross": {
+              "n": 451,
+              "fp_rate": 0.0
+            },
+            "neg-hard-hash-grid": {
+              "n": 481,
+              "fp_rate": 0.0
+            },
+            "neg-hard-iron-cross": {
+              "n": 477,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-alt-hooks": {
+              "n": 484,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-partial-hooks": {
+              "n": 471,
+              "fp_rate": 0.00849
+            },
+            "neg-hard-l-shapes-d4": {
+              "n": 459,
+              "fp_rate": 0.0
+            },
+            "neg-hard-latin-cross": {
+              "n": 485,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-alt-hooks": {
+              "n": 443,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-partial-hooks": {
+              "n": 495,
+              "fp_rate": 0.0
+            },
+            "neg-hard-spiral": {
+              "n": 462,
+              "fp_rate": 0.0
+            },
+            "neg-hard-square-spiral": {
+              "n": 470,
+              "fp_rate": 0.0
+            },
+            "neg-hard-t-shapes-d4": {
+              "n": 483,
+              "fp_rate": 0.0
+            },
+            "neg-hard-tetris": {
+              "n": 467,
+              "fp_rate": 0.0
+            },
+            "neg-house": {
+              "n": 165,
+              "fp_rate": 0.0
+            },
+            "neg-pixelart": {
+              "n": 149,
+              "fp_rate": 0.0
+            },
+            "neg-platform": {
+              "n": 186,
+              "fp_rate": 0.0
+            },
+            "neg-plaza": {
+              "n": 155,
+              "fp_rate": 0.0
+            },
+            "neg-pool": {
+              "n": 184,
+              "fp_rate": 0.0
+            },
+            "neg-railway": {
+              "n": 183,
+              "fp_rate": 0.0
+            },
+            "neg-road": {
+              "n": 194,
+              "fp_rate": 0.0
+            },
+            "neg-terrain": {
+              "n": 1050,
+              "fp_rate": 0.0
+            },
+            "neg-tower": {
+              "n": 184,
+              "fp_rate": 0.0
+            },
+            "neg-village": {
+              "n": 172,
+              "fp_rate": 0.0
+            },
+            "pos": {
+              "n": 2116,
+              "recall": 0.8043
+            },
+            "pos-irregular": {
+              "n": 384,
+              "recall": 0.3151
+            }
+          },
+          "by_mode": {
+            "neg:carved": {
+              "n": 445,
+              "fp_rate": 0.0
+            },
+            "neg:flush-diff": {
+              "n": 1430,
+              "fp_rate": 0.0014
+            },
+            "neg:flush-same-lum": {
+              "n": 440,
+              "fp_rate": 0.0
+            },
+            "neg:flush-water": {
+              "n": 772,
+              "fp_rate": 0.00259
+            },
+            "neg:mixed": {
+              "n": 465,
+              "fp_rate": 0.0
+            },
+            "neg:outlined": {
+              "n": 457,
+              "fp_rate": 0.0
+            },
+            "neg:plain": {
+              "n": 3015,
+              "fp_rate": 0.0
+            },
+            "neg:raised": {
+              "n": 1972,
+              "fp_rate": 0.0
+            },
+            "neg:raised-diff": {
+              "n": 567,
+              "fp_rate": 0.0
+            },
+            "neg:raised-same": {
+              "n": 437,
+              "fp_rate": 0.0
+            },
+            "pos:carved": {
+              "n": 177,
+              "recall": 0.7401
+            },
+            "pos:flush-diff": {
+              "n": 520,
+              "recall": 0.7712
+            },
+            "pos:flush-same-lum": {
+              "n": 152,
+              "recall": 0.6645
+            },
+            "pos:flush-water": {
+              "n": 261,
+              "recall": 0.6782
+            },
+            "pos:mixed": {
+              "n": 164,
+              "recall": 0.5427
+            },
+            "pos:outlined": {
+              "n": 165,
+              "recall": 0.6606
+            },
+            "pos:raised": {
+              "n": 714,
+              "recall": 0.8333
+            },
+            "pos:raised-diff": {
+              "n": 186,
+              "recall": 0.8656
+            },
+            "pos:raised-same": {
+              "n": 161,
+              "recall": 0.3665
+            }
+          }
+        }
+      },
+      "test": {
+        "metrics": {
+          "threshold": 0.97,
+          "precision": 0.9978494623655914,
+          "recall": 0.7424,
+          "fp_rate": 0.0004,
+          "false_positives": 4,
+          "flagged": 1860,
+          "positives": 2500,
+          "negatives": 10000
+        },
+        "verdict": "PASS",
+        "failures": [],
+        "subtypes": {
+          "by_shape": {
+            "neg-farm": {
+              "n": 193,
+              "fp_rate": 0.0
+            },
+            "neg-fence": {
+              "n": 197,
+              "fp_rate": 0.0
+            },
+            "neg-hard-celtic-cross": {
+              "n": 470,
+              "fp_rate": 0.0
+            },
+            "neg-hard-fylfot-mirror": {
+              "n": 460,
+              "fp_rate": 0.0
+            },
+            "neg-hard-greek-cross": {
+              "n": 458,
+              "fp_rate": 0.0
+            },
+            "neg-hard-hash-grid": {
+              "n": 472,
+              "fp_rate": 0.0
+            },
+            "neg-hard-iron-cross": {
+              "n": 448,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-alt-hooks": {
+              "n": 497,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-partial-hooks": {
+              "n": 464,
+              "fp_rate": 0.00862
+            },
+            "neg-hard-l-shapes-d4": {
+              "n": 494,
+              "fp_rate": 0.0
+            },
+            "neg-hard-latin-cross": {
+              "n": 445,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-alt-hooks": {
+              "n": 454,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-partial-hooks": {
+              "n": 459,
+              "fp_rate": 0.0
+            },
+            "neg-hard-spiral": {
+              "n": 464,
+              "fp_rate": 0.0
+            },
+            "neg-hard-square-spiral": {
+              "n": 463,
+              "fp_rate": 0.0
+            },
+            "neg-hard-t-shapes-d4": {
+              "n": 442,
+              "fp_rate": 0.0
+            },
+            "neg-hard-tetris": {
+              "n": 439,
+              "fp_rate": 0.0
+            },
+            "neg-house": {
+              "n": 209,
+              "fp_rate": 0.0
+            },
+            "neg-pixelart": {
+              "n": 177,
+              "fp_rate": 0.0
+            },
+            "neg-platform": {
+              "n": 203,
+              "fp_rate": 0.0
+            },
+            "neg-plaza": {
+              "n": 194,
+              "fp_rate": 0.0
+            },
+            "neg-pool": {
+              "n": 171,
+              "fp_rate": 0.0
+            },
+            "neg-railway": {
+              "n": 166,
+              "fp_rate": 0.0
+            },
+            "neg-road": {
+              "n": 181,
+              "fp_rate": 0.0
+            },
+            "neg-terrain": {
+              "n": 1032,
+              "fp_rate": 0.0
+            },
+            "neg-tower": {
+              "n": 182,
+              "fp_rate": 0.0
+            },
+            "neg-village": {
+              "n": 166,
+              "fp_rate": 0.0
+            },
+            "pos": {
+              "n": 2156,
+              "recall": 0.8047
+            },
+            "pos-irregular": {
+              "n": 344,
+              "recall": 0.3517
+            }
+          },
+          "by_mode": {
+            "neg:carved": {
+              "n": 468,
+              "fp_rate": 0.0
+            },
+            "neg:flush-diff": {
+              "n": 1482,
+              "fp_rate": 0.00067
+            },
+            "neg:flush-same-lum": {
+              "n": 429,
+              "fp_rate": 0.00233
+            },
+            "neg:flush-water": {
+              "n": 734,
+              "fp_rate": 0.00136
+            },
+            "neg:mixed": {
+              "n": 430,
+              "fp_rate": 0.0
+            },
+            "neg:outlined": {
+              "n": 403,
+              "fp_rate": 0.0
+            },
+            "neg:plain": {
+              "n": 3071,
+              "fp_rate": 0.0
+            },
+            "neg:raised": {
+              "n": 1953,
+              "fp_rate": 0.00051
+            },
+            "neg:raised-diff": {
+              "n": 569,
+              "fp_rate": 0.0
+            },
+            "neg:raised-same": {
+              "n": 461,
+              "fp_rate": 0.0
+            },
+            "pos:carved": {
+              "n": 156,
+              "recall": 0.7051
+            },
+            "pos:flush-diff": {
+              "n": 534,
+              "recall": 0.7865
+            },
+            "pos:flush-same-lum": {
+              "n": 155,
+              "recall": 0.7097
+            },
+            "pos:flush-water": {
+              "n": 273,
+              "recall": 0.7033
+            },
+            "pos:mixed": {
+              "n": 155,
+              "recall": 0.5871
+            },
+            "pos:outlined": {
+              "n": 180,
+              "recall": 0.6389
+            },
+            "pos:raised": {
+              "n": 673,
+              "recall": 0.8395
+            },
+            "pos:raised-diff": {
+              "n": 222,
+              "recall": 0.8964
+            },
+            "pos:raised-same": {
+              "n": 152,
+              "recall": 0.3553
+            }
+          }
+        }
+      },
+      "holdout": {
+        "metrics": {
+          "threshold": 0.97,
+          "precision": 0.999388379204893,
+          "recall": 0.6536,
+          "fp_rate": 0.0001,
+          "false_positives": 1,
+          "flagged": 1635,
+          "positives": 2500,
+          "negatives": 10000
+        },
+        "verdict": "PASS",
+        "failures": [],
+        "subtypes": {
+          "by_shape": {
+            "neg-farm": {
+              "n": 169,
+              "fp_rate": 0.0
+            },
+            "neg-fence": {
+              "n": 200,
+              "fp_rate": 0.0
+            },
+            "neg-hard-celtic-cross": {
+              "n": 446,
+              "fp_rate": 0.0
+            },
+            "neg-hard-fylfot-mirror": {
+              "n": 452,
+              "fp_rate": 0.0
+            },
+            "neg-hard-greek-cross": {
+              "n": 451,
+              "fp_rate": 0.0
+            },
+            "neg-hard-hash-grid": {
+              "n": 427,
+              "fp_rate": 0.0
+            },
+            "neg-hard-iron-cross": {
+              "n": 456,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-alt-hooks": {
+              "n": 484,
+              "fp_rate": 0.0
+            },
+            "neg-hard-irregular-partial-hooks": {
+              "n": 410,
+              "fp_rate": 0.00244
+            },
+            "neg-hard-l-shapes-d4": {
+              "n": 434,
+              "fp_rate": 0.0
+            },
+            "neg-hard-latin-cross": {
+              "n": 463,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-alt-hooks": {
+              "n": 415,
+              "fp_rate": 0.0
+            },
+            "neg-hard-plus-partial-hooks": {
+              "n": 421,
+              "fp_rate": 0.0
+            },
+            "neg-hard-spiral": {
+              "n": 428,
+              "fp_rate": 0.0
+            },
+            "neg-hard-square-spiral": {
+              "n": 408,
+              "fp_rate": 0.0
+            },
+            "neg-hard-t-shapes-d4": {
+              "n": 464,
+              "fp_rate": 0.0
+            },
+            "neg-hard-tetris": {
+              "n": 407,
+              "fp_rate": 0.0
+            },
+            "neg-hard-windmill-3": {
+              "n": 458,
+              "fp_rate": 0.0
+            },
+            "neg-house": {
+              "n": 170,
+              "fp_rate": 0.0
+            },
+            "neg-pixelart": {
+              "n": 156,
+              "fp_rate": 0.0
+            },
+            "neg-platform": {
+              "n": 183,
+              "fp_rate": 0.0
+            },
+            "neg-plaza": {
+              "n": 181,
+              "fp_rate": 0.0
+            },
+            "neg-pool": {
+              "n": 185,
+              "fp_rate": 0.0
+            },
+            "neg-railway": {
+              "n": 183,
+              "fp_rate": 0.0
+            },
+            "neg-road": {
+              "n": 180,
+              "fp_rate": 0.0
+            },
+            "neg-terrain": {
+              "n": 1017,
+              "fp_rate": 0.0
+            },
+            "neg-tower": {
+              "n": 177,
+              "fp_rate": 0.0
+            },
+            "neg-village": {
+              "n": 175,
+              "fp_rate": 0.0
+            },
+            "pos": {
+              "n": 2151,
+              "recall": 0.7094
+            },
+            "pos-irregular": {
+              "n": 349,
+              "recall": 0.3095
+            }
+          },
+          "by_mode": {
+            "neg:carved": {
+              "n": 430,
+              "fp_rate": 0.0
+            },
+            "neg:flush-diff": {
+              "n": 1505,
+              "fp_rate": 0.0
+            },
+            "neg:flush-same-lum": {
+              "n": 455,
+              "fp_rate": 0.0
+            },
+            "neg:flush-water": {
+              "n": 693,
+              "fp_rate": 0.0
+            },
+            "neg:mixed": {
+              "n": 479,
+              "fp_rate": 0.0
+            },
+            "neg:outlined": {
+              "n": 425,
+              "fp_rate": 0.0
+            },
+            "neg:plain": {
+              "n": 2976,
+              "fp_rate": 0.0
+            },
+            "neg:raised": {
+              "n": 2029,
+              "fp_rate": 0.00049
+            },
+            "neg:raised-diff": {
+              "n": 562,
+              "fp_rate": 0.0
+            },
+            "neg:raised-same": {
+              "n": 446,
+              "fp_rate": 0.0
+            },
+            "pos:carved": {
+              "n": 133,
+              "recall": 0.5113
+            },
+            "pos:flush-diff": {
+              "n": 519,
+              "recall": 0.7225
+            },
+            "pos:flush-same-lum": {
+              "n": 149,
+              "recall": 0.5705
+            },
+            "pos:flush-water": {
+              "n": 255,
+              "recall": 0.6706
+            },
+            "pos:mixed": {
+              "n": 189,
+              "recall": 0.4021
+            },
+            "pos:outlined": {
+              "n": 158,
+              "recall": 0.6203
+            },
+            "pos:raised": {
+              "n": 706,
+              "recall": 0.7649
+            },
+            "pos:raised-diff": {
+              "n": 215,
+              "recall": 0.8372
+            },
+            "pos:raised-same": {
+              "n": 176,
+              "recall": 0.233
+            }
+          }
+        }
+      },
+      "findings": {
+        "metrics": {
+          "threshold": 0.97,
+          "precision": 1.0,
+          "recall": 0.5,
+          "fp_rate": 0.0,
+          "false_positives": 0,
+          "flagged": 4,
+          "positives": 8,
+          "negatives": 29
+        },
+        "verdict": "FAIL",
+        "failures": [
+          "negatives 29 < 5000",
+          "recall 0.5000 < 0.6"
+        ],
+        "subtypes": {
+          "by_shape": {
+            "finding-fullscan-confirmed": {
+              "n": 8,
+              "recall": 0.5
+            },
+            "finding-fullscan-false-alarm": {
+              "n": 29,
+              "fp_rate": 0.0
+            }
+          },
+          "by_mode": {
+            "neg:plain": {
+              "n": 37,
+              "recall": 0.5
+            }
+          }
+        }
+      }
+    },
+    "model_bytes": 2559555
+  },
+  "scan": {},
+  "scan_pending": true
+}

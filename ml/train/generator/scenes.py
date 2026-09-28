@@ -27,7 +27,10 @@ MIN_CELLS_FOR_REMOVAL = 40
 MAX_DECOYS = 6
 
 HOLDOUT_ONLY_HARD_FAMILY = "windmill-3"
-IRREGULAR_SHARE = 0.5
+IRREGULAR_SHARE = {"fullscan": 0.15, "mask": 0.5}
+SMALL_SYMBOL_SHARE = {"fullscan": 0.6, "mask": 0.0}
+SMALL_SYMBOL_MAX = 11
+FULLSCAN_SYMBOL_MAX = 40
 
 POS_BASE_MODES = (
     "raised", "raised-same", "flush-diff", "flush-same-lum", "carved", "mixed", "outlined",
@@ -120,14 +123,22 @@ def _same_luminance_other_block(rng, ground_id):
     return int(candidates[int(rng.integers(0, len(candidates)))])
 
 
-def _build_symbol_variant(rng, holdout):
+def _symbol_size(rng, kind, holdout):
+    if rng.random() < SMALL_SYMBOL_SHARE[kind]:
+        return sample_size_thick(rng, max_size=SMALL_SYMBOL_MAX)
+    if kind == "fullscan":
+        return sample_size_thick(rng, max_size=FULLSCAN_SYMBOL_MAX + (8 if holdout else 0), min_size=SMALL_SYMBOL_MAX + 1)
+    return sample_size_thick(rng, max_size=64 if holdout else 60)
+
+
+def _build_symbol_variant(rng, holdout, kind):
     mirror = bool(rng.random() < 0.5)
     rot_k = int(rng.integers(0, 4))
-    irregular = bool(rng.random() < IRREGULAR_SHARE)
+    irregular = bool(rng.random() < IRREGULAR_SHARE[kind])
     if irregular:
         mask = build_irregular_symbol(rng, mirror)
     else:
-        size, thick = sample_size_thick(rng, max_size=64 if holdout else 60)
+        size, thick = _symbol_size(rng, kind, holdout)
         mask = build_symbol_mask(size, thick, mirror)
     mask = np.rot90(mask, rot_k)
     diag = rng.random() < 0.03
@@ -302,8 +313,8 @@ def _stamp_shape(rng, blocks, heights, mask):
     return footprint, suffix, vis
 
 
-def _stamp_symbol(rng, blocks, heights, holdout):
-    mask, irregular, diag = _build_symbol_variant(rng, holdout)
+def _stamp_symbol(rng, blocks, heights, holdout, kind):
+    mask, irregular, diag = _build_symbol_variant(rng, holdout, kind)
     footprint, suffix, vis = _stamp_shape(rng, blocks, heights, mask)
     subtype = f"pos-irregular-{suffix}" if irregular else f"pos-{suffix}"
     if diag:
@@ -384,7 +395,7 @@ def make_fullscan_sample(rng, label, holdout=False):
     _stamp_decoys(rng, blocks, heights, n_decoys)
 
     if label == 1:
-        _footprint, subtype, vis = _stamp_symbol(rng, blocks, heights, holdout)
+        _footprint, subtype, vis = _stamp_symbol(rng, blocks, heights, holdout, "fullscan")
     else:
         subtype, _footprint = _stamp_negative_family(rng, blocks, heights, holdout)
         vis = None
@@ -501,7 +512,7 @@ def make_mask_sample(rng, label, holdout=False):
     _stamp_decoys(rng, blocks, heights, n_decoys)
 
     if label == 1:
-        footprint, subtype, vis = _stamp_symbol(rng, blocks, heights, holdout)
+        footprint, subtype, vis = _stamp_symbol(rng, blocks, heights, holdout, "mask")
     else:
         footprint, subtype = _mask_primary_negative(rng, blocks, heights, holdout)
         vis = None

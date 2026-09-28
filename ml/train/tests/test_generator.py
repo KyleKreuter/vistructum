@@ -365,3 +365,17 @@ def test_surface_steps_stay_between_minus_one_and_two(monkeypatch):
     for _ in range(300):
         scenes.make_fullscan_sample(rng, 1)
     assert deltas and min(deltas) >= -1 and max(deltas) <= 2
+
+
+def test_surface_symbols_follow_the_2b2t_sizes_and_mask_symbols_keep_theirs():
+    from generator.scenes import _build_symbol_variant
+    rng = np.random.default_rng(41)
+    surface = [_build_symbol_variant(rng, False, "fullscan") for _ in range(2000)]
+    regular = [mask for mask, irregular, diag in surface if not irregular and not diag]
+    irregular_share = np.mean([irregular for _mask, irregular, _diag in surface])
+    small_share = np.mean([max(mask.shape) <= 11 for mask in regular])
+    assert 0.12 < irregular_share < 0.18
+    assert 0.55 < small_share < 0.68
+    assert max(max(mask.shape) for mask in regular) <= 40
+    mask_kind = [_build_symbol_variant(rng, False, "mask") for _ in range(2000)]
+    assert 0.45 < np.mean([irregular for _mask, irregular, _diag in mask_kind]) < 0.55

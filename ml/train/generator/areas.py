@@ -62,14 +62,14 @@ def _stamp_background(rng, blocks, heights, size, holdout, kind):
     return footprints
 
 
-def _stamp_symbols(rng, blocks, heights, size, count, holdout):
+def _stamp_symbols(rng, blocks, heights, size, count, holdout, kind):
     symbols = []
     for _ in range(count):
         for _attempt in range(MAX_PLACEMENT_TRIES):
             top, left = _view(size, rng)
             view_blocks = blocks[top:top + CANVAS, left:left + CANVAS].copy()
             view_heights = heights[top:top + CANVAS, left:left + CANVAS].copy()
-            footprint, subtype, _vis = _stamp_symbol(rng, view_blocks, view_heights, holdout)
+            footprint, subtype, _vis = _stamp_symbol(rng, view_blocks, view_heights, holdout, kind)
             box = _bbox(footprint, top, left)
             if box is None or any(_intersects(box, other["box"], margin=8) for other in symbols):
                 continue
@@ -86,7 +86,7 @@ def make_area(rng, kind, size, n_symbols, holdout=False):
     amplitude = float(rng.uniform(0, AMPLITUDE[kind][holdout]))
     blocks, heights, biome = generate_terrain(rng, size, amplitude=amplitude)
     background = _stamp_background(rng, blocks, heights, size, holdout, kind)
-    symbols = _stamp_symbols(rng, blocks, heights, size, n_symbols, holdout)
+    symbols = _stamp_symbols(rng, blocks, heights, size, n_symbols, holdout, kind)
     modified = np.zeros((size, size), dtype=bool)
     if kind == "mask":
         symbol_boxes = [footprint_box(s["footprint"], gap=EXTRA_GAP) for s in symbols]

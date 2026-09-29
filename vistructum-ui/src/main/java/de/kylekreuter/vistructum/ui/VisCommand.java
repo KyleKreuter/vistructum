@@ -13,6 +13,7 @@ import de.kylekreuter.vistructum.ui.gui.ListPosition;
 import de.kylekreuter.vistructum.ui.gui.ReviewMenus;
 import de.kylekreuter.vistructum.ui.text.Message;
 import de.kylekreuter.vistructum.ui.text.Messages;
+import de.kylekreuter.vistructum.ui.web.ReviewLinks;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
@@ -43,7 +44,8 @@ public final class VisCommand implements TabExecutor {
     private static final int DEFAULT_REVIEW_LIMIT = 10;
     private static final int MAX_REVIEW_LIMIT = 50;
     private static final List<String> STAFF_SUBCOMMANDS = List.of("status", "review", "show", "tp", "confirm", "falsealarm",
-            "stats");
+            "stats", "web", "evidence");
+    private static final List<String> EVIDENCE_ACTIONS = List.of("share", "unshare");
     private static final List<String> ADMIN_SUBCOMMANDS = List.of("scan", "export");
 
     private final Vistructum vistructum;
@@ -51,15 +53,19 @@ public final class VisCommand implements TabExecutor {
     private final Messages messages;
     private final String staffPermission;
     private final String adminPermission;
+    private final String sharePermission;
+    private final ReviewLinks links;
     private final Clock clock;
 
     public VisCommand(Vistructum vistructum, ReviewMenus menus, Messages messages, String staffPermission,
-                      String adminPermission, Clock clock) {
+                      String adminPermission, String sharePermission, ReviewLinks links, Clock clock) {
         this.vistructum = Objects.requireNonNull(vistructum, "vistructum");
         this.menus = Objects.requireNonNull(menus, "menus");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.staffPermission = Objects.requireNonNull(staffPermission, "staffPermission");
         this.adminPermission = Objects.requireNonNull(adminPermission, "adminPermission");
+        this.sharePermission = Objects.requireNonNull(sharePermission, "sharePermission");
+        this.links = Objects.requireNonNull(links, "links");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
@@ -78,6 +84,8 @@ public final class VisCommand implements TabExecutor {
             case "confirm" -> withId(sender, args, id -> judge(sender, id, Verdict.CONFIRMED));
             case "falsealarm" -> withId(sender, args, id -> judge(sender, id, Verdict.FALSE_ALARM));
             case "stats" -> stats(sender);
+            case "web" -> web(sender);
+            case "evidence" -> withId(sender, args, id -> evidence(sender, id, args));
             case "scan" -> scan(sender, args);
             case "export" -> export(sender);
             default -> reply(sender, Message.COMMAND_USAGE);
@@ -101,6 +109,9 @@ public final class VisCommand implements TabExecutor {
             List<String> options = new ArrayList<>(Bukkit.getWorlds().stream().map(World::getName).toList());
             options.add("stop");
             return options.stream().filter(option -> option.startsWith(args[1])).toList();
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("evidence") && sender.hasPermission(sharePermission)) {
+            return EVIDENCE_ACTIONS.stream().filter(option -> option.startsWith(args[2].toLowerCase())).toList();
         }
         return List.of();
     }
@@ -186,6 +197,62 @@ public final class VisCommand implements TabExecutor {
                     }
                 },
                 () -> reply(sender, Message.COMMAND_FINDING_MISSING, number("id", id))));
+    }
+
+    private void web(CommandSender sender) {
+        if (!links.enabled()) {
+            reply(sender, Message.WEB_DISABLED);
+            return;
+        }
+        if (!(sender instanceof Player player)) {
+            reply(sender, Message.COMMAND_PLAYER_ONLY);
+            return;
+        }
+        when(sender, messages, links.home(player), sender::sendMessage);
+    }
+
+    private void evidence(CommandSender sender, long id, String[] args) {
+        if (!links.enabled()) {
+            reply(sender, Message.WEB_DISABLED);
+            return;
+        }
+        String action = args.length > 2 ? args[2].toLowerCase() : "";
+        if (EVIDENCE_ACTIONS.contains(action) && !sender.hasPermission(sharePermission)) {
+            reply(sender, Message.COMMAND_NO_PERMISSION);
+            return;
+        }
+        switch (action) {
+            case "" -> evidenceLink(sender, id);
+            case "share" -> share(sender, id);
+            case "unshare" -> unshare(sender, id);
+            default -> reply(sender, Message.COMMAND_USAGE);
+        }
+    }
+
+    private void evidenceLink(CommandSender sender, long id) {
+        if (!(sender instanceof Player player)) {
+            reply(sender, Message.COMMAND_PLAYER_ONLY);
+            return;
+        }
+        when(sender, messages, vistructum.findings().hasEvidence(id), secured -> {
+            if (!secured) {
+                reply(sender, Message.EVIDENCE_MISSING, number("id", id));
+                return;
+            }
+            when(sender, messages, links.evidence(player, id), sender::sendMessage);
+        });
+    }
+
+    private void share(CommandSender sender, long id) {
+        when(sender, messages, vistructum.web().share(id, sender.getName()), token -> token.ifPresentOrElse(
+                shareToken -> reply(sender, Message.EVIDENCE_SHARED, number("id", id),
+                        Messages.link("link", links.shareLink(shareToken))),
+                () -> reply(sender, Message.EVIDENCE_NOT_SHAREABLE, number("id", id))));
+    }
+
+    private void unshare(CommandSender sender, long id) {
+        when(sender, messages, vistructum.web().unshare(id, sender.getName()), revoked -> reply(sender,
+                revoked ? Message.EVIDENCE_UNSHARED : Message.EVIDENCE_NOT_SHARED, number("id", id)));
     }
 
     private void scan(CommandSender sender, String[] args) {

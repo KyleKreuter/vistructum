@@ -1,5 +1,6 @@
 package de.kylekreuter.vistructum.api;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -28,4 +29,16 @@ public interface Players {
      * @throws NullPointerException if {@code player} is {@code null}
      */
     CompletableFuture<PlayerFace> face(UUID player);
+
+    /**
+     * Loads the full skin texture of a player.
+     *
+     * <p>Skins are fetched and stored like faces and follow the same reuse periods.
+     *
+     * @param player identifier of the player
+     * @return a future completing with the skin, or with an empty {@link Optional} if no skin is available; it
+     *         completes exceptionally only if the storage fails
+     * @throws NullPointerException if {@code player} is {@code null}
+     */
+    CompletableFuture<Optional<PlayerSkin>> skin(UUID player);
 }

@@ -1,13 +1,18 @@
 package de.kylekreuter.vistructum.core.alert;
 
+import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.core.MainThread;
-import de.kylekreuter.vistructum.core.face.FaceStore;
+import de.kylekreuter.vistructum.core.skin.SkinStore;
+import de.kylekreuter.vistructum.core.web.WebStore;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
 public final class FindingRetention {
@@ -16,18 +21,20 @@ public final class FindingRetention {
 
     private final MainThread mainThread;
     private final FindingStore findings;
-    private final FaceStore faces;
-    private final Duration keepReviewed;
+    private final SkinStore skins;
+    private final WebStore web;
+    private final Map<Verdict, Duration> keep;
     private final Logger logger;
     private final Clock clock;
     private BukkitTask task;
 
-    public FindingRetention(MainThread mainThread, FindingStore findings, FaceStore faces, Duration keepReviewed,
-                            Logger logger, Clock clock) {
+    public FindingRetention(MainThread mainThread, FindingStore findings, SkinStore skins, WebStore web,
+                            Map<Verdict, Duration> keep, Logger logger, Clock clock) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.findings = Objects.requireNonNull(findings, "findings");
-        this.faces = Objects.requireNonNull(faces, "faces");
-        this.keepReviewed = Objects.requireNonNull(keepReviewed, "keepReviewed");
+        this.skins = Objects.requireNonNull(skins, "skins");
+        this.web = Objects.requireNonNull(web, "web");
+        this.keep = Map.copyOf(keep);
         this.logger = Objects.requireNonNull(logger, "logger");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
@@ -42,16 +49,24 @@ public final class FindingRetention {
         }
     }
 
-    private void purge() {
-        findings.deleteReviewedBefore(clock.instant().minus(keepReviewed))
-                .thenCompose(deleted -> faces.deleteUnreferenced().thenAccept(orphans -> {
-                    if (deleted > 0 || orphans > 0) {
-                        logger.info("retention deleted " + deleted + " reviewed findings and " + orphans + " player faces");
-                    }
-                }))
+    public CompletableFuture<Integer> purge() {
+        Instant now = clock.instant();
+        CompletableFuture<Integer> deleted = CompletableFuture.completedFuture(0);
+        for (Map.Entry<Verdict, Duration> entry : keep.entrySet()) {
+            deleted = deleted.thenCompose(count -> findings.deleteReviewedBefore(entry.getKey(),
+                    now.minus(entry.getValue())).thenApply(more -> count + more));
+        }
+        return deleted.thenCompose(findingCount -> skins.deleteUnreferenced()
+                        .thenCombine(web.deleteExpired(now), (skinCount, grantCount) -> {
+                            if (findingCount > 0 || skinCount > 0) {
+                                logger.info("retention deleted " + findingCount + " reviewed findings and " + skinCount
+                                        + " player skins");
+                            }
+                            return findingCount;
+                        }))
                 .exceptionally(error -> {
                     logger.warning("retention cleanup failed: " + error.getMessage());
-                    return null;
+                    return 0;
                 });
     }
 }

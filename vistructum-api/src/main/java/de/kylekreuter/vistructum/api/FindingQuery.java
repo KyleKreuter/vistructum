@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.UUID;
 
 /**
  * Immutable selection criteria for {@link Findings#find(FindingQuery)}.
@@ -14,13 +15,16 @@ import java.util.OptionalLong;
  *
  * @param world exact name of the world a finding must belong to
  * @param source detection path a finding must originate from
+ * @param player player that must be among the players of a finding, see {@link Finding#players()}
  * @param state review state a finding must be in
  * @param since earliest creation time a finding may have, inclusive
  * @param beforeId exclusive upper bound for finding identifiers, used as the paging cursor
  * @param limit maximum number of findings per page, between {@code 1} and {@link #MAX_LIMIT} inclusive
+ * @param offset number of matching findings to skip after the paging cursor has been applied, at least {@code 0}
  */
-public record FindingQuery(Optional<String> world, Optional<Source> source, ReviewState state, Optional<Instant> since,
-                           OptionalLong beforeId, int limit) {
+public record FindingQuery(Optional<String> world, Optional<Source> source, Optional<UUID> player, ReviewState state,
+                           Optional<Instant> since, OptionalLong beforeId, int limit,
+                           int offset) {
 
     /**
      * Page size applied by {@link #all()} and {@link #open()}.
@@ -35,33 +39,39 @@ public record FindingQuery(Optional<String> world, Optional<Source> source, Revi
     /**
      * Validates the criteria.
      *
-     * @throws NullPointerException if any component other than {@code limit} is {@code null}
-     * @throws IllegalArgumentException if {@code limit} is outside the range {@code 1} to {@link #MAX_LIMIT}
+     * @throws NullPointerException if any component other than {@code limit} and {@code offset} is {@code null}
+     * @throws IllegalArgumentException if {@code limit} is outside the range {@code 1} to {@link #MAX_LIMIT} or
+     *         {@code offset} is negative
      */
     public FindingQuery {
         Objects.requireNonNull(world, "world");
         Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(player, "player");
         Objects.requireNonNull(state, "state");
         Objects.requireNonNull(since, "since");
         Objects.requireNonNull(beforeId, "beforeId");
         if (limit < 1 || limit > MAX_LIMIT) {
             throw new IllegalArgumentException("limit must be in 1.." + MAX_LIMIT + ", got " + limit);
         }
+        if (offset < 0) {
+            throw new IllegalArgumentException("offset must not be negative, got " + offset);
+        }
     }
 
     /**
      * Creates a query that selects every finding regardless of review state, with a page size of
-     * {@link #DEFAULT_LIMIT}.
+     * {@link #DEFAULT_LIMIT} and no offset.
      *
      * @return an unrestricted query
      */
     public static FindingQuery all() {
-        return new FindingQuery(Optional.empty(), Optional.empty(), ReviewState.ANY, Optional.empty(),
-                OptionalLong.empty(), DEFAULT_LIMIT);
+        return new FindingQuery(Optional.empty(), Optional.empty(), Optional.empty(), ReviewState.ANY,
+                Optional.empty(), OptionalLong.empty(), DEFAULT_LIMIT, 0);
     }
 
     /**
-     * Creates a query that selects every finding without a verdict, with a page size of {@link #DEFAULT_LIMIT}.
+     * Creates a query that selects every finding without a verdict, with a page size of {@link #DEFAULT_LIMIT}
+     * and no offset.
      *
      * @return a query restricted to {@link ReviewState#OPEN}
      */
@@ -77,7 +87,7 @@ public record FindingQuery(Optional<String> world, Optional<Source> source, Revi
      * @throws NullPointerException if {@code world} is {@code null}
      */
     public FindingQuery world(String world) {
-        return new FindingQuery(Optional.of(world), source, state, since, beforeId, limit);
+        return new FindingQuery(Optional.of(world), source, player, state, since, beforeId, limit, offset);
     }
 
     /**
@@ -88,7 +98,18 @@ public record FindingQuery(Optional<String> world, Optional<Source> source, Revi
      * @throws NullPointerException if {@code source} is {@code null}
      */
     public FindingQuery source(Source source) {
-        return new FindingQuery(world, Optional.of(source), state, since, beforeId, limit);
+        return new FindingQuery(world, Optional.of(source), player, state, since, beforeId, limit, offset);
+    }
+
+    /**
+     * Restricts the selection to findings built with the participation of one player.
+     *
+     * @param player identifier of the player
+     * @return a new query with the player criterion replaced
+     * @throws NullPointerException if {@code player} is {@code null}
+     */
+    public FindingQuery player(UUID player) {
+        return new FindingQuery(world, source, Optional.of(player), state, since, beforeId, limit, offset);
     }
 
     /**
@@ -99,7 +120,7 @@ public record FindingQuery(Optional<String> world, Optional<Source> source, Revi
      * @throws NullPointerException if {@code state} is {@code null}
      */
     public FindingQuery state(ReviewState state) {
-        return new FindingQuery(world, source, state, since, beforeId, limit);
+        return new FindingQuery(world, source, player, state, since, beforeId, limit, offset);
     }
 
     /**
@@ -110,7 +131,7 @@ public record FindingQuery(Optional<String> world, Optional<Source> source, Revi
      * @throws NullPointerException if {@code since} is {@code null}
      */
     public FindingQuery since(Instant since) {
-        return new FindingQuery(world, source, state, Optional.of(since), beforeId, limit);
+        return new FindingQuery(world, source, player, state, Optional.of(since), beforeId, limit, offset);
     }
 
     /**
@@ -123,7 +144,7 @@ public record FindingQuery(Optional<String> world, Optional<Source> source, Revi
      * @return a new query with the cursor replaced
      */
     public FindingQuery before(long id) {
-        return new FindingQuery(world, source, state, since, OptionalLong.of(id), limit);
+        return new FindingQuery(world, source, player, state, since, OptionalLong.of(id), limit, offset);
     }
 
     /**
@@ -134,6 +155,20 @@ public record FindingQuery(Optional<String> world, Optional<Source> source, Revi
      * @throws IllegalArgumentException if {@code limit} is outside the range {@code 1} to {@link #MAX_LIMIT}
      */
     public FindingQuery limit(int limit) {
-        return new FindingQuery(world, source, state, since, beforeId, limit);
+        return new FindingQuery(world, source, player, state, since, beforeId, limit, offset);
+    }
+
+    /**
+     * Sets the number of matching findings to skip.
+     *
+     * <p>The offset is applied after ordering and after the paging cursor {@link #beforeId()}, so a query with both
+     * skips findings below the cursor.
+     *
+     * @param offset number of findings to skip, {@code 0} to skip none
+     * @return a new query with the offset replaced
+     * @throws IllegalArgumentException if {@code offset} is negative
+     */
+    public FindingQuery offset(int offset) {
+        return new FindingQuery(world, source, player, state, since, beforeId, limit, offset);
     }
 }

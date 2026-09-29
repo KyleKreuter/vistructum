@@ -2,5 +2,15 @@ pack:
   bind-port: 8765
   public-url: "http://localhost:8765/pack.zip"
 
+web:
+  enabled: false
+  bind-address: "0.0.0.0"
+  public-url: "http://localhost:8765"
+  textures:
+    # true downloads the Minecraft client jar of the running version from Mojang and serves its block and item
+    # textures and models to the web app. Setting it to true means you accept the Minecraft EULA:
+    # https://aka.ms/MinecraftEULA
+    download: false
+
 list:
   map-previews: false

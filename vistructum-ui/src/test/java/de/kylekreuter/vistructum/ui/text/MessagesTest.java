@@ -75,6 +75,18 @@ class MessagesTest {
     }
 
     @Test
+    void linksOpenTheirUrl() throws Exception {
+        String url = "https://review.example/review/login?token=a-b_c&next=%2Freview%2Ffindings%2F42%2Fevidence";
+        Component line = messages().chat(Message.EVIDENCE_LINK, Messages.link("link", url), Messages.number("id", 42),
+                Messages.number("minutes", 5));
+        List<Component> parts = new ArrayList<>();
+        collect(line, parts);
+        assertTrue(parts.stream().map(Component::clickEvent).anyMatch(
+                click -> click != null && click.action() == ClickEvent.Action.OPEN_URL && click.value().equals(url)));
+        assertTrue(PlainTextComponentSerializer.plainText().serialize(line).contains("valid for 5 minutes"));
+    }
+
+    @Test
     void namesAreNotParsedAsTags() throws Exception {
         Finding reviewed = new Finding(7, Source.MASK, "world", FINDING.box(), 0.5, 1, Set.of(), "", "bf-mask-1",
                 CREATED, Optional.of(new Review(Verdict.CONFIRMED, "<red>Staff", CREATED)));

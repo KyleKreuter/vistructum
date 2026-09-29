@@ -69,6 +69,15 @@ public final class Model implements AutoCloseable {
                 scores.refined());
     }
 
+    public OcclusionMap occlusion(SurfaceScene scene, int top, int left, int bottom, int right) throws ModelException {
+        try {
+            return new OcclusionMap(info.version(), scene.width(), scene.height(),
+                    Occlusion.map(kind, scoring, scene, top, left, bottom, right));
+        } catch (OrtException e) {
+            throw new ModelException("occlusion failed: " + e.getMessage(), e);
+        }
+    }
+
     Scoring.Scores score(WindowBatch batch) throws ModelException {
         OptionalDouble prefilter = info.prefilter() == null ? OptionalDouble.empty() : OptionalDouble.of(info.prefilter());
         try {

@@ -4,11 +4,16 @@ import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.ui.gui.MapCards;
 import de.kylekreuter.vistructum.ui.gui.MenuListener;
 import de.kylekreuter.vistructum.ui.gui.PackDelivery;
-import de.kylekreuter.vistructum.ui.gui.PackServer;
 import de.kylekreuter.vistructum.ui.gui.ResourcePack;
 import de.kylekreuter.vistructum.ui.gui.ReviewMenus;
 import de.kylekreuter.vistructum.ui.gui.Thumbnails;
 import de.kylekreuter.vistructum.ui.text.Messages;
+import de.kylekreuter.vistructum.ui.web.BukkitGameServer;
+import de.kylekreuter.vistructum.ui.web.ReviewLinks;
+import de.kylekreuter.vistructum.ui.web.WebApplication;
+import de.kylekreuter.vistructum.ui.web.assets.GameAssets;
+import de.kylekreuter.vistructum.ui.web.WebSettings;
+import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -18,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UncheckedIOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -29,10 +35,13 @@ public final class VistructumUi extends JavaPlugin {
 
     private static final String STAFF_PERMISSION = "vistructum.staff";
     private static final String ADMIN_PERMISSION = "vistructum.admin";
+    private static final String SHARE_PERMISSION = "vistructum.evidence.share";
     private static final String MESSAGES_FILE = "messages.yml";
     private static final String MAPS_FILE = "maps.yml";
+    private static final String ASSETS_FOLDER = "assets";
 
-    private PackServer packServer;
+    private WebApplication webApplication;
+    private GameAssets gameAssets;
     private ScanBossBar scanBossBar;
 
     @Override
@@ -49,15 +58,13 @@ public final class VistructumUi extends JavaPlugin {
         Clock clock = Clock.systemDefaultZone();
         Messages messages = Messages.from(loadMessages(), clock.getZone());
         ResourcePack pack = ResourcePack.build();
-        int port = getConfig().getInt("pack.bind-port");
-        try {
-            packServer = new PackServer(port, pack);
-        } catch (IOException e) {
-            getLogger().log(Level.SEVERE, "the resource pack cannot be served on port " + port, e);
-        }
+        WebSettings web = WebSettings.from(getConfig());
+        startWebApplication(vistructum, pack, web, clock);
+        ReviewLinks links = new ReviewLinks(vistructum.web(), web, messages);
         Thumbnails thumbnails = new Thumbnails(this, vistructum);
-        ReviewMenus menus = new ReviewMenus(this, vistructum, messages, clock, loadMapCards(), thumbnails);
-        VisCommand command = new VisCommand(vistructum, menus, messages, STAFF_PERMISSION, ADMIN_PERMISSION, clock);
+        ReviewMenus menus = new ReviewMenus(this, vistructum, messages, clock, loadMapCards(), thumbnails, links);
+        VisCommand command = new VisCommand(vistructum, menus, messages, STAFF_PERMISSION, ADMIN_PERMISSION,
+                SHARE_PERMISSION, links, clock);
         PluginCommand vis = Objects.requireNonNull(getCommand("vis"));
         vis.setExecutor(command);
         vis.setTabCompleter(command);
@@ -78,9 +85,37 @@ public final class VistructumUi extends JavaPlugin {
             scanBossBar.close();
             scanBossBar = null;
         }
-        if (packServer != null) {
-            packServer.close();
-            packServer = null;
+        if (webApplication != null) {
+            webApplication.close();
+            webApplication = null;
+        }
+        if (gameAssets != null) {
+            gameAssets.close();
+            gameAssets = null;
+        }
+    }
+
+    private void startWebApplication(Vistructum vistructum, ResourcePack pack, WebSettings web, Clock clock) {
+        int port = getConfig().getInt("pack.bind-port");
+        InetSocketAddress address = web.enabled() ? new InetSocketAddress(web.bindAddress(), port)
+                : new InetSocketAddress(port);
+        gameAssets = new GameAssets(getDataFolder().toPath().resolve(ASSETS_FOLDER), Bukkit.getMinecraftVersion(),
+                web.enabled() && getConfig().getBoolean("web.textures.download"));
+        Optional<WebApplication.WebApp> app = web.enabled()
+                ? Optional.of(new WebApplication.WebApp(vistructum, web, new BukkitGameServer(SHARE_PERMISSION),
+                BukkitGameServer.palette(), gameAssets, Bukkit.getScheduler().getMainThreadExecutor(this),
+                getClassLoader(), clock))
+                : Optional.empty();
+        try {
+            webApplication = WebApplication.start(address, pack, app, getLogger());
+        } catch (RuntimeException e) {
+            getLogger().log(Level.SEVERE, "the resource pack and the web app cannot be served on " + address, e);
+            return;
+        }
+        if (web.enabled()) {
+            getLogger().info("the web app is served on " + address + " and linked as " + web.publicUrl()
+                    + WebSettings.HOME);
+            gameAssets.fetch(GameAssets.MANIFEST, getLogger());
         }
     }
 

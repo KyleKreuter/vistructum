@@ -1,12 +1,21 @@
 package de.kylekreuter.vistructum.core;
 
+import de.kylekreuter.vistructum.api.Activity;
+import de.kylekreuter.vistructum.api.Evidence;
+import de.kylekreuter.vistructum.api.EvidenceShare;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.FindingReviewedEvent;
+import de.kylekreuter.vistructum.api.FindingScene;
+import de.kylekreuter.vistructum.api.FindingTerrain;
+import de.kylekreuter.vistructum.api.FindingStats;
+import de.kylekreuter.vistructum.api.Heatmap;
+import de.kylekreuter.vistructum.api.IssuedSession;
 import de.kylekreuter.vistructum.api.InferenceStatus;
 import de.kylekreuter.vistructum.api.Findings;
 import de.kylekreuter.vistructum.api.Page;
 import de.kylekreuter.vistructum.api.PlayerFace;
+import de.kylekreuter.vistructum.api.PlayerSkin;
 import de.kylekreuter.vistructum.api.Players;
 import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.ScanCause;
@@ -18,11 +27,19 @@ import de.kylekreuter.vistructum.api.TrainingExport;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.api.VistructumStatus;
+import de.kylekreuter.vistructum.api.WebAccess;
+import de.kylekreuter.vistructum.api.WebSession;
 import de.kylekreuter.vistructum.core.alert.FindingExporter;
+import de.kylekreuter.vistructum.core.alert.FindingHeatmaps;
 import de.kylekreuter.vistructum.core.alert.FindingSlice;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
+import de.kylekreuter.vistructum.core.alert.MaterialKeys;
 import de.kylekreuter.vistructum.core.alert.PreviewImage;
-import de.kylekreuter.vistructum.core.face.FaceCache;
+import de.kylekreuter.vistructum.core.alert.SceneView;
+import de.kylekreuter.vistructum.core.alert.TerrainStore;
+import de.kylekreuter.vistructum.core.evidence.EvidenceStore;
+import de.kylekreuter.vistructum.core.skin.SkinCache;
+import de.kylekreuter.vistructum.core.web.WebStore;
 import de.kylekreuter.vistructum.core.scan.ScanStore;
 import de.kylekreuter.vistructum.core.scan.WorldScanner;
 import de.kylekreuter.vistructum.core.inference.Inference;
@@ -30,6 +47,7 @@ import de.kylekreuter.vistructum.core.tracking.BlockChangeStore;
 import org.bukkit.Bukkit;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -48,15 +66,23 @@ public final class VistructumService implements Vistructum {
     private final ScanStore scanStore;
     private final WorldScanner scanner;
     private final Inference inference;
-    private final FaceCache faces;
+    private final SkinCache skins;
+    private final FindingHeatmaps heatmaps;
+    private final EvidenceStore evidenceStore;
+    private final TerrainStore terrainStore;
+    private final WebStore webStore;
+    private final boolean recordingEnabled;
     private final Clock clock;
     private final Findings findings = new StoredFindings();
     private final Scans scans = new ScheduledScans();
     private final Players players = new CachedPlayers();
+    private final WebAccess web = new StoredWebAccess();
 
     public VistructumService(MainThread mainThread, BlockChangeStore changes, FindingStore findingStore,
-                             FindingExporter exporter, ScanStore scanStore, WorldScanner scanner, Inference inference, FaceCache faces,
-                             Clock clock) {
+                             FindingExporter exporter, ScanStore scanStore, WorldScanner scanner, Inference inference,
+                             SkinCache skins, FindingHeatmaps heatmaps, EvidenceStore evidenceStore,
+                             TerrainStore terrainStore, WebStore webStore,
+                             boolean recordingEnabled, Clock clock) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.changes = Objects.requireNonNull(changes, "changes");
         this.findingStore = Objects.requireNonNull(findingStore, "findingStore");
@@ -64,7 +90,12 @@ public final class VistructumService implements Vistructum {
         this.scanStore = Objects.requireNonNull(scanStore, "scanStore");
         this.scanner = Objects.requireNonNull(scanner, "scanner");
         this.inference = Objects.requireNonNull(inference, "inference");
-        this.faces = Objects.requireNonNull(faces, "faces");
+        this.skins = Objects.requireNonNull(skins, "skins");
+        this.heatmaps = Objects.requireNonNull(heatmaps, "heatmaps");
+        this.evidenceStore = Objects.requireNonNull(evidenceStore, "evidenceStore");
+        this.terrainStore = Objects.requireNonNull(terrainStore, "terrainStore");
+        this.webStore = Objects.requireNonNull(webStore, "webStore");
+        this.recordingEnabled = recordingEnabled;
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
@@ -84,13 +115,19 @@ public final class VistructumService implements Vistructum {
     }
 
     @Override
+    public WebAccess web() {
+        return web;
+    }
+
+    @Override
     public CompletableFuture<VistructumStatus> status() {
         CompletableFuture<InferenceStatus> models = inference.status();
         CompletableFuture<Integer> tracked = changes.count();
         CompletableFuture<Long> open = findingStore.count(FindingQuery.open());
         CompletableFuture<List<ScanJob>> active = scanStore.active();
         return mainThread.handOff(CompletableFuture.allOf(tracked, open, active, models).thenApply(ignored ->
-                new VistructumStatus(tracked.join(), Math.toIntExact(open.join()), active.join(), models.join())));
+                new VistructumStatus(tracked.join(), Math.toIntExact(open.join()), active.join(), models.join(),
+                        recordingEnabled)));
     }
 
     private final class StoredFindings implements Findings {
@@ -163,6 +200,56 @@ public final class VistructumService implements Vistructum {
         public CompletableFuture<TrainingExport> exportTraining() {
             return mainThread.handOff(exporter.export());
         }
+
+        @Override
+        public CompletableFuture<Optional<FindingScene>> scene(long id) {
+            return mainThread.handOff(findingStore.scene(id)
+                    .thenApply(stored -> stored.map(scene -> SceneView.of(scene, MaterialKeys::byOrdinal))));
+        }
+
+        @Override
+        public CompletableFuture<Optional<Heatmap>> heatmap(long id) {
+            return mainThread.handOff(heatmaps.heatmap(id));
+        }
+
+        @Override
+        public CompletableFuture<Boolean> hasTerrain(long id) {
+            return mainThread.handOff(terrainStore.hasTerrain(id));
+        }
+
+        @Override
+        public CompletableFuture<Optional<FindingTerrain>> terrain(long id) {
+            return mainThread.handOff(terrainStore.terrain(id));
+        }
+
+        @Override
+        public CompletableFuture<Boolean> hasEvidence(long id) {
+            return mainThread.handOff(evidenceStore.hasEvidence(id));
+        }
+
+        @Override
+        public CompletableFuture<Optional<Evidence>> evidence(long id) {
+            return mainThread.handOff(evidenceStore.evidence(id));
+        }
+
+        @Override
+        public CompletableFuture<FindingStats> stats(Instant from, Instant to) {
+            Objects.requireNonNull(from, "from");
+            Objects.requireNonNull(to, "to");
+            if (to.isBefore(from)) {
+                throw new IllegalArgumentException("range ends before it starts: " + from + " to " + to);
+            }
+            return mainThread.handOff(findingStore.stats(from, to, clock.getZone()));
+        }
+
+        @Override
+        public CompletableFuture<List<Activity>> activity(Instant before, int limit) {
+            Objects.requireNonNull(before, "before");
+            if (limit < 1 || limit > FindingQuery.MAX_LIMIT) {
+                throw new IllegalArgumentException("limit must be in 1.." + FindingQuery.MAX_LIMIT + ", got " + limit);
+            }
+            return mainThread.handOff(findingStore.activity(before, limit));
+        }
     }
 
     private final class FindingPage implements Page<Finding> {
@@ -190,7 +277,7 @@ public final class VistructumService implements Vistructum {
             if (!slice.more()) {
                 return CompletableFuture.failedFuture(new IllegalStateException("no further page"));
             }
-            return findings.find(query.before(slice.findings().getLast().id()));
+            return findings.find(query.before(slice.findings().getLast().id()).offset(0));
         }
     }
 
@@ -223,9 +310,68 @@ public final class VistructumService implements Vistructum {
         @Override
         public CompletableFuture<PlayerFace> face(UUID player) {
             Objects.requireNonNull(player, "player");
-            CompletableFuture<Optional<String>> knownName =
-                    mainThread.supply(() -> Optional.ofNullable(Bukkit.getOfflinePlayer(player).getName()));
-            return mainThread.handOff(knownName.thenCompose(name -> faces.face(player, name)));
+            return mainThread.handOff(knownName(player).thenCompose(name -> skins.face(player, name)));
+        }
+
+        @Override
+        public CompletableFuture<Optional<PlayerSkin>> skin(UUID player) {
+            Objects.requireNonNull(player, "player");
+            return mainThread.handOff(knownName(player).thenCompose(name -> skins.skin(player, name)));
+        }
+
+        private CompletableFuture<Optional<String>> knownName(UUID player) {
+            return mainThread.supply(() -> Optional.ofNullable(Bukkit.getOfflinePlayer(player).getName()));
+        }
+    }
+
+    private final class StoredWebAccess implements WebAccess {
+
+        @Override
+        public CompletableFuture<String> issueLogin(UUID player, String playerName) {
+            Objects.requireNonNull(player, "player");
+            Objects.requireNonNull(playerName, "playerName");
+            return mainThread.handOff(webStore.issueLogin(player, playerName, clock.instant()));
+        }
+
+        @Override
+        public CompletableFuture<Optional<IssuedSession>> redeemLogin(String loginToken) {
+            Objects.requireNonNull(loginToken, "loginToken");
+            return mainThread.handOff(webStore.redeemLogin(loginToken, clock.instant()));
+        }
+
+        @Override
+        public CompletableFuture<Optional<WebSession>> session(String sessionToken) {
+            Objects.requireNonNull(sessionToken, "sessionToken");
+            return mainThread.handOff(webStore.session(sessionToken, clock.instant()));
+        }
+
+        @Override
+        public CompletableFuture<Void> endSession(String sessionToken) {
+            Objects.requireNonNull(sessionToken, "sessionToken");
+            return mainThread.handOff(webStore.endSession(sessionToken));
+        }
+
+        @Override
+        public CompletableFuture<Optional<String>> share(long findingId, String actor) {
+            Objects.requireNonNull(actor, "actor");
+            return mainThread.handOff(webStore.share(findingId, actor, clock.instant()));
+        }
+
+        @Override
+        public CompletableFuture<Boolean> unshare(long findingId, String actor) {
+            Objects.requireNonNull(actor, "actor");
+            return mainThread.handOff(webStore.unshare(findingId, actor, clock.instant()));
+        }
+
+        @Override
+        public CompletableFuture<Optional<Long>> sharedFinding(String shareToken) {
+            Objects.requireNonNull(shareToken, "shareToken");
+            return mainThread.handOff(webStore.sharedFinding(shareToken));
+        }
+
+        @Override
+        public CompletableFuture<Optional<EvidenceShare>> shared(long findingId) {
+            return mainThread.handOff(webStore.shared(findingId));
         }
     }
 }

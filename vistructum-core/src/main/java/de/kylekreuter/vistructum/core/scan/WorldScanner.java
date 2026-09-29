@@ -3,6 +3,7 @@ package de.kylekreuter.vistructum.core.scan;
 import com.google.gson.JsonObject;
 import de.kylekreuter.vistructum.api.BlockBox;
 import de.kylekreuter.vistructum.api.FindingCandidate;
+import de.kylekreuter.vistructum.api.FindingTerrain;
 import de.kylekreuter.vistructum.api.ScanCause;
 import de.kylekreuter.vistructum.api.ScanFinishedEvent;
 import de.kylekreuter.vistructum.api.ScanJob;
@@ -306,7 +307,9 @@ public final class WorldScanner {
                             List<DetectedCandidate> all = new ArrayList<>(surface);
                             all.addAll(volumes);
                             return all;
-                        })).thenCompose(reporter::reportAll);
+                        }).thenApplyAsync(all -> withTerrain(all, tileColumns, current,
+                                new TerrainCut(minY, maxY - 1, blockStates)), workers))
+                .thenCompose(reporter::reportAll).thenApply(List::size);
         CompletableFuture<TileProgress> completed = reported.handle((count, error) -> {
             if (error != null) {
                 logger.warning("fullscan #" + running.id() + " tile " + current + " failed: " + error);
@@ -459,6 +462,18 @@ public final class WorldScanner {
         }
         return Optional.of(new BlockBox(tile.originX() + detection.left(), minY, tile.originZ() + detection.top(),
                 tile.originX() + detection.right() - 1, maxY, tile.originZ() + detection.bottom() - 1));
+    }
+
+    private static List<DetectedCandidate> withTerrain(List<DetectedCandidate> detected,
+                                                       Map<Long, ChunkColumn> tileColumns, ScanPlan.Tile tile,
+                                                       TerrainCut cut) {
+        BlockBox bounds = new BlockBox(tile.originX(), 0, tile.originZ(), tile.originX() + ScanPlan.TILE_SIZE - 1, 0,
+                tile.originZ() + ScanPlan.TILE_SIZE - 1);
+        Optional<FindingTerrain.SceneOrigin> tileOrigin =
+                Optional.of(new FindingTerrain.SceneOrigin(tile.originX(), tile.originZ()));
+        return detected.stream().map(candidate -> candidate.withTerrain(
+                cut.cut(tileColumns, candidate.candidate().box(), bounds).map(blocks -> new FindingTerrain(blocks,
+                        candidate.input().kind() == ModelKind.FULLSCAN ? tileOrigin : Optional.empty())))).toList();
     }
 
     private static JsonObject context(ScanJob job, ScanPlan.Tile tile) {

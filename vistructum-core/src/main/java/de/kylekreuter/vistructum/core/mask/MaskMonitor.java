@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.core.mask;
 
 import com.google.gson.JsonObject;
+import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingCandidate;
 import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Source;
@@ -36,6 +37,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 public final class MaskMonitor {
@@ -49,18 +51,20 @@ public final class MaskMonitor {
     private final Inference inference;
     private final FindingReporter reporter;
     private final Clock clock;
+    private final Consumer<Finding> created;
     private final Logger logger;
     private final AtomicLong lastWarning = new AtomicLong();
     private BukkitTask task;
 
     public MaskMonitor(MainThread mainThread, BlockChangeStore changes, ClusterSettings settings, MaskProjector projector,
-                       Inference inference, FindingReporter reporter, Clock clock) {
+                       Inference inference, FindingReporter reporter, Consumer<Finding> created, Clock clock) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.changes = Objects.requireNonNull(changes, "changes");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.projector = Objects.requireNonNull(projector, "projector");
         this.inference = Objects.requireNonNull(inference, "inference");
         this.reporter = Objects.requireNonNull(reporter, "reporter");
+        this.created = Objects.requireNonNull(created, "created");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.logger = mainThread.plugin().getLogger();
     }
@@ -105,6 +109,7 @@ public final class MaskMonitor {
             projector.project(axis, positions).ifPresent(projection ->
                     inference.infer(ModelKind.MASK, projection.scene(), context(cluster, projection, positions.size()))
                             .thenCompose(result -> reporter.reportAll(candidates(cluster, players, projection, result)))
+                            .thenAccept(stored -> stored.forEach(created))
                             .exceptionally(this::warn));
         }
     }
@@ -134,7 +139,7 @@ public final class MaskMonitor {
             return BreakClassifier.Sample.UNLOADED;
         }
         Block block = world.getBlockAt(pos.x(), pos.y(), pos.z());
-        return new BreakClassifier.Sample(true, block.getType().isSolid(), block.getType().name());
+        return new BreakClassifier.Sample(true, block.getType().isSolid(), block.getType().getKey().toString());
     }
 
     private static List<DetectedCandidate> candidates(Cluster cluster, Set<UUID> players, Projection projection,

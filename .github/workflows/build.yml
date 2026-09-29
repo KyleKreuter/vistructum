@@ -38,6 +38,8 @@ jobs:
               - "**/Dockerfile"
               - "docker-compose.yml"
               - ".dockerignore"
+              - "vistructum-ui/src/main/webapp/package.json"
+              - "vistructum-ui/src/main/webapp/package-lock.json"
               - "models/**"
               - ".github/workflows/build.yml"
 
@@ -51,6 +53,14 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+          cache: maven
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            vistructum-ui/src/main/webapp/node
+          key: npm-${{ runner.os }}-${{ hashFiles('vistructum-ui/src/main/webapp/package-lock.json', 'vistructum-ui/pom.xml') }}
+          restore-keys: npm-${{ runner.os }}-
       - run: mvn -B -q package
 
   ml:

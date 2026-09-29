@@ -1,11 +1,17 @@
 package de.kylekreuter.vistructum.core.alert;
 
+import de.kylekreuter.vistructum.api.Activity;
+import de.kylekreuter.vistructum.api.ActivityKind;
 import de.kylekreuter.vistructum.api.BlockBox;
+import de.kylekreuter.vistructum.api.DailyStats;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingCandidate;
 import de.kylekreuter.vistructum.api.FindingQuery;
+import de.kylekreuter.vistructum.api.FindingStats;
+import de.kylekreuter.vistructum.api.Heatmap;
 import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Review;
+import de.kylekreuter.vistructum.api.ReviewerStats;
 import de.kylekreuter.vistructum.api.SourcePrecision;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.api.Thumbnail;
@@ -21,6 +27,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -29,6 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -75,6 +84,37 @@ public final class FindingStore {
             ORDER BY id LIMIT ?
             """;
     private static final int THUMBNAIL_PIXEL_BYTES = 3;
+    private static final String STORED_SCENE = """
+            SELECT f.source, s.kind, s.width, s.height, s.window_top, s.window_left, s.window_bottom, s.window_right,
+                s.channels
+            FROM findings f JOIN finding_scenes s ON s.finding_id = f.id
+            WHERE f.id = ?
+            """;
+    private static final String STORE_HEATMAP = """
+            INSERT INTO finding_heatmaps (finding_id, width, height, model_version, heat)
+            SELECT id, ?, ?, ?, ? FROM findings WHERE id = ?
+            ON CONFLICT (finding_id) DO UPDATE SET width = excluded.width, height = excluded.height,
+                model_version = excluded.model_version, heat = excluded.heat
+            """;
+    private static final String REVIEWERS = """
+            SELECT reviewer, sum(verdict = ?) AS confirmed, sum(verdict = ?) AS false_alarms
+            FROM findings
+            WHERE verdict IS NOT NULL AND reviewed_at >= ? AND reviewed_at < ?
+            GROUP BY reviewer
+            ORDER BY count(*) DESC, reviewer
+            """;
+    private static final String ACTIVITY = """
+            SELECT at, actor, kind, finding_id FROM (
+                SELECT reviewed_at AS at, reviewer AS actor, verdict AS kind, id AS finding_id, 0 AS rank
+                FROM findings WHERE verdict IS NOT NULL AND reviewed_at < ?
+                UNION ALL
+                SELECT created_at, created_by, 'SHARED', finding_id, id * 2 FROM evidence_shares WHERE created_at < ?
+                UNION ALL
+                SELECT revoked_at, revoked_by, 'UNSHARED', finding_id, id * 2 + 1 FROM evidence_shares
+                WHERE revoked_at IS NOT NULL AND revoked_at < ?)
+            ORDER BY at DESC, rank DESC, finding_id DESC
+            LIMIT ?
+            """;
 
     private final Database database;
 
@@ -144,9 +184,21 @@ public final class FindingStore {
             sql.append(" AND source = ?");
             arguments.add(source.name());
         });
+        query.player().ifPresent(player -> {
+            sql.append(" AND instr(',' || players || ',', ?) > 0");
+            arguments.add("," + player + ",");
+        });
         switch (query.state()) {
             case OPEN -> sql.append(" AND verdict IS NULL");
             case REVIEWED -> sql.append(" AND verdict IS NOT NULL");
+            case CONFIRMED -> {
+                sql.append(" AND verdict = ?");
+                arguments.add(Verdict.CONFIRMED.name());
+            }
+            case FALSE_ALARM -> {
+                sql.append(" AND verdict = ?");
+                arguments.add(Verdict.FALSE_ALARM.name());
+            }
             case ANY -> {
             }
         }
@@ -292,14 +344,149 @@ public final class FindingStore {
         });
     }
 
-    public CompletableFuture<Integer> deleteReviewedBefore(Instant cutoff) {
+    public CompletableFuture<Integer> deleteReviewedBefore(Verdict verdict, Instant cutoff) {
         return database.transaction(connection -> {
             try (PreparedStatement delete = connection.prepareStatement(
-                    "DELETE FROM findings WHERE verdict IS NOT NULL AND reviewed_at < ?")) {
-                delete.setLong(1, cutoff.toEpochMilli());
+                    "DELETE FROM findings WHERE verdict = ? AND reviewed_at < ?")) {
+                delete.setString(1, verdict.name());
+                delete.setLong(2, cutoff.toEpochMilli());
                 return delete.executeUpdate();
             }
         });
+    }
+
+    public CompletableFuture<Optional<StoredScene>> scene(long id) {
+        return database.transaction(connection -> {
+            try (PreparedStatement select = connection.prepareStatement(STORED_SCENE)) {
+                select.setLong(1, id);
+                try (ResultSet rows = select.executeQuery()) {
+                    return rows.next() ? Optional.of(new StoredScene(id, Source.valueOf(rows.getString(1)),
+                            readInput(id, rows, 2))) : Optional.empty();
+                }
+            }
+        });
+    }
+
+    public CompletableFuture<Optional<Heatmap>> heatmap(long id) {
+        return database.transaction(connection -> {
+            try (PreparedStatement select = connection.prepareStatement(
+                    "SELECT width, height, heat FROM finding_heatmaps WHERE finding_id = ?")) {
+                select.setLong(1, id);
+                try (ResultSet rows = select.executeQuery()) {
+                    if (!rows.next()) {
+                        return Optional.empty();
+                    }
+                    byte[] heat = rows.getBytes(3);
+                    int[] values = new int[heat.length];
+                    for (int i = 0; i < heat.length; i++) {
+                        values[i] = heat[i] & 0xFF;
+                    }
+                    return Optional.of(new Heatmap(rows.getInt(1), rows.getInt(2), values));
+                }
+            }
+        });
+    }
+
+    public CompletableFuture<Boolean> storeHeatmap(long id, Heatmap heatmap, String modelVersion) {
+        int[] values = heatmap.values();
+        byte[] heat = new byte[values.length];
+        for (int i = 0; i < values.length; i++) {
+            heat[i] = (byte) values[i];
+        }
+        return database.transaction(connection -> {
+            try (PreparedStatement insert = connection.prepareStatement(STORE_HEATMAP)) {
+                insert.setInt(1, heatmap.width());
+                insert.setInt(2, heatmap.height());
+                insert.setString(3, modelVersion);
+                insert.setBytes(4, heat);
+                insert.setLong(5, id);
+                return insert.executeUpdate() > 0;
+            }
+        });
+    }
+
+    public CompletableFuture<FindingStats> stats(Instant from, Instant to, ZoneId zone) {
+        return database.transaction(connection -> new FindingStats(days(connection, from, to, zone),
+                reviewers(connection, from, to), countOpen(connection), oldestOpen(connection)));
+    }
+
+    public CompletableFuture<List<Activity>> activity(Instant before, int limit) {
+        return database.transaction(connection -> {
+            List<Activity> entries = new ArrayList<>();
+            try (PreparedStatement select = connection.prepareStatement(ACTIVITY)) {
+                long cursor = before.toEpochMilli();
+                select.setLong(1, cursor);
+                select.setLong(2, cursor);
+                select.setLong(3, cursor);
+                select.setInt(4, limit);
+                try (ResultSet rows = select.executeQuery()) {
+                    while (rows.next()) {
+                        entries.add(new Activity(Instant.ofEpochMilli(rows.getLong(1)), rows.getString(2),
+                                ActivityKind.valueOf(rows.getString(3)), rows.getLong(4)));
+                    }
+                }
+            }
+            return List.copyOf(entries);
+        });
+    }
+
+    private static List<DailyStats> days(Connection connection, Instant from, Instant to, ZoneId zone)
+            throws SQLException {
+        Map<LocalDate, Map<Source, int[]>> counts = new TreeMap<>();
+        try (PreparedStatement select = connection.prepareStatement(
+                "SELECT created_at, source, verdict FROM findings WHERE created_at >= ? AND created_at < ?")) {
+            select.setLong(1, from.toEpochMilli());
+            select.setLong(2, to.toEpochMilli());
+            try (ResultSet rows = select.executeQuery()) {
+                while (rows.next()) {
+                    LocalDate day = Instant.ofEpochMilli(rows.getLong(1)).atZone(zone).toLocalDate();
+                    int[] count = counts.computeIfAbsent(day, d -> new EnumMap<>(Source.class))
+                            .computeIfAbsent(Source.valueOf(rows.getString(2)), s -> new int[3]);
+                    count[0]++;
+                    String verdict = rows.getString(3);
+                    if (verdict != null) {
+                        count[Verdict.valueOf(verdict) == Verdict.CONFIRMED ? 1 : 2]++;
+                    }
+                }
+            }
+        }
+        List<DailyStats> days = new ArrayList<>();
+        counts.forEach((day, sources) -> sources.forEach((source, count) ->
+                days.add(new DailyStats(day, source, count[0], count[1], count[2]))));
+        return days;
+    }
+
+    private static List<ReviewerStats> reviewers(Connection connection, Instant from, Instant to) throws SQLException {
+        List<ReviewerStats> reviewers = new ArrayList<>();
+        try (PreparedStatement select = connection.prepareStatement(REVIEWERS)) {
+            select.setString(1, Verdict.CONFIRMED.name());
+            select.setString(2, Verdict.FALSE_ALARM.name());
+            select.setLong(3, from.toEpochMilli());
+            select.setLong(4, to.toEpochMilli());
+            try (ResultSet rows = select.executeQuery()) {
+                while (rows.next()) {
+                    reviewers.add(new ReviewerStats(rows.getString(1), rows.getInt(2), rows.getInt(3)));
+                }
+            }
+        }
+        return reviewers;
+    }
+
+    private static long countOpen(Connection connection) throws SQLException {
+        try (PreparedStatement select = connection.prepareStatement(
+                "SELECT count(*) FROM findings WHERE verdict IS NULL");
+             ResultSet rows = select.executeQuery()) {
+            return rows.getLong(1);
+        }
+    }
+
+    private static Optional<Instant> oldestOpen(Connection connection) throws SQLException {
+        try (PreparedStatement select = connection.prepareStatement(
+                "SELECT min(created_at) FROM findings WHERE verdict IS NULL");
+             ResultSet rows = select.executeQuery()) {
+            long oldest = rows.getLong(1);
+            return rows.wasNull() ? Optional.empty() : Optional.of(Instant.ofEpochMilli(oldest));
+        }
     }
 
     private static boolean overlapsRecent(Connection connection, FindingCandidate candidate, Instant cutoff) throws SQLException {
@@ -365,13 +552,17 @@ public final class FindingStore {
 
     private static ReviewedScene readScene(ResultSet rows) throws SQLException {
         long id = rows.getLong(1);
-        String kind = rows.getString(5);
+        return new ReviewedScene(id, Source.valueOf(rows.getString(2)), Verdict.valueOf(rows.getString(3)),
+                rows.getString(4), readInput(id, rows, 5));
+    }
+
+    private static ModelInput readInput(long id, ResultSet rows, int first) throws SQLException {
+        String kind = rows.getString(first);
         ModelKind modelKind = ModelKind.byId(kind)
                 .orElseThrow(() -> new SQLException("unknown model kind " + kind + " for finding " + id));
-        ModelInput input = new ModelInput(modelKind, SceneBlob.decode(rows.getInt(6), rows.getInt(7), rows.getBytes(12)),
-                rows.getInt(8), rows.getInt(9), rows.getInt(10), rows.getInt(11));
-        return new ReviewedScene(id, Source.valueOf(rows.getString(2)), Verdict.valueOf(rows.getString(3)),
-                rows.getString(4), input);
+        return new ModelInput(modelKind, SceneBlob.decode(rows.getInt(first + 1), rows.getInt(first + 2),
+                rows.getBytes(first + 7)), rows.getInt(first + 3), rows.getInt(first + 4), rows.getInt(first + 5),
+                rows.getInt(first + 6));
     }
 
     private static Optional<Finding> select(Connection connection, long id) throws SQLException {

@@ -53,6 +53,21 @@ public final class InferenceEngine implements AutoCloseable {
         }, executor);
     }
 
+    public CompletableFuture<OcclusionMap> occlusion(ModelKind kind, SurfaceScene scene, int top, int left, int bottom,
+                                                     int right) {
+        return CompletableFuture.supplyAsync(() -> {
+            Model model = models.get(kind);
+            if (model == null) {
+                throw new CompletionException(new ModelException("no " + kind.id() + " model loaded"));
+            }
+            try {
+                return model.occlusion(scene, top, left, bottom, right);
+            } catch (ModelException e) {
+                throw new CompletionException(e);
+            }
+        }, executor);
+    }
+
     public CompletableFuture<Map<ModelKind, ModelInfo>> models() {
         return CompletableFuture.supplyAsync(() -> {
             Map<ModelKind, ModelInfo> infos = new EnumMap<>(ModelKind.class);

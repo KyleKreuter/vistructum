@@ -18,24 +18,31 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class BlockChangeStore {
 
-    private static final String UPSERT = """
-            INSERT INTO block_changes (world, x, y, z, player, kind, material, changed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (world, x, y, z, player) DO UPDATE
-            SET kind = excluded.kind, material = excluded.material, changed_at = excluded.changed_at
+    private static final String INSERT = """
+            INSERT INTO block_events (world, x, y, z, player, player_name, kind, block_data, previous_data, changed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+    private static final String LATEST_PER_POSITION_AND_PLAYER = """
+            SELECT world, x, y, z, player, kind, block_data, changed_at, reported_at FROM (
+                SELECT world, x, y, z, player, kind, block_data, changed_at,
+                    max(reported_at) OVER (PARTITION BY world, x, y, z, player) AS reported_at,
+                    row_number() OVER (PARTITION BY world, x, y, z, player ORDER BY changed_at DESC, id DESC) AS newest
+                FROM block_events)
+            WHERE newest = 1
             """;
     private static final String MARK_REPORTED =
-            "UPDATE block_changes SET reported_at = ? WHERE world = ? AND x = ? AND y = ? AND z = ?";
+            "UPDATE block_events SET reported_at = ? WHERE world = ? AND x = ? AND z = ? AND y = ?";
 
     private final Database database;
-    private final Queue<BlockChange> unwritten = new ConcurrentLinkedQueue<>();
+    private final Queue<TrackedChange> unwritten = new ConcurrentLinkedQueue<>();
     private final AtomicBoolean flushQueued = new AtomicBoolean();
 
     public BlockChangeStore(Database database) {
         this.database = Objects.requireNonNull(database, "database");
     }
 
-    public void record(String world, BlockPos pos, UUID player, ChangeKind kind, String material, long changedAt) {
-        unwritten.add(new BlockChange(world, pos, player, kind, material, changedAt, 0));
+    public void record(TrackedChange change) {
+        unwritten.add(Objects.requireNonNull(change, "change"));
         if (flushQueued.compareAndSet(false, true)) {
             database.transaction(this::flush);
         }
@@ -44,14 +51,14 @@ public final class BlockChangeStore {
     public CompletableFuture<List<Cluster>> takeReady(ClusterSettings settings, long nowMillis) {
         return database.transaction(connection -> {
             flush(connection);
-            try (PreparedStatement delete = connection.prepareStatement("DELETE FROM block_changes WHERE changed_at < ?")) {
+            try (PreparedStatement delete = connection.prepareStatement("DELETE FROM block_events WHERE changed_at < ?")) {
                 delete.setLong(1, nowMillis - settings.ttl().toMillis());
                 delete.executeUpdate();
             }
             if (!anyUnreported(connection)) {
                 return List.of();
             }
-            List<Cluster> ready = Clustering.ready(readAll(connection), settings, nowMillis);
+            List<Cluster> ready = Clustering.ready(latest(connection), settings, nowMillis);
             markReported(connection, ready, nowMillis);
             return ready;
         });
@@ -59,7 +66,7 @@ public final class BlockChangeStore {
 
     public CompletableFuture<Integer> count() {
         return database.transaction(connection -> {
-            try (PreparedStatement select = connection.prepareStatement("SELECT count(*) FROM block_changes");
+            try (PreparedStatement select = connection.prepareStatement("SELECT count(*) FROM (SELECT DISTINCT world, x, y, z, player FROM block_events)");
                  ResultSet rows = select.executeQuery()) {
                 return rows.getInt(1);
             }
@@ -68,41 +75,42 @@ public final class BlockChangeStore {
 
     private Void flush(Connection connection) throws SQLException {
         flushQueued.set(false);
-        try (PreparedStatement upsert = connection.prepareStatement(UPSERT)) {
-            BlockChange change;
+        try (PreparedStatement insert = connection.prepareStatement(INSERT)) {
+            TrackedChange change;
             while ((change = unwritten.poll()) != null) {
-                upsert.setString(1, change.world());
-                upsert.setInt(2, change.pos().x());
-                upsert.setInt(3, change.pos().y());
-                upsert.setInt(4, change.pos().z());
-                upsert.setString(5, change.player().toString());
-                upsert.setString(6, change.kind().name());
-                upsert.setString(7, change.material());
-                upsert.setLong(8, change.changedAt());
-                upsert.addBatch();
+                insert.setString(1, change.world());
+                insert.setInt(2, change.pos().x());
+                insert.setInt(3, change.pos().y());
+                insert.setInt(4, change.pos().z());
+                insert.setString(5, change.player().toString());
+                insert.setString(6, change.playerName());
+                insert.setString(7, change.kind().name());
+                insert.setString(8, change.blockData());
+                insert.setString(9, change.previousData());
+                insert.setLong(10, change.changedAt());
+                insert.addBatch();
             }
-            upsert.executeBatch();
+            insert.executeBatch();
         }
         return null;
     }
 
     private static boolean anyUnreported(Connection connection) throws SQLException {
         try (PreparedStatement select = connection.prepareStatement(
-                "SELECT EXISTS (SELECT 1 FROM block_changes WHERE changed_at > reported_at)");
+                "SELECT EXISTS (SELECT 1 FROM block_events WHERE changed_at > reported_at)");
              ResultSet rows = select.executeQuery()) {
             return rows.getBoolean(1);
         }
     }
 
-    private static List<BlockChange> readAll(Connection connection) throws SQLException {
+    private static List<BlockChange> latest(Connection connection) throws SQLException {
         List<BlockChange> changes = new ArrayList<>();
-        try (PreparedStatement select = connection.prepareStatement(
-                "SELECT world, x, y, z, player, kind, material, changed_at, reported_at FROM block_changes");
+        try (PreparedStatement select = connection.prepareStatement(LATEST_PER_POSITION_AND_PLAYER);
              ResultSet rows = select.executeQuery()) {
             while (rows.next()) {
                 changes.add(new BlockChange(rows.getString(1), new BlockPos(rows.getInt(2), rows.getInt(3), rows.getInt(4)),
-                        UUID.fromString(rows.getString(5)), ChangeKind.valueOf(rows.getString(6)), rows.getString(7),
-                        rows.getLong(8), rows.getLong(9)));
+                        UUID.fromString(rows.getString(5)), ChangeKind.valueOf(rows.getString(6)),
+                        TrackedChange.material(rows.getString(7)), rows.getLong(8), rows.getLong(9)));
             }
         }
         return changes;
@@ -115,8 +123,8 @@ public final class BlockChangeStore {
                     update.setLong(1, nowMillis);
                     update.setString(2, cluster.world());
                     update.setInt(3, pos.x());
-                    update.setInt(4, pos.y());
-                    update.setInt(5, pos.z());
+                    update.setInt(4, pos.z());
+                    update.setInt(5, pos.y());
                     update.addBatch();
                 }
             }

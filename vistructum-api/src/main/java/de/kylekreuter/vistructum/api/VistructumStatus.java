@@ -12,8 +12,11 @@ import java.util.Objects;
  * @param activeScans unmodifiable list of the scans in state {@link ScanStatus#QUEUED} or
  *                    {@link ScanStatus#RUNNING}, ordered by ascending identifier
  * @param inference state of the inference path that serves detections
+ * @param recordingEnabled {@code true} if player movement is recorded and evidence is secured for findings of the
+ *                         live check
  */
-public record VistructumStatus(int trackedChanges, int openFindings, List<ScanJob> activeScans, InferenceStatus inference) {
+public record VistructumStatus(int trackedChanges, int openFindings, List<ScanJob> activeScans, InferenceStatus inference,
+                               boolean recordingEnabled) {
 
     /**
      * Validates the components and copies {@code activeScans} into an unmodifiable list.

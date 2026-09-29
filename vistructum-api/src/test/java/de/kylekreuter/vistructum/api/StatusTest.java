@@ -27,7 +27,8 @@ class StatusTest {
     void statusListsAreImmutableCopies() {
         List<ScanJob> jobs = new ArrayList<>(List.of(new ScanJob(1, "world", ScanCause.MANUAL, ScanStatus.RUNNING, 4, 1,
                 0, 0, Instant.EPOCH)));
-        VistructumStatus status = new VistructumStatus(3, 2, jobs, InferenceStatus.unavailable(InferenceMode.LOCAL, "down"));
+        VistructumStatus status = new VistructumStatus(3, 2, jobs, InferenceStatus.unavailable(InferenceMode.LOCAL, "down"),
+                false);
         jobs.clear();
         assertEquals(1, status.activeScans().size());
         assertThrows(UnsupportedOperationException.class, () -> status.activeScans().clear());

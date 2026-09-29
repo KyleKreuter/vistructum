@@ -41,17 +41,39 @@ class BlockChangeStoreTest {
         database.close();
     }
 
+    private void record(BlockPos pos, ChangeKind kind, String blockData, long changedAt) {
+        store.record(new TrackedChange("world", pos, PLAYER, "Builder", kind, blockData, "minecraft:air", changedAt));
+    }
+
+    @Test
+    void everyChangeIsKeptInTheLogWhileTheNewestDecides() throws Exception {
+        record(new BlockPos(0, 0, 0), ChangeKind.PLACE, "minecraft:oak_stairs[facing=north]", T);
+        record(new BlockPos(0, 0, 0), ChangeKind.BREAK, "minecraft:oak_stairs[facing=north]", T + 10);
+        record(new BlockPos(0, 0, 0), ChangeKind.PLACE, "minecraft:stone", T + 20);
+        record(new BlockPos(1, 0, 0), ChangeKind.PLACE, "minecraft:stone", T + 20);
+
+        assertEquals(2, store.count().get());
+        assertEquals(4L, database.transaction(connection -> {
+            try (var rows = connection.createStatement().executeQuery("SELECT count(*) FROM block_events")) {
+                return rows.getLong(1);
+            }
+        }).get());
+        Cluster cluster = store.takeReady(SETTINGS, T + 200).get().getFirst();
+        assertEquals(Set.of(new BlockPos(0, 0, 0), new BlockPos(1, 0, 0)), cluster.placed());
+        assertEquals("minecraft:stone", cluster.blocks().get(new BlockPos(0, 0, 0)).material());
+    }
+
     @Test
     void readyClusterIsTakenOnceUntilItChangesAgain() throws Exception {
-        store.record("world", new BlockPos(0, 0, 0), PLAYER, ChangeKind.PLACE, "STONE", T);
-        store.record("world", new BlockPos(2, 0, 0), PLAYER, ChangeKind.PLACE, "STONE", T);
+        record(new BlockPos(0, 0, 0), ChangeKind.PLACE, "minecraft:stone", T);
+        record(new BlockPos(2, 0, 0), ChangeKind.PLACE, "minecraft:stone", T);
 
         assertTrue(store.takeReady(SETTINGS, T + 50).get().isEmpty());
         List<Cluster> first = store.takeReady(SETTINGS, T + 100).get();
         assertEquals(1, first.size());
         assertTrue(store.takeReady(SETTINGS, T + 200).get().isEmpty());
 
-        store.record("world", new BlockPos(4, 0, 0), PLAYER, ChangeKind.PLACE, "STONE", T + 250);
+        record(new BlockPos(4, 0, 0), ChangeKind.PLACE, "minecraft:stone", T + 250);
         assertTrue(store.takeReady(SETTINGS, T + 300).get().isEmpty());
         List<Cluster> again = store.takeReady(SETTINGS, T + 350).get();
         assertEquals(1, again.size());
@@ -60,20 +82,20 @@ class BlockChangeStoreTest {
 
     @Test
     void theNewestChangeOfAPlayerDecidesTheKind() throws Exception {
-        store.record("world", new BlockPos(0, 0, 0), PLAYER, ChangeKind.PLACE, "OAK_PLANKS", T);
-        store.record("world", new BlockPos(0, 0, 0), PLAYER, ChangeKind.BREAK, "OAK_PLANKS", T + 10);
-        store.record("world", new BlockPos(1, 0, 0), PLAYER, ChangeKind.PLACE, "OAK_PLANKS", T + 10);
+        record(new BlockPos(0, 0, 0), ChangeKind.PLACE, "minecraft:oak_planks", T);
+        record(new BlockPos(0, 0, 0), ChangeKind.BREAK, "minecraft:oak_planks", T + 10);
+        record(new BlockPos(1, 0, 0), ChangeKind.PLACE, "minecraft:oak_planks", T + 10);
 
         Cluster cluster = store.takeReady(SETTINGS, T + 200).get().getFirst();
 
-        assertEquals(Map.of(new BlockPos(0, 0, 0), "OAK_PLANKS"), cluster.broken());
+        assertEquals(Map.of(new BlockPos(0, 0, 0), "minecraft:oak_planks"), cluster.broken());
         assertEquals(Set.of(new BlockPos(1, 0, 0)), cluster.placed());
     }
 
     @Test
     void expiredChangesAreDeleted() throws Exception {
-        store.record("world", new BlockPos(0, 0, 0), PLAYER, ChangeKind.PLACE, "STONE", T);
-        store.record("world", new BlockPos(1, 0, 0), PLAYER, ChangeKind.PLACE, "STONE", T + 900);
+        record(new BlockPos(0, 0, 0), ChangeKind.PLACE, "minecraft:stone", T);
+        record(new BlockPos(1, 0, 0), ChangeKind.PLACE, "minecraft:stone", T + 900);
         assertEquals(2, store.count().get());
 
         store.takeReady(SETTINGS, T + 1500).get();
@@ -82,16 +104,16 @@ class BlockChangeStoreTest {
 
     @Test
     void recordingTheSamePositionAgainRefreshesIt() throws Exception {
-        store.record("world", new BlockPos(0, 0, 0), PLAYER, ChangeKind.PLACE, "STONE", T);
-        store.record("world", new BlockPos(0, 0, 0), PLAYER, ChangeKind.PLACE, "STONE", T + 900);
+        record(new BlockPos(0, 0, 0), ChangeKind.PLACE, "minecraft:stone", T);
+        record(new BlockPos(0, 0, 0), ChangeKind.PLACE, "minecraft:stone", T + 900);
         store.takeReady(SETTINGS, T + 1500).get();
         assertEquals(1, store.count().get());
     }
 
     @Test
     void stateSurvivesReopening() throws Exception {
-        store.record("world", new BlockPos(0, 0, 0), PLAYER, ChangeKind.PLACE, "STONE", T);
-        store.record("world", new BlockPos(2, 0, 0), PLAYER, ChangeKind.PLACE, "STONE", T);
+        record(new BlockPos(0, 0, 0), ChangeKind.PLACE, "minecraft:stone", T);
+        record(new BlockPos(2, 0, 0), ChangeKind.PLACE, "minecraft:stone", T);
         store.count().get();
         database.close();
 

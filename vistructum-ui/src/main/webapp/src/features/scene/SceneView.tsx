@@ -115,18 +115,15 @@ export function SceneView({ scene, colours, heatmap, heatmapState, layer, onLaye
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Tabs value={String(layer)} onValueChange={(value) => onLayer(Number(value))}>
-          <TabsList aria-label="Layer">
-            {layers.map((info, index) => (
-              <TabsTrigger key={info.key} value={String(index)} title={info.hint}>
-                {info.title}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-        <span className="text-xs text-muted-foreground">{active.hint}</span>
-      </div>
+      <Tabs value={String(layer)} onValueChange={(value) => onLayer(Number(value))}>
+        <TabsList aria-label="Layer">
+          {layers.map((info, index) => (
+            <TabsTrigger key={info.key} value={String(index)}>
+              {info.title}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
       <div className="rounded-lg bg-well p-3">
         <LayerCanvas
           scene={scene}

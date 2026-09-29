@@ -6,15 +6,14 @@ export type LayerKey = "colour" | "height" | "relief" | "luminance" | "heatmap";
 export interface LayerInfo {
   key: LayerKey;
   title: string;
-  hint: string;
 }
 
 export const layers: LayerInfo[] = [
-  { key: "colour", title: "Colour", hint: "Map colour per block, shaded by height" },
-  { key: "height", title: "Height", hint: "Relative to the median of the model window" },
-  { key: "relief", title: "Relief", hint: "Hillshade from the height" },
-  { key: "luminance", title: "Luminance", hint: "The channel the model sees" },
-  { key: "heatmap", title: "Heatmap", hint: "Score drop when a cell is hidden" },
+  { key: "colour", title: "Colour" },
+  { key: "height", title: "Height" },
+  { key: "relief", title: "Relief" },
+  { key: "luminance", title: "Luminance" },
+  { key: "heatmap", title: "Heatmap" },
 ];
 
 export interface PaintOptions {

@@ -29,6 +29,8 @@
         <gson.version>2.11.0</gson.version>
         <lz4.version>1.8.0</lz4.version>
         <bstats.version>3.2.1</bstats.version>
+        <javalin.version>7.2.3</javalin.version>
+        <slf4j.version>2.0.18</slf4j.version>
     </properties>
 
     <repositories>
@@ -83,6 +85,16 @@
                 <artifactId>lz4-java</artifactId>
                 <version>${lz4.version}</version>
                 <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.javalin</groupId>
+                <artifactId>javalin</artifactId>
+                <version>${javalin.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.bstats</groupId>

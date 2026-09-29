@@ -15,7 +15,7 @@ export function PageSpinner({ className }: { className?: string }) {
 
 export function ErrorState({ error, onRetry, className }: { error: unknown; onRetry?: () => void; className?: string }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed p-8 text-center", className)}>
+    <div className={cn("flex flex-col items-center justify-center gap-3 p-8 text-center", className)}>
       <AlertTriangle className="size-5 text-destructive" />
       <p className="text-sm text-muted-foreground">{errorMessage(error)}</p>
       {onRetry && (
@@ -29,7 +29,7 @@ export function ErrorState({ error, onRetry, className }: { error: unknown; onRe
 
 export function EmptyState({ title, children, className }: { title: string; children?: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center gap-1 rounded-lg border border-dashed p-8 text-center", className)}>
+    <div className={cn("flex flex-col items-center justify-center gap-1 p-8 text-center", className)}>
       <p className="text-sm font-medium">{title}</p>
       {children && <div className="text-sm text-muted-foreground">{children}</div>}
     </div>

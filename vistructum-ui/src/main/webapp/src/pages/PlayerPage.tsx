@@ -64,7 +64,7 @@ export default function PlayerPage() {
               </div>
             </div>
             {missingSkin === uuid ? (
-              <div className="flex h-72 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">No skin available</div>
+              <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">No skin available</div>
             ) : (
               <Suspense fallback={<PageSpinner className="h-72" />}>
                 <SkinPreview url={urls.skin(uuid)} onMissing={onMissing} />

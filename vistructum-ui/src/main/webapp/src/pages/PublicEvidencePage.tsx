@@ -49,7 +49,6 @@ export default function PublicEvidencePage() {
       <header className="border-b">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
           <Logo />
-          <span className="text-sm text-muted-foreground">Evidence</span>
           <div className="ml-auto">
             <ThemeToggle />
           </div>
@@ -59,7 +58,7 @@ export default function PublicEvidencePage() {
         {evidence.isPending || palette.isPending ? (
           <PageSpinner className="h-[60vh]" />
         ) : gone ? (
-          <div className="mx-auto max-w-md space-y-2 rounded-lg border border-dashed p-8 text-center">
+          <div className="mx-auto max-w-md space-y-2 p-8 text-center">
             <p className="font-medium">This link is not active</p>
             <p className="text-sm text-muted-foreground">The evidence was never shared under this link, or the link has been deactivated.</p>
           </div>

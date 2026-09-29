@@ -11,6 +11,7 @@ import org.bukkit.Bukkit;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -53,11 +54,17 @@ public final class FindingReporter {
                         }));
     }
 
-    public CompletableFuture<Integer> reportAll(List<DetectedCandidate> candidates) {
-        CompletableFuture<Integer> reported = CompletableFuture.completedFuture(0);
+    public CompletableFuture<List<Finding>> reportAll(List<DetectedCandidate> candidates) {
+        CompletableFuture<List<Finding>> reported = CompletableFuture.completedFuture(List.of());
         for (DetectedCandidate candidate : candidates) {
-            reported = reported.thenCompose(count -> report(candidate)
-                    .thenApply(stored -> count + (stored.isPresent() ? 1 : 0)));
+            reported = reported.thenCompose(findings -> report(candidate).thenApply(stored -> {
+                if (stored.isEmpty()) {
+                    return findings;
+                }
+                List<Finding> all = new ArrayList<>(findings);
+                all.add(stored.get());
+                return List.copyOf(all);
+            }));
         }
         return reported;
     }

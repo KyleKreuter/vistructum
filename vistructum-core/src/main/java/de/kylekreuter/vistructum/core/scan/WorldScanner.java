@@ -306,7 +306,7 @@ public final class WorldScanner {
                             List<DetectedCandidate> all = new ArrayList<>(surface);
                             all.addAll(volumes);
                             return all;
-                        })).thenCompose(reporter::reportAll);
+                        })).thenCompose(reporter::reportAll).thenApply(List::size);
         CompletableFuture<TileProgress> completed = reported.handle((count, error) -> {
             if (error != null) {
                 logger.warning("fullscan #" + running.id() + " tile " + current + " failed: " + error);

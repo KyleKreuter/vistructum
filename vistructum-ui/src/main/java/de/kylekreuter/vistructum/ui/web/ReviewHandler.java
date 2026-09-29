@@ -66,7 +66,8 @@ final class ReviewHandler implements HttpHandler {
             return CompletableFuture.completedFuture(Reply.text(405, "Method not allowed").with("Allow", "GET, HEAD"));
         }
         if (path.equals(WebSettings.ROOT + "/login")) {
-            return api.login(request);
+            return request.method().equals("GET") ? api.login(request)
+                    : CompletableFuture.completedFuture(Reply.text(405, "Method not allowed").with("Allow", "GET"));
         }
         if (path.startsWith(StaticFiles.ASSETS)) {
             return CompletableFuture.completedFuture(files.asset(path));

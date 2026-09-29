@@ -123,6 +123,9 @@ class WebServerTest {
     @Test
     void usedOrUnknownLoginTokensAndForeignTargetsAreRejected() throws Exception {
         String login = vistructum.issueLogin(STAFF, "Staff").join();
+        HttpResponse<String> probe = send(HttpRequest.newBuilder(uri("/review/login?token=" + login))
+                .method("HEAD", HttpRequest.BodyPublishers.noBody()), Map.of());
+        assertEquals(405, probe.statusCode());
         HttpResponse<String> first = get("/review/login?token=" + login + "&next=//evil.example/", Map.of());
         assertEquals("/review/", first.headers().firstValue("Location").orElseThrow());
         HttpResponse<String> again = get("/review/login?token=" + login, Map.of());

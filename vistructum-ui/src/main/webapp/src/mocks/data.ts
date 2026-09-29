@@ -1,5 +1,6 @@
-import type { ActivityItem, Evidence, FindingDetail, FindingSummary, Heatmap, Palette, PlayerRef, ScanCause, Scene, Source, Verdict } from "@/api/types";
+import type { ActivityItem, Evidence, FindingDetail, FindingSummary, Heatmap, Palette, PlayerRef, ScanCause, Scene, Source, Status, Verdict } from "@/api/types";
 import { colourOf, isAir, materialOf, rgbTriple } from "@/logic/blocks";
+import { seededRandom } from "@/logic/mc/random";
 import { appliedCount, buildTimeline } from "@/logic/timeline";
 import { cellIndex, dynamicStates, indexVolume } from "@/logic/volume";
 import { builder, findingBox, syntheticEvidence, watcher } from "./evidence";
@@ -23,7 +24,7 @@ interface FixtureScene {
   heat: { top: number; left: number; size: number; values: number[] };
 }
 
-interface Fixture {
+export interface Fixture {
   scenes: FixtureScene[];
   palette: Palette;
 }
@@ -37,14 +38,53 @@ export interface MockFinding extends FindingDetail {
   shareActive: boolean;
 }
 
+export interface MockStatus {
+  trackedChanges: number;
+  recordingEnabled: boolean;
+  texturesAvailable: boolean;
+  inference: Status["inference"];
+}
+
+export interface MockScan {
+  id: number;
+  world: string;
+  cause: ScanCause;
+  totalTiles: number;
+  startedAt: number;
+  tileMs: number;
+  findings: number;
+}
+
 export interface MockDb {
   me: { player: string; name: string; expiresAt: string; canShare: boolean };
   findings: MockFinding[];
   players: PlayerRef[];
   palette: Palette;
   activity: ActivityItem[];
-  scans: { id: number; world: string; cause: ScanCause; totalTiles: number; startedAt: number; tileMs: number; findings: number }[];
+  scans: MockScan[];
   shares: Map<string, number>;
+  status: MockStatus;
+  evidenceOf: (finding: MockFinding) => Evidence | null;
+}
+
+export const defaultInference: Status["inference"] = {
+  mode: "LOCAL",
+  available: true,
+  models: [
+    { kind: "fullscan", version: "scan-v4" },
+    { kind: "mask", version: "bf-scan-3" },
+  ],
+  detail: null,
+};
+
+export const texturesConfigured = !!import.meta.env.VITE_ASSETS_TARGET;
+
+export function storedEvidence(finding: MockFinding): Evidence | null {
+  return finding.evidence;
+}
+
+export function expiresIn(now: number): string {
+  return new Date(now + 12 * 3600_000).toISOString();
 }
 
 export function publicUrl(token: string): string {
@@ -64,18 +104,7 @@ const extraPlayers: PlayerRef[] = [
 const reviewers = ["kyleonaut", "Staff_Anna", "mod_jonas"];
 const worlds = ["world", "world", "world", "world_nether", "creative"];
 
-function random(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-async function loadFixture(): Promise<Fixture> {
+export async function loadFixture(): Promise<Fixture> {
   const response = await fetch(scenesUrl);
   const stream = response.body;
   if (!stream) throw new Error("fixture");
@@ -83,7 +112,7 @@ async function loadFixture(): Promise<Fixture> {
   return JSON.parse(text) as Fixture;
 }
 
-function fixtureScene(fixture: FixtureScene): { scene: Scene; heatmap: Heatmap } {
+export function fixtureScene(fixture: FixtureScene): { scene: Scene; heatmap: Heatmap } {
   const blocks = fixture.blocks.map((value) => (value === 255 ? -1 : value));
   const values = new Array<number>(fixture.width * fixture.height).fill(0);
   const { top, left, size } = fixture.heat;
@@ -172,14 +201,13 @@ function evidenceScene(evidence: Evidence, palette: Palette): { scene: Scene; he
   };
 }
 
-function teleport(world: string, x: number, y: number, z: number): string {
+export function teleport(world: string, x: number, y: number, z: number): string {
   const command = `/tp @s ${x} ${y} ${z}`;
   return world === "world" ? command : `/execute in minecraft:${world} run tp @s ${x} ${y} ${z}`;
 }
 
-export async function createDb(now = Date.now()): Promise<MockDb> {
-  const fixture = await loadFixture();
-  const palette: Palette = {
+export function mockPalette(fixture: Fixture): Palette {
+  return {
     ...fixture.palette,
     "minecraft:black_concrete": 0x080a0f,
     "minecraft:white_concrete": 0xcfd5d6,
@@ -195,7 +223,11 @@ export async function createDb(now = Date.now()): Promise<MockDb> {
     "minecraft:dirt": 0x976d4d,
     "minecraft:stone": 0x707070,
   };
-  const rnd = random(2026);
+}
+
+export function createDefaultDb(fixture: Fixture, now = Date.now()): MockDb {
+  const palette = mockPalette(fixture);
+  const rnd = seededRandom(2026);
   const players = [builder, watcher, ...extraPlayers].map((player) => ({ uuid: player.uuid, name: player.name }));
   const fixtureScenes = fixture.scenes.map(fixtureScene);
   const findings: MockFinding[] = [];
@@ -299,7 +331,7 @@ export async function createDb(now = Date.now()): Promise<MockDb> {
   findings.sort((a, b) => b.id - a.id);
   activity.sort((a, b) => b.at.localeCompare(a.at));
   return {
-    me: { player: staff.uuid, name: staff.name, expiresAt: new Date(now + 12 * 3600_000).toISOString(), canShare: true },
+    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true },
     findings,
     players: [...players, staff],
     palette,
@@ -309,5 +341,7 @@ export async function createDb(now = Date.now()): Promise<MockDb> {
       { id: 312, world: "world_nether", cause: "MANUAL", totalTiles: 400, startedAt: now + 5 * 60_000, tileMs: 300, findings: 0 },
     ],
     shares: new Map(evidenceFindings.filter((entry) => entry.token).map((entry) => [entry.token ?? "", entry.id])),
+    status: { trackedChanges: 1843, recordingEnabled: true, texturesAvailable: texturesConfigured, inference: defaultInference },
+    evidenceOf: storedEvidence,
   };
 }

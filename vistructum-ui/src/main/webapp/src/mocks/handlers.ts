@@ -1,9 +1,10 @@
-import { delay, http, HttpResponse } from "msw";
+import { delay, http, HttpResponse, passthrough } from "msw";
 import type { ActivityItem, AssetStatus, FindingState, FindingSummary, ScanJob, Stats, Status, Verdict } from "@/api/types";
 import { matchesState } from "@/logic/filters";
 import { paintLayer, sceneColours } from "@/logic/sceneLayers";
 import { publicUrl, type MockDb, type MockFinding } from "./data";
 import { relativeEvidence } from "./evidence";
+import { activeSettings, type EndpointKey } from "./settings";
 import { facePng, imagePng, lookFor, skinPng } from "./skins";
 
 const api = "/review/api";
@@ -28,6 +29,17 @@ export function setMockSignedOut(value: boolean) {
 }
 
 const error = (status: number, code: string) => HttpResponse.json({ error: code }, { status });
+
+const failureCodes: Record<number, string> = { 401: "unauthorized", 403: "forbidden", 404: "not_found", 409: "not_shareable", 500: "internal", 503: "unavailable" };
+
+async function gate(key: EndpointKey, defaultDelay: number, access: "private" | "public" = "private") {
+  const settings = activeSettings();
+  const pause = settings.latency ?? defaultDelay;
+  if (pause > 0) await delay(pause);
+  const status = settings.failures[key];
+  if (status !== undefined) return error(status, failureCodes[status] ?? "internal");
+  return access === "private" && mockSignedOut() ? error(401, "unauthorized") : null;
+}
 
 function summary(finding: MockFinding): FindingSummary {
   return {
@@ -58,10 +70,10 @@ function png(blob: Blob, headers: Record<string, string> = {}) {
   return new HttpResponse(blob, { headers: { "Content-Type": "image/png", ...headers } });
 }
 
-function sharedFinding(db: MockDb, shareToken: string): MockFinding | undefined {
+function sharedFinding(db: MockDb, index: Map<number, MockFinding>, shareToken: string): MockFinding | undefined {
   const id = db.shares.get(shareToken);
-  const finding = id === undefined ? undefined : db.findings.find((entry) => entry.id === id);
-  return finding?.shareActive ? finding : undefined;
+  const finding = id === undefined ? undefined : index.get(id);
+  return finding?.shareActive && finding.hasEvidence ? finding : undefined;
 }
 
 function token(): string {
@@ -70,25 +82,27 @@ function token(): string {
 }
 
 export function handlers(db: MockDb) {
-  const byId = (id: string | readonly string[] | undefined) => db.findings.find((finding) => finding.id === Number(id));
-  const knownPlayer = (uuid: string) => db.players.some((player) => player.uuid === uuid);
-  const guard = () => (mockSignedOut() ? error(401, "unauthorized") : null);
+  const index = new Map(db.findings.map((finding) => [finding.id, finding]));
+  const byId = (id: string | readonly string[] | undefined) => index.get(Number(id));
+  const playerIds = new Set(db.players.map((player) => player.uuid));
+  const knownPlayer = (uuid: string) => playerIds.has(uuid);
 
   return [
     http.get(`${api}/me`, async () => {
-      await delay(120);
-      return guard() ?? HttpResponse.json(db.me);
+      const blocked = await gate("me", 120);
+      return blocked ?? HttpResponse.json(db.me);
     }),
 
     http.post(`${api}/logout`, async () => {
+      const blocked = await gate("logout", 0, "public");
+      if (blocked) return blocked;
       setMockSignedOut(true);
       return new HttpResponse(null, { status: 204 });
     }),
 
     http.get(`${api}/status`, async () => {
-      await delay(80);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("status", 80);
+      if (blocked) return blocked;
       const now = Date.now();
       const scans = db.scans.map((scan): ScanJob => {
         const elapsed = now - scan.startedAt;
@@ -107,28 +121,19 @@ export function handlers(db: MockDb) {
         };
       });
       const status: Status = {
-        trackedChanges: 1843 + Math.floor((now / 1000) % 60),
+        trackedChanges: db.status.trackedChanges > 0 ? db.status.trackedChanges + Math.floor((now / 1000) % 60) : 0,
         openFindings: db.findings.filter((finding) => !finding.review).length,
-        inference: {
-          mode: "LOCAL",
-          available: true,
-          models: [
-            { kind: "fullscan", version: "scan-v4" },
-            { kind: "mask", version: "bf-scan-3" },
-          ],
-          detail: null,
-        },
+        inference: db.status.inference,
         scans,
-        recordingEnabled: true,
-        textures: { enabled: true, available: !!import.meta.env.VITE_ASSETS_TARGET, version: null },
+        recordingEnabled: db.status.recordingEnabled,
+        textures: { enabled: true, available: db.status.texturesAvailable, version: null },
       };
       return HttpResponse.json(status);
     }),
 
     http.get(`${api}/findings`, async ({ request }) => {
-      await delay(180);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("findings", 180);
+      if (blocked) return blocked;
       const url = new URL(request.url);
       const state = (url.searchParams.get("state") ?? "open") as FindingState;
       const source = url.searchParams.get("source");
@@ -154,16 +159,15 @@ export function handlers(db: MockDb) {
     }),
 
     http.get(`${api}/findings/:id`, async ({ params }) => {
-      await delay(120);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("finding", 120);
+      if (blocked) return blocked;
       const finding = byId(params.id);
       return finding ? HttpResponse.json({ ...summary(finding), teleport: finding.teleport }) : error(404, "not_found");
     }),
 
     http.get(`${api}/findings/:id/thumbnail.png`, async ({ params }) => {
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("thumbnail", 0);
+      if (blocked) return blocked;
       const finding = byId(params.id);
       if (!finding?.scene || !finding.thumbnail) return error(404, "not_found");
       const pixels = paintLayer(finding.scene, sceneColours(finding.scene, db.palette), "colour", { span: 4, heatmap: null, overlay: false });
@@ -171,34 +175,31 @@ export function handlers(db: MockDb) {
     }),
 
     http.get(`${api}/findings/:id/scene`, async ({ params }) => {
-      await delay(220);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("scene", 220);
+      if (blocked) return blocked;
       const finding = byId(params.id);
       return finding?.scene ? HttpResponse.json(finding.scene) : error(404, "not_found");
     }),
 
     http.get(`${api}/findings/:id/heatmap`, async ({ params }) => {
-      await delay(1400);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("heatmap", 1400);
+      if (blocked) return blocked;
       const finding = byId(params.id);
       if (!finding) return error(404, "not_found");
       return finding.heatmap ? HttpResponse.json(finding.heatmap) : error(503, "unavailable");
     }),
 
     http.get(`${api}/findings/:id/evidence`, async ({ params }) => {
-      await delay(300);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("evidence", 300);
+      if (blocked) return blocked;
       const finding = byId(params.id);
-      return finding?.evidence ? HttpResponse.json(finding.evidence) : error(404, "not_found");
+      const evidence = finding ? db.evidenceOf(finding) : null;
+      return evidence ? HttpResponse.json(evidence) : error(404, "not_found");
     }),
 
     http.post(`${api}/findings/:id/verdict`, async ({ params, request }) => {
-      await delay(150);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("verdict", 150);
+      if (blocked) return blocked;
       if (!csrfOk(request)) return error(403, "csrf");
       const finding = byId(params.id);
       if (!finding) return error(404, "not_found");
@@ -211,14 +212,13 @@ export function handlers(db: MockDb) {
     }),
 
     http.post(`${api}/findings/:id/share`, async ({ params, request }) => {
-      await delay(200);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("share", 200);
+      if (blocked) return blocked;
       if (!csrfOk(request)) return error(403, "csrf");
       if (!db.me.canShare) return error(403, "forbidden");
       const finding = byId(params.id);
       if (!finding) return error(404, "not_found");
-      if (finding.review?.verdict !== "CONFIRMED" || !finding.evidence) return error(409, "not_shareable");
+      if (finding.review?.verdict !== "CONFIRMED" || !finding.hasEvidence) return error(409, "not_shareable");
       if (finding.shareActive && finding.shareToken && finding.sharedSince) {
         return HttpResponse.json({ url: publicUrl(finding.shareToken), sharedSince: finding.sharedSince });
       }
@@ -232,9 +232,8 @@ export function handlers(db: MockDb) {
     }),
 
     http.delete(`${api}/findings/:id/share`, async ({ params, request }) => {
-      await delay(150);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("share", 150);
+      if (blocked) return blocked;
       if (!csrfOk(request)) return error(403, "csrf");
       const finding = byId(params.id);
       if (!finding) return error(404, "not_found");
@@ -247,9 +246,8 @@ export function handlers(db: MockDb) {
     }),
 
     http.get(`${api}/stats`, async ({ request }) => {
-      await delay(200);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("stats", 200);
+      if (blocked) return blocked;
       const url = new URL(request.url);
       const from = url.searchParams.get("from") ?? "";
       const to = url.searchParams.get("to") ?? "￿";
@@ -290,9 +288,8 @@ export function handlers(db: MockDb) {
     }),
 
     http.get(`${api}/activity`, async ({ request }) => {
-      await delay(150);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("activity", 150);
+      if (blocked) return blocked;
       const url = new URL(request.url);
       const before = url.searchParams.get("before");
       const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? 50)));
@@ -301,9 +298,8 @@ export function handlers(db: MockDb) {
     }),
 
     http.get(`${api}/players/:uuid`, async ({ params }) => {
-      await delay(120);
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("players", 120);
+      if (blocked) return blocked;
       const uuid = String(params.uuid);
       const player = db.players.find((entry) => entry.uuid === uuid);
       if (!player) return error(404, "not_found");
@@ -321,50 +317,53 @@ export function handlers(db: MockDb) {
     }),
 
     http.get(`${api}/players/:uuid/skin.png`, async ({ params }) => {
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("skin", 0);
+      if (blocked) return blocked;
       const uuid = String(params.uuid);
       if (!knownPlayer(uuid) || uuid === extraPlayersWithoutSkin) return error(404, "not_found");
       return png(await skinPng(uuid), { "X-Skin-Model": lookFor(uuid).skin === "#e8b796" ? "slim" : "classic" });
     }),
 
     http.get(`${api}/players/:uuid/face.png`, async ({ params }) => {
-      const denied = guard();
-      if (denied) return denied;
+      const blocked = await gate("face", 0);
+      if (blocked) return blocked;
       const uuid = String(params.uuid);
       if (!knownPlayer(uuid) || uuid === extraPlayersWithoutSkin) return error(404, "not_found");
       return png(await facePng(uuid));
     }),
 
     http.get(`${api}/palette`, async () => {
-      await delay(60);
+      const blocked = await gate("palette", 60, "public");
+      if (blocked) return blocked;
       return HttpResponse.json(db.palette, { headers: { "Cache-Control": "max-age=86400" } });
     }),
 
     http.get(`${api}/public/:token`, async ({ params }) => {
-      await delay(250);
-      const finding = sharedFinding(db, String(params.token));
-      if (!finding?.evidence) return error(404, "not_found");
+      const blocked = await gate("public", 250, "public");
+      if (blocked) return blocked;
+      const finding = sharedFinding(db, index, String(params.token));
+      const evidence = finding ? db.evidenceOf(finding) : null;
+      if (!finding || !evidence) return error(404, "not_found");
       return HttpResponse.json({
         finding: { id: finding.id, createdAt: finding.createdAt, verdict: finding.review?.verdict ?? null, players: finding.players },
-        evidence: relativeEvidence(finding.evidence),
+        evidence: relativeEvidence(evidence),
       });
     }),
 
-    ...(import.meta.env.VITE_ASSETS_TARGET
-      ? []
-      : [
-          http.get(`${api}/assets`, async () => {
-            await delay(60);
-            const assets: AssetStatus = { available: false, version: null, downloading: false };
-            return HttpResponse.json(assets);
-          }),
-        ]),
+    http.get(`${api}/assets`, async () => {
+      const blocked = await gate("assets", 60, "public");
+      if (blocked) return blocked;
+      if (db.status.texturesAvailable) return passthrough();
+      const assets: AssetStatus = { available: false, version: null, downloading: false };
+      return HttpResponse.json(assets);
+    }),
 
     http.get(`${api}/public/:token/skins/:file`, async ({ params }) => {
-      const finding = sharedFinding(db, String(params.token));
+      const blocked = await gate("public", 0, "public");
+      if (blocked) return blocked;
+      const finding = sharedFinding(db, index, String(params.token));
       const uuid = String(params.file).replace(/\.png$/, "");
-      if (!finding?.evidence?.recordings.some((recording) => recording.player === uuid)) return error(404, "not_found");
+      if (!finding?.players.some((player) => player.uuid === uuid)) return error(404, "not_found");
       return png(await skinPng(uuid));
     }),
   ];

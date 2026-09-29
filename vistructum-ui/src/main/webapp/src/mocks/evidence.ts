@@ -1,4 +1,5 @@
 import type { BlockChange, Evidence, MotionFrame, Recording } from "@/api/types";
+import { seededRandom } from "@/logic/mc/random";
 import { flags, yawOfDirection } from "@/logic/motion";
 
 export const builder = { uuid: "5f1c7a2e-8b4d-4e39-9a61-2c7d3b0e9f14", name: "Blockwright" };
@@ -20,17 +21,6 @@ const frameStep = 100;
 const leadMs = 30000;
 const walkSpeed = 4.3;
 const sneakSpeed = 1.3;
-
-function random(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 interface Target {
   x: number;
@@ -101,7 +91,7 @@ function beforeVolume(): Evidence["before"] {
     cells[(dy * sizeZ + dz) * sizeX + dx] = state;
   };
   const surface = margin - 1;
-  const rnd = random(7);
+  const rnd = seededRandom(7);
   for (let dx = 0; dx < sizeX; dx++) {
     for (let dz = 0; dz < sizeZ; dz++) {
       for (let dy = 0; dy < surface; dy++) set(dx, dy, dz, dy < surface - 2 ? 1 : 2);
@@ -175,7 +165,7 @@ interface BuilderPlan {
 }
 
 function planBuilder(start: number, targets: Target[]): BuilderPlan {
-  const rnd = random(42);
+  const rnd = seededRandom(42);
   const frames: MotionFrame[] = [];
   const changes: BlockChange[] = [];
   const buildEnd = start + leadMs + 88000;

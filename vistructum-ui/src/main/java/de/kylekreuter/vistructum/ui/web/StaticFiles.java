@@ -15,8 +15,6 @@ final class StaticFiles {
     static final String ASSETS = WebSettings.ROOT + "/assets/";
 
     private static final String INDEX = "index.html";
-    private static final String IMMUTABLE = "public, max-age=31536000, immutable";
-    private static final String NO_CACHE = "no-cache";
     private static final Map<String, String> TYPES = Map.ofEntries(
             Map.entry("html", "text/html; charset=utf-8"),
             Map.entry("js", "application/javascript; charset=utf-8"),
@@ -46,13 +44,15 @@ final class StaticFiles {
             return Reply.text(404, "Not found");
         }
         return read(relative)
-                .map(bytes -> new Reply(200, type(relative), bytes, List.of(new Reply.Header("Cache-Control", IMMUTABLE))))
+                .map(bytes -> new Reply(200, type(relative), bytes,
+                        List.of(new Reply.Header("Cache-Control", Reply.IMMUTABLE))))
                 .orElseGet(() -> Reply.text(404, "Not found"));
     }
 
     Reply index() {
         return read(INDEX)
-                .map(bytes -> new Reply(200, type(INDEX), bytes, List.of(new Reply.Header("Cache-Control", NO_CACHE))))
+                .map(bytes -> new Reply(200, type(INDEX), bytes,
+                        List.of(new Reply.Header("Cache-Control", Reply.NO_CACHE))))
                 .orElseGet(() -> Reply.text(503, "The web app is not part of this build of vistructum-ui."));
     }
 

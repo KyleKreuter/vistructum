@@ -6,13 +6,16 @@ import com.sun.net.httpserver.HttpHandler;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 final class ReviewHandler implements HttpHandler {
@@ -91,6 +94,10 @@ final class ReviewHandler implements HttpHandler {
             headers.set("Content-Type", reply.contentType());
             headers.set("X-Content-Type-Options", "nosniff");
             reply.headers().forEach(header -> headers.add(header.name(), header.value()));
+            if (reply.stored().isPresent()) {
+                stream(exchange, reply.status(), reply.stored().get(), acceptsGzip, head);
+                return;
+            }
             if (reply.compressible()) {
                 headers.add("Vary", "Accept-Encoding");
                 if (acceptsGzip && body.length >= GZIP_THRESHOLD) {
@@ -108,6 +115,28 @@ final class ReviewHandler implements HttpHandler {
             }
         } catch (IOException e) {
             exchange.close();
+        }
+    }
+
+    private static void stream(HttpExchange exchange, int status, Reply.Stored stored, boolean acceptsGzip,
+                               boolean head) throws IOException {
+        boolean inflate = stored.gzipped() && !acceptsGzip;
+        if (stored.gzipped()) {
+            exchange.getResponseHeaders().add("Vary", "Accept-Encoding");
+            if (!inflate) {
+                exchange.getResponseHeaders().set("Content-Encoding", "gzip");
+            }
+        }
+        long length = Files.size(stored.path());
+        if (head) {
+            exchange.sendResponseHeaders(status, -1);
+            return;
+        }
+        exchange.sendResponseHeaders(status, inflate || length == 0 ? 0 : length);
+        try (InputStream file = Files.newInputStream(stored.path());
+             InputStream in = inflate ? new GZIPInputStream(file) : file;
+             OutputStream out = exchange.getResponseBody()) {
+            in.transferTo(out);
         }
     }
 

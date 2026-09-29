@@ -102,7 +102,7 @@ final class Views {
         return array;
     }
 
-    static JsonObject status(VistructumStatus status) {
+    static JsonObject status(VistructumStatus status, GameAssets assets) {
         JsonObject json = new JsonObject();
         json.addProperty("trackedChanges", status.trackedChanges());
         json.addProperty("openFindings", status.openFindings());
@@ -111,6 +111,19 @@ final class Views {
         status.activeScans().forEach(job -> scans.add(scan(job)));
         json.add("scans", scans);
         json.addProperty("recordingEnabled", status.recordingEnabled());
+        JsonObject textures = new JsonObject();
+        textures.addProperty("enabled", assets.enabled());
+        textures.addProperty("available", assets.available());
+        textures.add("version", assets.cachedVersion().<JsonElement>map(JsonPrimitive::new).orElse(JsonNull.INSTANCE));
+        json.add("textures", textures);
+        return json;
+    }
+
+    static JsonObject assets(GameAssets assets) {
+        JsonObject json = new JsonObject();
+        json.addProperty("available", assets.available());
+        json.add("version", assets.cachedVersion().<JsonElement>map(JsonPrimitive::new).orElse(JsonNull.INSTANCE));
+        json.addProperty("downloading", assets.downloading());
         return json;
     }
 

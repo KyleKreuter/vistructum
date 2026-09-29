@@ -1,7 +1,17 @@
 import { setupWorker } from "msw/browser";
+import { createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { createDb } from "./db";
+import { DevMenu } from "./DevMenu";
 import { handlers, setMockSignedOut } from "./handlers";
-import { loadSettings } from "./settings";
+import { loadSettings, type MockSettings } from "./settings";
+
+function mountDevMenu(settings: MockSettings) {
+  const host = document.createElement("div");
+  host.id = "mock-dev-menu";
+  document.body.append(host);
+  createRoot(host).render(createElement(DevMenu, { settings }));
+}
 
 export async function startMocks() {
   const params = new URLSearchParams(location.search);
@@ -17,6 +27,7 @@ export async function startMocks() {
     onUnhandledRequest: "bypass",
     quiet: true,
   });
+  mountDevMenu(settings);
 }
 
 export function mockSignIn() {

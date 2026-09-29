@@ -61,7 +61,7 @@ public final class Features {
         return origins;
     }
 
-    private static FeatureMap padToGrid(ModelKind kind, FeatureMap features) {
+    static FeatureMap padToGrid(ModelKind kind, FeatureMap features) {
         int rows = Math.max(features.rows(), Contract.GRID);
         int cols = Math.max(features.cols(), Contract.GRID);
         if (rows == features.rows() && cols == features.cols()) {

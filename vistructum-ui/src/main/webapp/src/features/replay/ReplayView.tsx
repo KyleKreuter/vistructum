@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { ChevronLeft, ChevronRight, Orbit, Pause, Play, Video } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type RefObject } from "react";
+import { memo, useCallback, useEffect, useMemo, useState, useSyncExternalStore, type RefObject } from "react";
 import type { Evidence, Palette } from "@/api/types";
 import { PlayerFace } from "@/components/app/PlayerFace";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { useBlockLibrary } from "@/features/world/library";
 import { skyTheme } from "@/features/world/skyColours";
 import { displayMaterial } from "@/logic/blocks";
 import { prepareTrack } from "@/logic/motion";
-import { appliedCount, buildTimeline, formatClock, speeds, tallies } from "@/logic/timeline";
+import { appliedCount, buildTimeline, formatClock, speeds, tallies, type Timeline } from "@/logic/timeline";
 import { indexVolume } from "@/logic/volume";
 import { createClock } from "./clock";
 import { playerColour } from "./colours";
@@ -34,6 +34,34 @@ export interface ReplayViewProps {
   showCoordinates: boolean;
   controlsRef?: RefObject<ReplayControls | null>;
   active?: boolean;
+}
+
+const TimelineMarks = memo(function TimelineMarks({ timeline, applied, colourFor, onSeek }: { timeline: Timeline; applied: number; colourFor: (uuid: string) => string; onSeek: (t: number) => void }) {
+  const span = timeline.end - timeline.start;
+  return (
+    <div className="absolute inset-x-1 top-0 h-3">
+      {timeline.changes.map((change, index) => (
+        <button
+          key={`${change.t}-${index}`}
+          type="button"
+          className="absolute top-0 h-3 w-[3px] -translate-x-1/2 rounded-full opacity-80 hover:opacity-100 focus-visible:outline-2"
+          style={{
+            left: `${span > 0 ? ((change.t - timeline.start) / span) * 100 : 0}%`,
+            background: change.action === "BREAK" ? "#ff4d4f" : colourFor(change.player),
+            opacity: index < applied ? 1 : 0.35,
+          }}
+          onClick={() => onSeek(change.t)}
+          aria-label={`Block change ${index + 1}`}
+          tabIndex={-1}
+        />
+      ))}
+    </div>
+  );
+});
+
+function idleMessage(changes: number, recorded: boolean): string {
+  if (changes) return `No block changed yet · ${changes.toLocaleString("en-GB")} to come`;
+  return recorded ? "No block changes recorded" : "Nothing was recorded for this finding";
 }
 
 export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin = false, showCoordinates, controlsRef, active = true }: ReplayViewProps) {
@@ -90,6 +118,15 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
   const totalCounts = useMemo(() => tallies(timeline.changes), [timeline.changes]);
   const current = applied > 0 ? timeline.changes[applied - 1] : null;
   const span = timeline.end - timeline.start;
+  const recorded = tracks.length > 0;
+  const playable = span > 0;
+  const seekTo = useCallback(
+    (t: number) => {
+      clock.pause();
+      clock.seek(t);
+    },
+    [clock],
+  );
   const assets = useWorldAssets(palette);
   const loaded = useBlockLibrary(assets, indexed.states);
 
@@ -115,7 +152,7 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
           {current ? (
             <>
               <div>
-                Block {applied} of {timeline.changes.length}
+                Block {applied.toLocaleString("en-GB")} of {timeline.changes.length.toLocaleString("en-GB")}
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="size-2 rounded-full" style={{ background: current.action === "BREAK" ? "#ff4d4f" : colourFor(current.player) }} />
@@ -130,8 +167,9 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
               )}
             </>
           ) : (
-            <div>{timeline.changes.length ? `No block changed yet · ${timeline.changes.length} to come` : "No block changes recorded"}</div>
+            <div>{idleMessage(timeline.changes.length, recorded)}</div>
           )}
+          {!recorded && timeline.changes.length > 0 && <div className="text-white/60">Player movement was not recorded</div>}
         </div>
         <div className="absolute top-3 right-3 flex gap-1 rounded-md bg-black/55 p-1 backdrop-blur-sm">
           <Tooltip>
@@ -172,13 +210,13 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
 
       <div className="rounded-lg border bg-card p-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="icon" variant="outline" onClick={() => clock.step(-1)} aria-label="Previous block change">
+          <Button size="icon" variant="outline" disabled={!timeline.changes.length} onClick={() => clock.step(-1)} aria-label="Previous block change">
             <ChevronLeft />
           </Button>
-          <Button size="icon" onClick={clock.toggle} aria-label={state.playing ? "Pause" : "Play"}>
+          <Button size="icon" disabled={!playable} onClick={clock.toggle} aria-label={state.playing ? "Pause" : "Play"}>
             {state.playing ? <Pause /> : <Play />}
           </Button>
-          <Button size="icon" variant="outline" onClick={() => clock.step(1)} aria-label="Next block change">
+          <Button size="icon" variant="outline" disabled={!timeline.changes.length} onClick={() => clock.step(1)} aria-label="Next block change">
             <ChevronRight />
           </Button>
           <span className="min-w-24 px-2 text-sm tabular-nums">
@@ -209,27 +247,9 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
           </span>
         </div>
         <div className="relative mt-3 px-1 pt-4">
-          <div className="absolute inset-x-1 top-0 h-3">
-            {timeline.changes.map((change, index) => (
-              <button
-                key={`${change.t}-${index}`}
-                type="button"
-                className="absolute top-0 h-3 w-[3px] -translate-x-1/2 rounded-full opacity-80 hover:opacity-100 focus-visible:outline-2"
-                style={{
-                  left: `${((change.t - timeline.start) / span) * 100}%`,
-                  background: change.action === "BREAK" ? "#ff4d4f" : colourFor(change.player),
-                  opacity: index < applied ? 1 : 0.35,
-                }}
-                onClick={() => {
-                  clock.pause();
-                  clock.seek(change.t);
-                }}
-                aria-label={`Block change ${index + 1}`}
-                tabIndex={-1}
-              />
-            ))}
-          </div>
+          <TimelineMarks timeline={timeline} applied={applied} colourFor={colourFor} onSeek={seekTo} />
           <Slider
+            disabled={!playable}
             min={timeline.start}
             max={timeline.end}
             step={50}
@@ -253,7 +273,9 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
             >
               <span className="size-2.5 rounded-full" style={{ background: colourFor(player.uuid) }} />
               <PlayerFace uuid={player.uuid} name={player.name} size={20} skin={facesFromSkin ? skinUrl(player.uuid) : undefined} />
-              <span className="font-medium">{player.name}</span>
+              <span className="max-w-48 truncate font-medium" title={player.name}>
+                {player.name}
+              </span>
               <span className="text-xs text-muted-foreground tabular-nums">
                 {now?.placed ?? 0}/{total?.placed ?? 0} placed · {now?.broken ?? 0}/{total?.broken ?? 0} broken
               </span>

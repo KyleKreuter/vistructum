@@ -2,13 +2,13 @@ import { useMemo, useState } from "react";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { Link } from "react-router";
 import { useStats } from "@/api/queries";
-import { ErrorState, PageHeader, PageSpinner } from "@/components/app/States";
+import { EmptyState, ErrorState, PageHeader, PageSpinner } from "@/components/app/States";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatDateTime, formatPercent, formatRelative, precision } from "@/logic/format";
-import { dayRows, rangeBounds, ranges, reviewerRows, totals, type RangeKey } from "@/logic/stats";
+import { axisWidth, compactCount, dayRows, rangeBounds, ranges, reviewerRows, totals, weekRows, type RangeKey } from "@/logic/stats";
 
 const chartConfig = {
   mask: { label: "Live check", color: "var(--chart-1)" },
@@ -39,7 +39,11 @@ export default function StatsPage() {
   const rows = useMemo(() => (stats.data ? dayRows(stats.data, bounds.from, bounds.to) : []), [stats.data, bounds]);
   const sum = useMemo(() => totals(rows), [rows]);
   const reviewers = useMemo(() => (stats.data ? reviewerRows(stats.data) : []), [stats.data]);
-  const tickEvery = Math.max(1, Math.ceil(rows.length / 12));
+  const weekly = rows.length > 90;
+  const chartRows = useMemo(() => (weekly ? weekRows(rows) : rows), [rows, weekly]);
+  const tickEvery = Math.max(1, Math.ceil(chartRows.length / 12));
+  const empty = sum.created === 0 && sum.confirmed === 0 && sum.falseAlarms === 0;
+  const count = (value: number) => value.toLocaleString("en-GB");
 
   return (
     <div className="space-y-4">
@@ -47,9 +51,9 @@ export default function StatsPage() {
         title="Statistics"
         description="Findings created and reviewed in the selected range"
         actions={
-          <ToggleGroup type="single" variant="outline" size="sm" value={range} onValueChange={(value) => value && setRange(value as RangeKey)}>
+          <ToggleGroup type="single" variant="outline" size="sm" className="w-full sm:w-auto" value={range} onValueChange={(value) => value && setRange(value as RangeKey)}>
             {ranges.map((entry) => (
-              <ToggleGroupItem key={entry.key} value={entry.key} className="px-3">
+              <ToggleGroupItem key={entry.key} value={entry.key} className="flex-1 px-2 sm:flex-none sm:px-3">
                 {entry.label}
               </ToggleGroupItem>
             ))}
@@ -72,22 +76,27 @@ export default function StatsPage() {
               }
               hint={stats.data.oldestOpen ? <span title={formatDateTime(stats.data.oldestOpen)}>Oldest {formatRelative(stats.data.oldestOpen)}</span> : "Nothing waiting"}
             />
-            <Kpi label="Created" value={sum.created.toLocaleString("en-GB")} hint={`in ${ranges.find((entry) => entry.key === range)?.label}`} />
+            <Kpi label="Created" value={count(sum.created)} hint={`in ${ranges.find((entry) => entry.key === range)?.label}`} />
             <Kpi label="Confirmed" value={sum.confirmed.toLocaleString("en-GB")} hint={`${sum.falseAlarms.toLocaleString("en-GB")} false alarms`} />
             <Kpi label="Precision" value={formatPercent(precision(sum.confirmed, sum.falseAlarms))} hint="Confirmed of all reviewed" />
           </div>
 
           <Card className="gap-3">
             <CardHeader>
-              <CardTitle className="text-base">Findings per day</CardTitle>
-              <CardDescription>Bars stack the created findings by source. Lines show the verdicts given that day.</CardDescription>
+              <CardTitle className="text-base">Findings per {weekly ? "week" : "day"}</CardTitle>
+              <CardDescription>Bars stack the created findings by source. Lines show the verdicts given in that {weekly ? "week" : "day"}.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={chartConfig} className="aspect-auto h-72 w-full">
-                <ComposedChart data={rows} margin={{ left: -16, right: 8 }}>
+              {empty ? (
+                <EmptyState title="No findings in this range" className="h-72">
+                  Nothing was created or reviewed.
+                </EmptyState>
+              ) : (
+                <ChartContainer config={chartConfig} className="aspect-auto h-72 w-full">
+                <ComposedChart data={chartRows} margin={{ left: 0, right: 8 }}>
                   <CartesianGrid vertical={false} />
                   <XAxis dataKey="day" tickLine={false} axisLine={false} interval={tickEvery - 1} tickFormatter={(day: string) => day.slice(5)} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={40} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={axisWidth(chartRows)} tickFormatter={compactCount} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <ChartLegend content={<ChartLegendContent />} />
                   <Bar dataKey="mask" stackId="created" fill="var(--color-mask)" />
@@ -95,11 +104,12 @@ export default function StatsPage() {
                   <Line dataKey="confirmed" type="monotone" stroke="var(--color-confirmed)" strokeWidth={2} dot={false} />
                   <Line dataKey="falseAlarms" type="monotone" stroke="var(--color-falseAlarms)" strokeWidth={2} dot={false} />
                 </ComposedChart>
-              </ChartContainer>
+                </ChartContainer>
+              )}
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
             <Card className="gap-3">
               <CardHeader>
                 <CardTitle className="text-base">Precision per source</CardTitle>
@@ -120,8 +130,8 @@ export default function StatsPage() {
                       return (
                         <TableRow key={row.source}>
                           <TableCell>{sourceLabels[row.source]}</TableCell>
-                          <TableCell className="text-right tabular-nums">{row.confirmed}</TableCell>
-                          <TableCell className="text-right tabular-nums">{row.falseAlarms}</TableCell>
+                          <TableCell className="text-right tabular-nums">{count(row.confirmed)}</TableCell>
+                          <TableCell className="text-right tabular-nums">{count(row.falseAlarms)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
                               <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:block">
@@ -158,10 +168,12 @@ export default function StatsPage() {
                     <TableBody>
                       {reviewers.map((row) => (
                         <TableRow key={row.reviewer}>
-                          <TableCell className="font-medium">{row.reviewer}</TableCell>
-                          <TableCell className="text-right tabular-nums">{row.total}</TableCell>
-                          <TableCell className="text-right tabular-nums">{row.confirmed}</TableCell>
-                          <TableCell className="text-right tabular-nums">{row.falseAlarms}</TableCell>
+                          <TableCell className="max-w-40 truncate font-medium" title={row.reviewer}>
+                            {row.reviewer}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{count(row.total)}</TableCell>
+                          <TableCell className="text-right tabular-nums">{count(row.confirmed)}</TableCell>
+                          <TableCell className="text-right tabular-nums">{count(row.falseAlarms)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

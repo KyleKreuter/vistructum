@@ -36,14 +36,17 @@ export const keys = {
   publicEvidence: (token: string) => ["public", token] as const,
 };
 
-const noRetryOn = (codes: number[]) => (count: number, error: unknown) =>
-  !(error instanceof ApiError && codes.includes(error.status)) && count < 2;
+export function shouldRetry(failures: number, error: unknown): boolean {
+  if (error instanceof ApiError && (error.status < 500 || error.status === 503)) return false;
+  return failures < 1;
+}
+
+export const retryDelayMs = 400;
 
 export function useMe() {
   return useQuery({
     queryKey: keys.me,
     queryFn: () => request<Me>("/me"),
-    retry: noRetryOn([401, 403]),
     staleTime: 60_000,
   });
 }
@@ -63,7 +66,6 @@ export function useFinding(id: number) {
   return useQuery({
     queryKey: keys.finding(id),
     queryFn: () => request<FindingDetail>(`/findings/${id}`),
-    retry: noRetryOn([401, 404]),
   });
 }
 
@@ -73,7 +75,6 @@ export function useScene(id: number, enabled = true) {
     queryFn: () => request<Scene>(`/findings/${id}/scene`),
     enabled,
     staleTime: Number.POSITIVE_INFINITY,
-    retry: noRetryOn([401, 404]),
   });
 }
 
@@ -83,7 +84,6 @@ export function useHeatmap(id: number, enabled: boolean) {
     queryFn: () => request<Heatmap>(`/findings/${id}/heatmap`),
     enabled,
     staleTime: Number.POSITIVE_INFINITY,
-    retry: noRetryOn([401, 404, 503]),
   });
 }
 
@@ -93,7 +93,6 @@ export function useEvidence(id: number, enabled: boolean) {
     queryFn: () => request<Evidence>(`/findings/${id}/evidence`),
     enabled,
     staleTime: Number.POSITIVE_INFINITY,
-    retry: noRetryOn([401, 404]),
   });
 }
 
@@ -138,7 +137,6 @@ export function usePlayer(uuid: string) {
   return useQuery({
     queryKey: keys.player(uuid),
     queryFn: () => request<PlayerInfo>(`/players/${uuid}`),
-    retry: noRetryOn([401, 404]),
   });
 }
 
@@ -146,7 +144,6 @@ export function usePublicEvidence(token: string) {
   return useQuery({
     queryKey: keys.publicEvidence(token),
     queryFn: () => request<PublicEvidence>(`/public/${encodeURIComponent(token)}`, {}, { public: true }),
-    retry: noRetryOn([404]),
     staleTime: Number.POSITIVE_INFINITY,
   });
 }

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import { createBrowserRouter, Navigate, RouterProvider, useLocation } from "react-router";
+import { retryDelayMs, shouldRetry } from "@/api/queries";
 import { AuthGate } from "@/components/app/AuthGate";
 import { PageSpinner } from "@/components/app/States";
 import { Toaster } from "@/components/ui/sonner";
@@ -51,7 +52,7 @@ export function App() {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { refetchOnWindowFocus: false, staleTime: 15_000 },
+          queries: { refetchOnWindowFocus: false, staleTime: 15_000, retry: shouldRetry, retryDelay: retryDelayMs },
         },
       }),
   );

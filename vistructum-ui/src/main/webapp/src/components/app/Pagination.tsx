@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 import { pageSizes } from "@/logic/filters";
 import { pageCount, pageRange, pageSlots } from "@/logic/pagination";
 
-function StepButton({ label, disabled, onClick, children }: { label: string; disabled: boolean; onClick: () => void; children: ReactNode }) {
+function StepButton({ label, disabled, onClick, children, className }: { label: string; disabled: boolean; onClick: () => void; children: ReactNode; className?: string }) {
   return (
-    <Button variant="outline" size="icon" className="size-8" aria-label={label} title={label} disabled={disabled} onClick={onClick}>
+    <Button variant="outline" size="icon" className={cn("size-8", className)} aria-label={label} title={label} disabled={disabled} onClick={onClick}>
       {children}
     </Button>
   );
@@ -52,15 +52,18 @@ export function Pagination({
         </Select>
       </div>
       <div className="flex items-center gap-1">
-        <StepButton label="First page" disabled={page <= 1} onClick={() => go(1)}>
+        <StepButton label="First page" className="hidden sm:inline-flex" disabled={page <= 1} onClick={() => go(1)}>
           <ChevronsLeft />
         </StepButton>
         <StepButton label="Previous page" disabled={page <= 1} onClick={() => go(page - 1)}>
           <ChevronLeft />
         </StepButton>
+        <span className="px-2 tabular-nums sm:hidden">
+          {format(Math.min(page, count))} / {format(count)}
+        </span>
         {pageSlots(Math.min(page, count), count).map((slot, index) =>
           slot === "gap" ? (
-            <span key={`gap-${index}`} className="w-6 text-center select-none" aria-hidden>
+            <span key={`gap-${index}`} className="hidden w-6 text-center select-none sm:inline" aria-hidden>
               …
             </span>
           ) : (
@@ -68,7 +71,7 @@ export function Pagination({
               key={slot}
               variant={slot === page ? "default" : "ghost"}
               size="sm"
-              className="h-8 min-w-8 px-2 tabular-nums"
+              className="hidden h-8 min-w-8 px-2 tabular-nums sm:inline-flex"
               aria-label={`Page ${slot}`}
               aria-current={slot === page ? "page" : undefined}
               onClick={() => go(slot)}
@@ -80,7 +83,7 @@ export function Pagination({
         <StepButton label="Next page" disabled={page >= count} onClick={() => go(page + 1)}>
           <ChevronRight />
         </StepButton>
-        <StepButton label="Last page" disabled={page >= count} onClick={() => go(count)}>
+        <StepButton label="Last page" className="hidden sm:inline-flex" disabled={page >= count} onClick={() => go(count)}>
           <ChevronsRight />
         </StepButton>
       </div>

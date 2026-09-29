@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { isUnauthorized, onUnauthorized } from "@/api/client";
 import { useMe } from "@/api/queries";
 import { AppShell } from "./AppShell";
+import { PlainShell } from "./PlainShell";
 import { SignInPage } from "./SignInPage";
 import { ErrorState, PageSpinner } from "./States";
 
@@ -26,7 +27,12 @@ export function AuthGate() {
 
   if (me.isPending) return <PageSpinner className="min-h-screen" />;
   if (expired || isUnauthorized(me.error)) return <SignInPage reason={loginExpired ? "link-expired" : expired && me.data ? "session-expired" : "signed-out"} />;
-  if (me.error || !me.data) return <ErrorState error={me.error} onRetry={() => void me.refetch()} className="m-8" />;
+  if (me.error || !me.data)
+    return (
+      <PlainShell className="flex items-center justify-center">
+        <ErrorState error={me.error} onRetry={() => void me.refetch()} />
+      </PlainShell>
+    );
   return (
     <AppShell me={me.data}>
       <Outlet />

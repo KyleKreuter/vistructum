@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { boxCentre, boxSize, localPosition } from "./coords";
 import { dayRange, formatRelative, precision } from "./format";
-import { dayRows, rangeBounds, reviewerRows, totals } from "./stats";
+import { axisWidth, compactCount, dayRows, rangeBounds, reviewerRows, totals, weekRows } from "./stats";
 
 describe("stats", () => {
   it("fills missing days and splits by source", () => {
@@ -51,5 +51,22 @@ describe("coordinates", () => {
 
   it("converts world to local coordinates", () => {
     expect(localPosition({ minX: -10, minY: 56, minZ: 1 }, -9.5, 64, 3.25)).toEqual([0.5, 8, 2.25]);
+  });
+});
+
+describe("chart helpers", () => {
+  const row = (day: string, mask: number) => ({ day, mask, fullscan: 0, confirmed: 0, falseAlarms: 0 });
+
+  it("sums days into weeks labelled by their first day", () => {
+    const days = Array.from({ length: 9 }, (_, i) => row(`2026-01-${String(i + 1).padStart(2, "0")}`, 1));
+    expect(weekRows(days).map((week) => [week.day, week.mask])).toEqual([
+      ["2026-01-01", 7],
+      ["2026-01-08", 2],
+    ]);
+  });
+
+  it("widens the axis for large counts", () => {
+    expect(compactCount(1234)).toMatch(/^1\.2k$/i);
+    expect(axisWidth([row("2026-01-01", 120)])).toBeGreaterThan(axisWidth([row("2026-01-01", 5)]));
   });
 });

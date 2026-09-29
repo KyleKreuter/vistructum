@@ -54,3 +54,27 @@ export function reviewerRows(stats: Pick<Stats, "reviewers">): { reviewer: strin
     .map((row) => ({ ...row, total: row.confirmed + row.falseAlarms, precision: precision(row.confirmed, row.falseAlarms) }))
     .sort((a, b) => b.total - a.total || a.reviewer.localeCompare(b.reviewer));
 }
+
+export function weekRows(rows: DayRow[]): DayRow[] {
+  const weeks: DayRow[] = [];
+  rows.forEach((row, index) => {
+    if (index % 7 === 0) weeks.push({ ...row });
+    else {
+      const week = weeks[weeks.length - 1];
+      week.mask += row.mask;
+      week.fullscan += row.fullscan;
+      week.confirmed += row.confirmed;
+      week.falseAlarms += row.falseAlarms;
+    }
+  });
+  return weeks;
+}
+
+export function compactCount(value: number): string {
+  return new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
+export function axisWidth(rows: DayRow[]): number {
+  const highest = rows.reduce((max, row) => Math.max(max, row.mask + row.fullscan, row.confirmed, row.falseAlarms), 0);
+  return Math.max(28, compactCount(highest).length * 8 + 12);
+}

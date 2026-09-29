@@ -8,7 +8,7 @@ import { findingsOptions, useEvidence, useFinding, useFindings, useHeatmap, useM
 import { urls } from "@/api/client";
 import type { FindingDetail, FindingSummary, Verdict } from "@/api/types";
 import { IndicatorIcons, SourceBadge, VerdictBadge } from "@/components/app/Badges";
-import { PlayerChip } from "@/components/app/PlayerFace";
+import { PlayerList } from "@/components/app/PlayerFace";
 import { SharePanel } from "@/components/app/SharePanel";
 import { EmptyState, ErrorState, PageSpinner } from "@/components/app/States";
 import { Button } from "@/components/ui/button";
@@ -426,15 +426,11 @@ export default function FindingDetailPage() {
                   </span>
                 </Fact>
               </dl>
-              {data.detail && <p className="text-xs text-muted-foreground">{data.detail}</p>}
+              {data.detail && <p className="text-xs [overflow-wrap:anywhere] text-muted-foreground">{data.detail}</p>}
               <div className="space-y-1.5">
                 <div className="text-xs text-muted-foreground">Players</div>
                 {data.players.length ? (
-                  <div className="flex flex-col gap-1.5">
-                    {data.players.map((player) => (
-                      <PlayerChip key={player.uuid} player={player} />
-                    ))}
-                  </div>
+                  <PlayerList players={data.players} />
                 ) : (
                   <p className="text-sm text-muted-foreground">No players recorded.</p>
                 )}

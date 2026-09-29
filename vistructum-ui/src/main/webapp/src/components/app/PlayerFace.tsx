@@ -1,13 +1,10 @@
+import { UserRound } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { urls } from "@/api/client";
 import type { PlayerRef } from "@/api/types";
 import { playerLabel } from "@/logic/format";
 import { cn } from "@/lib/utils";
-
-function initials(name: string | null, uuid: string): string {
-  return (name ?? uuid).slice(0, 2).toUpperCase();
-}
 
 function SkinFace({ skin, size, className, onError }: { skin: string; size: number; className?: string; onError: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -53,11 +50,12 @@ export function PlayerFace({
   if (failed === url) {
     return (
       <span
-        className={cn("inline-flex shrink-0 items-center justify-center rounded-sm bg-muted text-[9px] font-semibold text-muted-foreground", className)}
+        className={cn("inline-flex shrink-0 items-center justify-center rounded-sm bg-muted text-muted-foreground", className)}
         style={style}
+        title={name ?? uuid}
         aria-hidden
       >
-        {initials(name, uuid)}
+        <UserRound style={{ width: size * 0.7, height: size * 0.7 }} />
       </span>
     );
   }
@@ -77,5 +75,30 @@ export function PlayerChip({ player, link = true }: { player: PlayerRef; link?: 
     <Link to={`/players/${player.uuid}`} className="inline-flex min-w-0 items-center gap-1.5 rounded-sm text-sm hover:underline" onClick={(event) => event.stopPropagation()}>
       {content}
     </Link>
+  );
+}
+
+const collapsedPlayers = 8;
+
+export function PlayerList({ players }: { players: PlayerRef[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? players : players.slice(0, collapsedPlayers);
+  const hidden = players.length - visible.length;
+  return (
+    <div className="flex flex-col gap-1.5">
+      {visible.map((player) => (
+        <PlayerChip key={player.uuid} player={player} />
+      ))}
+      {hidden > 0 && (
+        <button type="button" className="self-start rounded-sm text-sm text-muted-foreground hover:text-foreground hover:underline" onClick={() => setExpanded(true)}>
+          +{hidden.toLocaleString("en-GB")} more
+        </button>
+      )}
+      {expanded && players.length > collapsedPlayers && (
+        <button type="button" className="self-start rounded-sm text-sm text-muted-foreground hover:text-foreground hover:underline" onClick={() => setExpanded(false)}>
+          Show fewer
+        </button>
+      )}
+    </div>
   );
 }

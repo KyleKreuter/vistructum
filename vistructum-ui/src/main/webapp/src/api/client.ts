@@ -82,5 +82,6 @@ export function errorMessage(error: unknown): string {
         return `Server error (${error.status}).`;
     }
   }
+  if (error instanceof TypeError) return "The server cannot be reached.";
   return error instanceof Error ? error.message : "Unknown error.";
 }

@@ -18,7 +18,9 @@ function ScanRow({ scan }: { scan: ScanJob }) {
     <div className="space-y-2 rounded-lg border p-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span>#{scan.id}</span>
-        <span className="text-muted-foreground">{scan.world}</span>
+        <span className="min-w-0 truncate text-muted-foreground" title={scan.world}>
+          {scan.world}
+        </span>
         <Badge variant="slate" className="text-[11px]">
           {scan.cause === "DAILY" ? "Daily" : "Manual"}
         </Badge>
@@ -36,8 +38,10 @@ function ScanRow({ scan }: { scan: ScanJob }) {
         <span>
           {scan.doneTiles.toLocaleString("en-GB")} / {scan.totalTiles.toLocaleString("en-GB")} tiles ({Math.floor(fraction * 100)}%)
         </span>
-        <span>{scan.findings} findings</span>
-        {scan.failures > 0 && <span className="text-destructive">{scan.failures} failed tiles</span>}
+        <span>{scan.findings.toLocaleString("en-GB")} {scan.findings === 1 ? "finding" : "findings"}</span>
+        {scan.failures > 0 && <span className="text-destructive">
+            {scan.failures.toLocaleString("en-GB")} failed {scan.failures === 1 ? "tile" : "tiles"}
+          </span>}
       </div>
     </div>
   );
@@ -54,8 +58,8 @@ export default function StatusPage() {
       ) : status.isError || !data ? (
         <ErrorState error={status.error} onRetry={() => void status.refetch()} />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <div className="space-y-4">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="min-w-0 space-y-4">
             <Card className="gap-3 py-4">
               <CardHeader className="px-4">
                 <CardTitle className="flex items-center gap-2 text-sm">
@@ -68,12 +72,14 @@ export default function StatusPage() {
                   <span>{data.inference.mode === "LOCAL" ? "Local" : "Remote"}</span>
                   <span className="text-muted-foreground">{data.inference.available ? "available" : "unavailable"}</span>
                 </div>
-                {data.inference.detail && <p className="text-xs text-muted-foreground">{data.inference.detail}</p>}
+                {data.inference.detail && <p className="text-xs [overflow-wrap:anywhere] text-muted-foreground">{data.inference.detail}</p>}
                 <ul className="space-y-1">
                   {data.inference.models.map((model) => (
                     <li key={model.kind} className="flex justify-between gap-2">
-                      <span className="text-muted-foreground">{model.kind}</span>
-                      <span>{model.version}</span>
+                      <span className="shrink-0 text-muted-foreground">{model.kind}</span>
+                      <span className="min-w-0 truncate" title={model.version}>
+                        {model.version}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -103,7 +109,7 @@ export default function StatusPage() {
               </CardContent>
             </Card>
           </div>
-          <Card className="gap-3 py-4">
+          <Card className="min-w-0 gap-3 py-4">
             <CardHeader className="px-4">
               <CardTitle className="text-sm">Full scans</CardTitle>
             </CardHeader>

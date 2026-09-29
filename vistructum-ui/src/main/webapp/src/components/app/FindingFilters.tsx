@@ -37,17 +37,18 @@ export function FindingFilters({
 
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <div className="grid gap-1.5">
+      <div className="grid w-full gap-1.5 sm:w-auto">
         <Label className="text-xs text-muted-foreground">State</Label>
         <ToggleGroup
           type="single"
           variant="outline"
           size="sm"
+          className="w-full sm:w-auto"
           value={filter.state}
           onValueChange={(value) => value && onChange({ ...filter, state: value as FindingState })}
         >
           {states.map((state) => (
-            <ToggleGroupItem key={state.value} value={state.value} className="px-3">
+            <ToggleGroupItem key={state.value} value={state.value} className="flex-1 px-2 sm:flex-none sm:px-3">
               {state.label}
             </ToggleGroupItem>
           ))}

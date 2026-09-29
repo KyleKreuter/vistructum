@@ -5,8 +5,7 @@ import { ApiError, urls } from "@/api/client";
 import { usePalette, usePublicEvidence } from "@/api/queries";
 import { PlayerFace } from "@/components/app/PlayerFace";
 import { ErrorState, PageSpinner } from "@/components/app/States";
-import { Logo } from "@/components/app/Logo";
-import { ThemeToggle } from "@/components/app/ThemeToggle";
+import { PlainShell } from "@/components/app/PlainShell";
 import { Badge } from "@/components/ui/badge";
 import type { ReplayControls } from "@/features/replay/ReplayView";
 import { formatDateTime, playerLabel } from "@/logic/format";
@@ -45,16 +44,7 @@ export default function PublicEvidencePage() {
   }, []);
 
   return (
-    <div className="min-h-svh bg-background">
-      <header className="border-b">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
-          <Logo />
-          <div className="ml-auto">
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl space-y-4 px-4 py-6">
+    <PlainShell className="space-y-4">
         {evidence.isPending || palette.isPending ? (
           <PageSpinner className="h-[60vh]" />
         ) : gone ? (
@@ -102,7 +92,6 @@ export default function PublicEvidencePage() {
             </Suspense>
           </>
         )}
-      </main>
-    </div>
+    </PlainShell>
   );
 }

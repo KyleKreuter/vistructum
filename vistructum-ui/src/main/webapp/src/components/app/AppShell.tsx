@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import type { ReactNode } from "react";
-import { NavLink, useMatch } from "react-router";
+import { NavLink, useMatch, useNavigate } from "react-router";
 import type { Me } from "@/api/types";
 import { useLogout } from "@/api/queries";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ const links = [
 export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const logout = useLogout();
   const client = useQueryClient();
+  const navigate = useNavigate();
   const fixed = useMatch({ path: "/findings", end: true }) !== null;
   return (
     <div className={cn("flex flex-col", fixed ? "min-h-screen md:h-dvh md:min-h-0 md:overflow-hidden" : "min-h-screen")}>
@@ -30,7 +31,21 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           <NavLink to="/findings?state=open" className="flex shrink-0 items-center rounded-sm" aria-label="Vistructum findings">
             <Logo />
           </NavLink>
-          <nav className="flex items-center gap-1 overflow-x-auto" aria-label="Main">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open navigation">
+                <Menu />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              {links.map((link) => (
+                <DropdownMenuItem key={link.label} onSelect={() => void navigate(link.to)}>
+                  {link.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
             {links.map((link) => (
               <NavLink
                 key={link.label}

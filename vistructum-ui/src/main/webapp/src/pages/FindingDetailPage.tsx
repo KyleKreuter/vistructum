@@ -357,7 +357,6 @@ export default function FindingDetailPage() {
                     </span>
                   </Fact>
                 </dl>
-                {data.detail && <p className="text-xs [overflow-wrap:anywhere] text-muted-foreground">{data.detail}</p>}
                 {tab !== "replay" && (
                   <div className="space-y-1.5">
                     <div className="text-xs text-muted-foreground">Players</div>

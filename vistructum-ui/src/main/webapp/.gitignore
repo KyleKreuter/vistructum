@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.mock-public/
+*.tsbuildinfo
+*.log
+.env.local

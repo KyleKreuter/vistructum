@@ -62,7 +62,7 @@ describe("pose interpolation", () => {
   });
 
   it("accumulates walked distance", () => {
-    expect([...track.distance]).toEqual([0, 4, 7, 7, 7]);
+    [0, 4, 7, 7, 7].forEach((expected, index) => expect(track.distance[index]).toBeCloseTo(expected));
   });
 
   it("interpolates position, yaw and speed", () => {
@@ -90,6 +90,35 @@ describe("pose interpolation", () => {
     expect(swingProgressAt(track.frames, 3, 3150)).toBeCloseTo(50 / 300);
     expect(swingProgressAt(track.frames, 4, 3250)).toBeCloseTo(150 / 300);
     expect(swingProgressAt(track.frames, 1, 2500)).toBe(0);
+  });
+});
+
+describe("smoothing", () => {
+  const jittered = prepareTrack({
+    player: "p",
+    playerName: "P",
+    frames: Array.from({ length: 40 }, (_, i) => frame(i * 50 + (i % 2 ? 12 : -12), i * 0.2 + (i % 3 === 0 ? 0.08 : 0), 0)),
+  });
+
+  it("keeps the walking speed steady despite tick jitter", () => {
+    const speeds = Array.from({ length: 60 }, (_, i) => poseAt(jittered, 400 + i * 16)?.speed ?? 0);
+    expect(Math.max(...speeds) - Math.min(...speeds)).toBeLessThan(0.6);
+    speeds.forEach((speed) => expect(speed).toBeCloseTo(4, 0));
+  });
+
+  it("moves forward monotonically", () => {
+    const xs = Array.from({ length: 60 }, (_, i) => poseAt(jittered, 400 + i * 16)?.x ?? 0);
+    xs.slice(1).forEach((x, i) => expect(x).toBeGreaterThanOrEqual(xs[i]));
+  });
+
+  it("snaps across teleports instead of sliding", () => {
+    const teleported = prepareTrack({ player: "p", playerName: "P", frames: [frame(0, 0, 0), frame(50, 0.2, 0), frame(100, 30, 0), frame(150, 30.2, 0)] });
+    expect(poseAt(teleported, 75)?.x).toBeLessThan(1);
+    expect(teleported.distance[3]).toBeLessThan(1);
+  });
+
+  it("blends the body towards the head yaw when slowing down", () => {
+    expect(bodyYawFor(0, -1, 0, 0.4)).toBeCloseTo(25);
   });
 });
 

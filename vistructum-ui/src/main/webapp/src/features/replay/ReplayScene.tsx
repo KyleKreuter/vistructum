@@ -2,7 +2,7 @@ import { OrbitControls } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { PlayerObject } from "skinview3d/libs/model.js";
-import { BoxGeometry, EdgesGeometry, Group, LineBasicMaterial, LineSegments, Mesh, MeshLambertMaterial, Vector3 } from "three";
+import { BoxGeometry, EdgesGeometry, Group, LineBasicMaterial, LineSegments, Vector3 } from "three";
 import { isAir, isFullOpaque } from "@/logic/blocks";
 import type { Grid } from "@/logic/mc/mesher";
 import { skeletonFor, followCameraOffset, eyeHeight, poseAt, type JointPose, type Track } from "@/logic/motion";
@@ -104,11 +104,10 @@ interface Avatar {
   root: Group;
   player: PlayerObject;
   hand: Group;
-  marker: Mesh<BoxGeometry, MeshLambertMaterial>;
   held: string;
 }
 
-function createAvatar(colour: string): Avatar {
+function createAvatar(): Avatar {
   const root = new Group();
   const player = new PlayerObject();
   player.scale.setScalar(pixel);
@@ -117,17 +116,9 @@ function createAvatar(colour: string): Avatar {
   player.elytra.visible = false;
   player.ears.visible = false;
   const hand = new Group();
-  const marker = new Mesh(new BoxGeometry(0.18, 0.18, 0.18), new MeshLambertMaterial({ color: colour, emissive: colour, emissiveIntensity: 0.6 }));
-  marker.rotation.set(Math.PI / 4, 0, Math.PI / 4);
   root.add(player);
-  root.add(marker);
   player.skin.rightArm.add(hand);
-  return { root, player, hand, marker, held: "" };
-}
-
-function disposeAvatar(avatar: Avatar) {
-  avatar.marker.geometry.dispose();
-  avatar.marker.material.dispose();
+  return { root, player, hand, held: "" };
 }
 
 function dressAvatar(avatar: Avatar, skin: LoadedSkin | null) {
@@ -160,7 +151,6 @@ function poseAvatar(avatar: Avatar, track: Track, time: number, origin: [number,
   applyJoint(skin.leftArm, skeleton.leftArm);
   applyJoint(skin.rightLeg, skeleton.rightLeg);
   applyJoint(skin.leftLeg, skeleton.leftLeg);
-  avatar.marker.position.y = (pose.sneaking ? 1.65 : 2.05) + 0.05 * Math.sin(time / 300);
   holdItem(avatar, pose.mainHand.toLowerCase(), assets);
 }
 
@@ -170,18 +160,14 @@ function PlayerAvatar({
   clock,
   assets,
   origin,
-  colour,
 }: {
   track: Track;
   skinUrl: string;
   clock: ReplayClock;
   assets: WorldAssets | null;
   origin: [number, number, number];
-  colour: string;
 }) {
-  const avatar = useMemo(() => createAvatar(colour), [colour]);
-
-  useEffect(() => () => disposeAvatar(avatar), [avatar]);
+  const avatar = useMemo(() => createAvatar(), []);
 
   useEffect(() => {
     let active = true;
@@ -300,7 +286,7 @@ export function ReplayScene({ indexed, timeline, tracks, assets, loaded, clock, 
       {loaded && <ReplayBlocks indexed={indexed} loaded={loaded} clock={clock} timeline={timeline} />}
       <ChangeHighlight indexed={indexed} clock={clock} timeline={timeline} highlightColour={playerColour} />
       {tracks.map((track) => (
-        <PlayerAvatar key={track.player} track={track} skinUrl={skinUrl(track.player)} clock={clock} assets={assets} origin={origin} colour={playerColour(track.player)} />
+        <PlayerAvatar key={track.player} track={track} skinUrl={skinUrl(track.player)} clock={clock} assets={assets} origin={origin} />
       ))}
       <OrbitControls makeDefault enableDamping target={centre} maxPolarAngle={Math.PI * 0.495} />
       <CameraRig mode={camera} tracks={tracks} clock={clock} origin={origin} centre={centre} />

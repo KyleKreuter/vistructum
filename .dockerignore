@@ -17,3 +17,6 @@ __pycache__/
 logs/
 .docker/
 ml/
+vistructum-ui/src/main/webapp/node_modules/
+vistructum-ui/src/main/webapp/node/
+vistructum-ui/src/main/webapp/dist/

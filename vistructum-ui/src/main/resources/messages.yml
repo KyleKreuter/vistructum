@@ -5,7 +5,7 @@ command:
   no-permission: "<prefix><red>This action is not permitted.</red>"
   player-only: "<prefix><red>This command can only be run by a player.</red>"
   failed: "<prefix><red>The request failed: <reason></red>"
-  usage: "<prefix><gray>Usage: /vis [status | review [count] | show <id> | tp <id> | confirm <id> | falsealarm <id> | stats | scan [world|stop] | export]</gray>"
+  usage: "<prefix><gray>Usage: /vis [status | review [count] | show <id> | tp <id> | confirm <id> | falsealarm <id> | stats | web | evidence <id> [share|unshare] | scan [world|stop] | export]</gray>"
   id-missing: "<prefix><red>A finding ID is required, for example /vis <subcommand> 12.</red>"
   count-invalid: "<prefix><red>The count must be a positive number.</red>"
   finding-missing: "<prefix><red>Finding #<id> was not found.</red>"
@@ -57,6 +57,18 @@ export:
 pack:
   prompt: "<gray>The vistructum review menu and scan bar are displayed with this resource pack.</gray>"
 
+web:
+  disabled: "<prefix><red>The web app is not enabled on this server.</red>"
+  link: "<prefix><gray>A sign-in link to the web app was created, valid for <minutes> minutes:</gray> <link><aqua>[Open]</aqua></link>"
+
+evidence:
+  link: "<prefix><gray>A sign-in link to the evidence of finding #<id> was created, valid for <minutes> minutes:</gray> <link><aqua>[Open]</aqua></link>"
+  missing: "<prefix><red>No evidence was secured for finding #<id>.</red>"
+  shared: "<prefix><gray>The evidence of finding #<id> was shared publicly:</gray> <link><aqua>[Open]</aqua></link>"
+  not-shareable: "<prefix><red>The evidence of finding #<id> cannot be shared. Only confirmed findings with evidence can be shared.</red>"
+  unshared: "<prefix><gray>The public link to the evidence of finding #<id> was revoked.</gray>"
+  not-shared: "<prefix><gray>No public link to the evidence of finding #<id> was active.</gray>"
+
 source:
   mask: "Live check"
   fullscan: "Fullscan"
@@ -80,6 +92,7 @@ menu:
   confirm: "<green>Confirm</green>"
   false-alarm: "<red>False alarm</red>"
   teleport: "<aqua>Teleport</aqua>"
+  evidence: "<light_purple>Evidence</light_purple>"
   back: "<white>Back to the list</white>"
   previous: "<white>Previous page</white>"
   next: "<white>Next page</white>"

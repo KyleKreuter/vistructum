@@ -3,12 +3,11 @@ import { lazy, Suspense, useCallback, useEffect, useRef } from "react";
 import { useParams } from "react-router";
 import { ApiError, urls } from "@/api/client";
 import { usePalette, usePublicEvidence } from "@/api/queries";
-import { PlayerFace } from "@/components/app/PlayerFace";
 import { ErrorState, PageSpinner } from "@/components/app/States";
 import { PlainShell } from "@/components/app/PlainShell";
 import { Badge } from "@/components/ui/badge";
 import type { ReplayControls } from "@/features/replay/ReplayView";
-import { formatDateTime, playerLabel } from "@/logic/format";
+import { formatDateTime } from "@/logic/format";
 import { detailAction, isEditableTarget } from "@/logic/keyboard";
 
 const ReplayView = lazy(() => import("@/features/replay/ReplayView"));
@@ -70,14 +69,6 @@ export default function PublicEvidencePage() {
                 <Badge variant="amber">Not reviewed</Badge>
               )}
               <span className="text-sm text-muted-foreground">{formatDateTime(finding.createdAt)}</span>
-              <span className="flex flex-wrap items-center gap-3">
-                {finding.players.map((player) => (
-                  <span key={player.uuid} className="inline-flex items-center gap-1.5 text-sm">
-                    <PlayerFace uuid={player.uuid} name={player.name} size={18} skin={skinUrl(player.uuid)} />
-                    {playerLabel(player)}
-                  </span>
-                ))}
-              </span>
             </div>
             {finding.verdict !== "CONFIRMED" && (
               <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-4 py-3 text-sm">

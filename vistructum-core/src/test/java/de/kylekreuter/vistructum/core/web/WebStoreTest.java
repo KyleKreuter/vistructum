@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.core.web;
 
 import de.kylekreuter.vistructum.api.BlockBox;
+import de.kylekreuter.vistructum.api.EvidenceShare;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingCandidate;
 import de.kylekreuter.vistructum.api.IssuedSession;
@@ -135,48 +136,77 @@ class WebStoreTest {
     }
 
     @Test
-    void sharingAgainReplacesTheActiveLink() throws Exception {
+    void sharingAgainKeepsTheActiveLink() throws Exception {
         Finding finding = confirmedWithEvidence();
 
         String first = store.share(finding.id(), "Staff", NOW).get().orElseThrow();
         String second = store.share(finding.id(), "Admin", NOW.plusSeconds(10)).get().orElseThrow();
 
-        assertTrue(store.sharedFinding(first).get().isEmpty());
-        assertEquals(Optional.of(finding.id()), store.sharedFinding(second).get());
-        assertEquals(Optional.of(NOW.plusSeconds(10)), store.sharedSince(finding.id()).get());
-        assertEquals(1, count("SELECT count(*) FROM evidence_shares WHERE revoked_by = 'Admin'"));
+        assertEquals(first, second);
+        assertEquals(Optional.of(new EvidenceShare(first, NOW)), store.shared(finding.id()).get());
+        assertEquals(1, count("SELECT count(*) FROM share_events"));
     }
 
     @Test
-    void unshareRevokesTheLink() throws Exception {
+    void unshareDeactivatesTheLinkAndShareRestoresTheSameToken() throws Exception {
         Finding finding = confirmedWithEvidence();
         String token = store.share(finding.id(), "Staff", NOW).get().orElseThrow();
 
         assertTrue(store.unshare(finding.id(), "Staff", NOW.plusSeconds(5)).get());
         assertFalse(store.unshare(finding.id(), "Staff", NOW.plusSeconds(6)).get());
-
         assertTrue(store.sharedFinding(token).get().isEmpty());
-        assertTrue(store.sharedSince(finding.id()).get().isEmpty());
+        assertTrue(store.shared(finding.id()).get().isEmpty());
+
+        assertEquals(Optional.of(token), store.share(finding.id(), "Admin", NOW.plusSeconds(20)).get());
+        assertEquals(Optional.of(finding.id()), store.sharedFinding(token).get());
+        assertEquals(Optional.of(new EvidenceShare(token, NOW.plusSeconds(20))), store.shared(finding.id()).get());
+        assertEquals(3, count("SELECT count(*) FROM share_events"));
     }
 
     @Test
-    void linkStopsWorkingWhenTheVerdictChanges() throws Exception {
+    void linkKeepsWorkingWhenTheVerdictChanges() throws Exception {
         Finding finding = confirmedWithEvidence();
         String token = store.share(finding.id(), "Staff", NOW).get().orElseThrow();
 
         findings.review(finding.id(), Verdict.FALSE_ALARM, "Staff", NOW.plusSeconds(5)).get();
 
-        assertTrue(store.sharedFinding(token).get().isEmpty());
+        assertEquals(Optional.of(finding.id()), store.sharedFinding(token).get());
+        assertEquals(Optional.of(token), store.share(finding.id(), "Staff", NOW.plusSeconds(6)).get());
+    }
+
+    @Test
+    void inactiveLinkOfAFindingNoLongerConfirmedCannotBeActivated() throws Exception {
+        Finding finding = confirmedWithEvidence();
+        store.share(finding.id(), "Staff", NOW).get();
+        store.unshare(finding.id(), "Staff", NOW.plusSeconds(1)).get();
+
+        findings.review(finding.id(), Verdict.FALSE_ALARM, "Staff", NOW.plusSeconds(5)).get();
+
+        assertTrue(store.share(finding.id(), "Staff", NOW.plusSeconds(6)).get().isEmpty());
     }
 
     @Test
     void sharesCascadeWithTheFinding() throws Exception {
         Finding finding = confirmedWithEvidence();
         store.share(finding.id(), "Staff", NOW).get();
+        store.unshare(finding.id(), "Staff", NOW).get();
 
         findings.deleteReviewedBefore(Verdict.CONFIRMED, NOW.plusSeconds(1)).get();
 
         assertEquals(0, count("SELECT count(*) FROM evidence_shares"));
+        assertEquals(0, count("SELECT count(*) FROM share_events"));
+    }
+
+    @Test
+    void activeLinksKeepTheirFindingsPastTheRetentionPeriod() throws Exception {
+        Finding finding = confirmedWithEvidence();
+        store.share(finding.id(), "Staff", NOW).get();
+
+        assertEquals(0, findings.deleteReviewedBefore(Verdict.CONFIRMED, NOW.plusSeconds(100)).get());
+
+        store.unshare(finding.id(), "Staff", NOW.plusSeconds(200)).get();
+        assertEquals(0, findings.deleteReviewedBefore(Verdict.CONFIRMED, NOW.plusSeconds(200)).get());
+        assertEquals(1, findings.deleteReviewedBefore(Verdict.CONFIRMED, NOW.plusSeconds(201)).get());
     }
 
     private Finding confirmedWithEvidence() throws Exception {

@@ -1,6 +1,5 @@
 package de.kylekreuter.vistructum.api;
 
-import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -9,7 +8,8 @@ import java.util.concurrent.CompletableFuture;
  * Sign-in and public evidence links of the web application.
  *
  * <p>All tokens are random secrets of 256 bits, encoded as URL-safe Base64 without padding. The server stores only
- * their SHA-256 hashes. A login token is valid for {@value #LOGIN_MINUTES} minutes and can be redeemed once; a
+ * the SHA-256 hashes of login and session tokens. Share tokens are stored as they are, because a public link stays
+ * the same for the whole lifetime of its finding. A login token is valid for {@value #LOGIN_MINUTES} minutes and can be redeemed once; a
  * session lasts {@value #SESSION_HOURS} hours. Checking permissions is the task of the caller: a login token
  * should be issued only to a player allowed to review.
  *
@@ -69,25 +69,30 @@ public interface WebAccess {
     CompletableFuture<Void> endSession(String sessionToken);
 
     /**
-     * Makes the evidence of a confirmed finding available through a public link.
+     * Activates the public link to the evidence of a confirmed finding.
      *
-     * <p>A finding has at most one public link. Sharing again revokes the previous link and issues a new token.
-     * The action is added to the activity log.
+     * <p>A finding has exactly one share token, issued on the first activation and kept for good. Activating an
+     * inactive link again brings back the same token; activating an active link changes nothing. A later change of
+     * the verdict does not deactivate the link. Every activation is added to the activity log.
      *
      * @param findingId identifier of the finding
      * @param actor name of the sharing party as it is to be stored and displayed
      * @return a future completing with the share token, or with an empty {@link Optional} if no finding has this
-     *         identifier, the finding is not confirmed or it has no evidence
+     *         identifier, or the link is inactive and the finding is not confirmed or has no evidence
      * @throws NullPointerException if {@code actor} is {@code null}
      */
     CompletableFuture<Optional<String>> share(long findingId, String actor);
 
     /**
-     * Revokes the public link to the evidence of a finding.
+     * Deactivates the public link to the evidence of a finding.
+     *
+     * <p>The token is kept, so activating the link again restores the same address. The action is added to the
+     * activity log.
      *
      * @param findingId identifier of the finding
-     * @param actor name of the revoking party as it is to be stored and displayed
-     * @return a future completing with {@code true} if a link was revoked, or {@code false} if none was active
+     * @param actor name of the deactivating party as it is to be stored and displayed
+     * @return a future completing with {@code true} if an active link was deactivated, or {@code false} if none was
+     *         active
      * @throws NullPointerException if {@code actor} is {@code null}
      */
     CompletableFuture<Boolean> unshare(long findingId, String actor);
@@ -97,17 +102,17 @@ public interface WebAccess {
      *
      * @param shareToken token from {@link #share(long, String)}
      * @return a future completing with the finding identifier, or with an empty {@link Optional} if the token is
-     *         unknown or revoked
+     *         unknown or its link is inactive
      * @throws NullPointerException if {@code shareToken} is {@code null}
      */
     CompletableFuture<Optional<Long>> sharedFinding(String shareToken);
 
     /**
-     * Reports since when the evidence of a finding is shared.
+     * Looks up the active public link to the evidence of a finding.
      *
      * @param findingId identifier of the finding
-     * @return a future completing with the time the active link was created, or with an empty {@link Optional} if
-     *         no link is active
+     * @return a future completing with the active link, or with an empty {@link Optional} if the link of the finding
+     *         is inactive or was never activated
      */
-    CompletableFuture<Optional<Instant>> sharedSince(long findingId);
+    CompletableFuture<Optional<EvidenceShare>> shared(long findingId);
 }

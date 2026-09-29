@@ -1,5 +1,7 @@
 package de.kylekreuter.vistructum.core.web;
 
+import de.kylekreuter.vistructum.api.ActivityKind;
+import de.kylekreuter.vistructum.api.EvidenceShare;
 import de.kylekreuter.vistructum.api.IssuedSession;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.api.WebAccess;
@@ -26,12 +28,9 @@ public final class WebStore {
             SELECT EXISTS (SELECT 1 FROM findings f JOIN finding_evidence e ON e.finding_id = f.id
                 WHERE f.id = ? AND f.verdict = ?)
             """;
-    private static final String REVOKE = """
-            UPDATE evidence_shares SET revoked_at = ?, revoked_by = ? WHERE finding_id = ? AND revoked_at IS NULL
-            """;
-    private static final String SHARED_FINDING = """
-            SELECT s.finding_id FROM evidence_shares s JOIN findings f ON f.id = s.finding_id
-            WHERE s.token_hash = ? AND s.revoked_at IS NULL AND f.verdict = ?
+    private static final String ACTIVATE = """
+            INSERT INTO evidence_shares (finding_id, token, active, shared_since) VALUES (?, ?, 1, ?)
+            ON CONFLICT (finding_id) DO UPDATE SET active = 1, shared_since = excluded.shared_since
             """;
 
     private final Database database;
@@ -85,39 +84,46 @@ public final class WebStore {
     }
 
     public CompletableFuture<Optional<String>> share(long findingId, String actor, Instant now) {
-        String token = tokens.next();
+        String issued = tokens.next();
         return database.transaction(connection -> {
-            try (PreparedStatement select = connection.prepareStatement(SHAREABLE)) {
-                select.setLong(1, findingId);
-                select.setString(2, Verdict.CONFIRMED.name());
-                try (ResultSet rows = select.executeQuery()) {
-                    if (!rows.getBoolean(1)) {
-                        return Optional.empty();
-                    }
-                }
+            Optional<EvidenceShare> active = link(connection, findingId, true);
+            if (active.isPresent()) {
+                return Optional.of(active.get().token());
             }
-            revoke(connection, findingId, actor, now);
-            try (PreparedStatement insert = connection.prepareStatement(
-                    "INSERT INTO evidence_shares (finding_id, token_hash, created_at, created_by) VALUES (?, ?, ?, ?)")) {
-                insert.setLong(1, findingId);
-                insert.setString(2, Tokens.hash(token));
-                insert.setLong(3, now.toEpochMilli());
-                insert.setString(4, actor);
-                insert.executeUpdate();
+            if (!shareable(connection, findingId)) {
+                return Optional.empty();
             }
+            String token = link(connection, findingId, false).map(EvidenceShare::token).orElse(issued);
+            try (PreparedStatement upsert = connection.prepareStatement(ACTIVATE)) {
+                upsert.setLong(1, findingId);
+                upsert.setString(2, token);
+                upsert.setLong(3, now.toEpochMilli());
+                upsert.executeUpdate();
+            }
+            record(connection, findingId, actor, now, ActivityKind.SHARED);
             return Optional.of(token);
         });
     }
 
     public CompletableFuture<Boolean> unshare(long findingId, String actor, Instant now) {
-        return database.transaction(connection -> revoke(connection, findingId, actor, now) > 0);
+        return database.transaction(connection -> {
+            try (PreparedStatement update = connection.prepareStatement(
+                    "UPDATE evidence_shares SET active = 0 WHERE finding_id = ? AND active = 1")) {
+                update.setLong(1, findingId);
+                if (update.executeUpdate() == 0) {
+                    return false;
+                }
+            }
+            record(connection, findingId, actor, now, ActivityKind.UNSHARED);
+            return true;
+        });
     }
 
     public CompletableFuture<Optional<Long>> sharedFinding(String shareToken) {
         return database.transaction(connection -> {
-            try (PreparedStatement select = connection.prepareStatement(SHARED_FINDING)) {
-                select.setString(1, Tokens.hash(shareToken));
-                select.setString(2, Verdict.CONFIRMED.name());
+            try (PreparedStatement select = connection.prepareStatement(
+                    "SELECT finding_id FROM evidence_shares WHERE token = ? AND active = 1")) {
+                select.setString(1, shareToken);
                 try (ResultSet rows = select.executeQuery()) {
                     return rows.next() ? Optional.of(rows.getLong(1)) : Optional.empty();
                 }
@@ -125,16 +131,8 @@ public final class WebStore {
         });
     }
 
-    public CompletableFuture<Optional<Instant>> sharedSince(long findingId) {
-        return database.transaction(connection -> {
-            try (PreparedStatement select = connection.prepareStatement(
-                    "SELECT created_at FROM evidence_shares WHERE finding_id = ? AND revoked_at IS NULL")) {
-                select.setLong(1, findingId);
-                try (ResultSet rows = select.executeQuery()) {
-                    return rows.next() ? Optional.of(Instant.ofEpochMilli(rows.getLong(1))) : Optional.empty();
-                }
-            }
-        });
+    public CompletableFuture<Optional<EvidenceShare>> shared(long findingId) {
+        return database.transaction(connection -> link(connection, findingId, true));
     }
 
     public CompletableFuture<Integer> deleteExpired(Instant now) {
@@ -151,12 +149,39 @@ public final class WebStore {
         });
     }
 
-    private static int revoke(Connection connection, long findingId, String actor, Instant now) throws SQLException {
-        try (PreparedStatement update = connection.prepareStatement(REVOKE)) {
-            update.setLong(1, now.toEpochMilli());
-            update.setString(2, actor);
-            update.setLong(3, findingId);
-            return update.executeUpdate();
+    private static boolean shareable(Connection connection, long findingId) throws SQLException {
+        try (PreparedStatement select = connection.prepareStatement(SHAREABLE)) {
+            select.setLong(1, findingId);
+            select.setString(2, Verdict.CONFIRMED.name());
+            try (ResultSet rows = select.executeQuery()) {
+                return rows.getBoolean(1);
+            }
+        }
+    }
+
+    private static Optional<EvidenceShare> link(Connection connection, long findingId, boolean onlyActive)
+            throws SQLException {
+        try (PreparedStatement select = connection.prepareStatement(
+                "SELECT token, shared_since, active FROM evidence_shares WHERE finding_id = ?")) {
+            select.setLong(1, findingId);
+            try (ResultSet rows = select.executeQuery()) {
+                if (!rows.next() || onlyActive && !rows.getBoolean(3)) {
+                    return Optional.empty();
+                }
+                return Optional.of(new EvidenceShare(rows.getString(1), Instant.ofEpochMilli(rows.getLong(2))));
+            }
+        }
+    }
+
+    private static void record(Connection connection, long findingId, String actor, Instant now, ActivityKind kind)
+            throws SQLException {
+        try (PreparedStatement insert = connection.prepareStatement(
+                "INSERT INTO share_events (finding_id, at, actor, kind) VALUES (?, ?, ?, ?)")) {
+            insert.setLong(1, findingId);
+            insert.setLong(2, now.toEpochMilli());
+            insert.setString(3, actor);
+            insert.setString(4, kind.name());
+            insert.executeUpdate();
         }
     }
 

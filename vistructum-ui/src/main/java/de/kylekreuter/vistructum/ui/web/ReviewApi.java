@@ -10,6 +10,7 @@ import com.google.gson.JsonPrimitive;
 import de.kylekreuter.vistructum.api.BlockEvent;
 import de.kylekreuter.vistructum.api.BlockVolume;
 import de.kylekreuter.vistructum.api.Evidence;
+import de.kylekreuter.vistructum.api.EvidenceShare;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.Findings;
@@ -254,11 +255,12 @@ final class ReviewApi {
         return permitted(session).thenCompose(ignored -> existing(id))
                 .thenCompose(finding -> off(vistructum.web().share(id, session.playerName())))
                 .thenCompose(token -> {
-                    String shareToken = token.orElseThrow(ApiError::notShareable);
-                    return off(vistructum.web().sharedSince(id)).thenApply(since -> {
+                    token.orElseThrow(ApiError::notShareable);
+                    return off(vistructum.web().shared(id)).thenApply(shared -> {
+                        EvidenceShare active = shared.orElseThrow(ApiError::notShareable);
                         JsonObject json = new JsonObject();
-                        json.addProperty("url", settings.shareLink(shareToken));
-                        json.addProperty("sharedSince", since.orElseGet(clock::instant).toString());
+                        json.addProperty("url", settings.shareLink(active.token()));
+                        json.addProperty("sharedSince", active.sharedSince().toString());
                         return Reply.json(json);
                     });
                 });
@@ -345,12 +347,8 @@ final class ReviewApi {
         return off(vistructum.web().sharedFinding(token)).thenCompose(found -> {
             long id = found.orElseThrow(ApiError::notFound);
             CompletableFuture<Optional<Evidence>> evidence = off(vistructum.findings().evidence(id));
-            return off(vistructum.findings().get(id)).thenCombine(evidence, (finding, secured) -> {
-                Finding confirmed = finding.filter(candidate -> candidate.review()
-                        .filter(review -> review.verdict() == Verdict.CONFIRMED).isPresent())
-                        .orElseThrow(ApiError::notFound);
-                return new Shared(confirmed, secured.orElseThrow(ApiError::notFound));
-            });
+            return off(vistructum.findings().get(id)).thenCombine(evidence, (finding, secured) ->
+                    new Shared(finding.orElseThrow(ApiError::notFound), secured.orElseThrow(ApiError::notFound)));
         });
     }
 
@@ -363,10 +361,11 @@ final class ReviewApi {
 
     private CompletableFuture<JsonObject> summary(Finding finding) {
         CompletableFuture<Boolean> evidence = off(vistructum.findings().hasEvidence(finding.id()));
-        CompletableFuture<Optional<Instant>> shared = off(vistructum.web().sharedSince(finding.id()));
+        CompletableFuture<Optional<EvidenceShare>> shared = off(vistructum.web().shared(finding.id()));
         CompletableFuture<Map<UUID, Optional<String>>> names = names(finding.players());
         return CompletableFuture.allOf(evidence, shared, names).thenApply(ignored ->
-                Views.finding(finding, names.join(), evidence.join(), shared.join()));
+                Views.finding(finding, names.join(), evidence.join(),
+                        shared.join().map(link -> new Views.Link(settings.shareLink(link.token()), link.sharedSince()))));
     }
 
     private CompletableFuture<Finding> existing(long id) {

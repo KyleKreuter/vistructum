@@ -377,12 +377,12 @@ class FindingStoreTest {
         store.review(second.id(), Verdict.FALSE_ALARM, "Ben", NOW.plusSeconds(20)).get();
         database.transaction(connection -> {
             try (PreparedStatement insert = connection.prepareStatement("""
-                    INSERT INTO evidence_shares (finding_id, token_hash, created_at, created_by, revoked_at, revoked_by)
-                    VALUES (?, 'h', ?, 'Anna', ?, 'Ben')
+                    INSERT INTO share_events (finding_id, at, actor, kind) VALUES (?, ?, 'Anna', 'SHARED'), (?, ?, 'Ben', 'UNSHARED')
                     """)) {
                 insert.setLong(1, first.id());
                 insert.setLong(2, NOW.plusSeconds(30).toEpochMilli());
-                insert.setLong(3, NOW.plusSeconds(40).toEpochMilli());
+                insert.setLong(3, first.id());
+                insert.setLong(4, NOW.plusSeconds(40).toEpochMilli());
                 insert.executeUpdate();
             }
             return null;

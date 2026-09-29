@@ -38,6 +38,9 @@ final class Views {
     private Views() {
     }
 
+    record Link(String url, Instant sharedSince) {
+    }
+
     static JsonObject me(WebSession session, boolean canShare) {
         JsonObject me = new JsonObject();
         me.addProperty("player", session.player().toString());
@@ -48,7 +51,7 @@ final class Views {
     }
 
     static JsonObject finding(Finding finding, Map<UUID, Optional<String>> names, boolean hasEvidence,
-                              Optional<Instant> sharedSince) {
+                              Optional<Link> share) {
         JsonObject json = new JsonObject();
         json.addProperty("id", finding.id());
         json.addProperty("source", source(finding.source()));
@@ -68,7 +71,8 @@ final class Views {
             return object;
         }).orElse(JsonNull.INSTANCE));
         json.addProperty("hasEvidence", hasEvidence);
-        json.add("sharedSince", time(sharedSince));
+        json.add("sharedSince", time(share.map(Link::sharedSince)));
+        json.add("shareUrl", text(share.map(Link::url)));
         return json;
     }
 
@@ -81,7 +85,8 @@ final class Views {
         JsonObject json = new JsonObject();
         json.addProperty("id", finding.id());
         json.addProperty("createdAt", finding.createdAt().toString());
-        json.addProperty("verdict", "CONFIRMED");
+        json.add("verdict", finding.review().<JsonElement>map(review -> new JsonPrimitive(review.verdict().name()))
+                .orElse(JsonNull.INSTANCE));
         json.add("players", players(finding.players(), names));
         return json;
     }

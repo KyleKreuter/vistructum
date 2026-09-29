@@ -66,7 +66,7 @@ evidence:
   missing: "<prefix><red>No evidence was secured for finding #<id>.</red>"
   shared: "<prefix><gray>The evidence of finding #<id> was shared publicly:</gray> <link><aqua>[Open]</aqua></link>"
   not-shareable: "<prefix><red>The evidence of finding #<id> cannot be shared. Only confirmed findings with evidence can be shared.</red>"
-  unshared: "<prefix><gray>The public link to the evidence of finding #<id> was revoked.</gray>"
+  unshared: "<prefix><gray>The public link to the evidence of finding #<id> was deactivated. It works again once it is shared again.</gray>"
   not-shared: "<prefix><gray>No public link to the evidence of finding #<id> was active.</gray>"
 
 source:

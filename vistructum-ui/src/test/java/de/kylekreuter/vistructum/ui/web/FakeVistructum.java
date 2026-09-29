@@ -2,6 +2,7 @@ package de.kylekreuter.vistructum.ui.web;
 
 import de.kylekreuter.vistructum.api.Activity;
 import de.kylekreuter.vistructum.api.Evidence;
+import de.kylekreuter.vistructum.api.EvidenceShare;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.FindingScene;
@@ -258,12 +259,14 @@ final class FakeVistructum implements Vistructum, Findings, Scans, Players, WebA
 
     @Override
     public synchronized CompletableFuture<Optional<String>> share(long findingId, String actor) {
+        if (shares.containsValue(findingId)) {
+            return completedFuture(Optional.of("share-" + findingId));
+        }
         Finding finding = findings.get(findingId);
         boolean confirmed = finding != null && finding.review().map(Review::verdict).orElse(null) == Verdict.CONFIRMED;
         if (!confirmed || !evidence.containsKey(findingId)) {
             return completedFuture(Optional.empty());
         }
-        shares.values().removeIf(id -> id == findingId);
         String token = "share-" + findingId;
         shares.put(token, findingId);
         return completedFuture(Optional.of(token));
@@ -280,8 +283,9 @@ final class FakeVistructum implements Vistructum, Findings, Scans, Players, WebA
     }
 
     @Override
-    public CompletableFuture<Optional<Instant>> sharedSince(long findingId) {
-        return completedFuture(shares.containsValue(findingId) ? Optional.of(now) : Optional.empty());
+    public CompletableFuture<Optional<EvidenceShare>> shared(long findingId) {
+        return completedFuture(shares.containsValue(findingId)
+                ? Optional.of(new EvidenceShare("share-" + findingId, now)) : Optional.empty());
     }
 
     private record ListPage(List<Finding> items, boolean hasNext) implements Page<Finding> {

@@ -4,23 +4,22 @@ import de.kylekreuter.vistructum.api.BlockBox;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.core.MainThread;
 import de.kylekreuter.vistructum.core.recording.MotionRecorder;
+import de.kylekreuter.vistructum.inference.Contract;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
 
 public final class EvidenceKeeper {
 
-    static final long MAX_CELLS = 1L << 21;
+    static final int MAX_EXTENT = Contract.GRID;
 
     private final MainThread mainThread;
     private final EvidenceStore store;
     private final MotionRecorder recorder;
     private final EvidenceSettings settings;
-    private final Logger logger;
 
     public EvidenceKeeper(MainThread mainThread, EvidenceStore store, MotionRecorder recorder,
                           EvidenceSettings settings) {
@@ -28,7 +27,6 @@ public final class EvidenceKeeper {
         this.store = Objects.requireNonNull(store, "store");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
         this.settings = Objects.requireNonNull(settings, "settings");
-        this.logger = mainThread.plugin().getLogger();
     }
 
     public CompletableFuture<Boolean> secure(Finding finding) {
@@ -47,10 +45,6 @@ public final class EvidenceKeeper {
             return Optional.empty();
         }
         BlockBox region = region(finding.box(), settings.margin(), world.getMinHeight(), world.getMaxHeight() - 1);
-        if (VolumeSnapshot.volume(region) > MAX_CELLS) {
-            logger.warning("finding #" + finding.id() + " is too large to secure evidence for");
-            return Optional.empty();
-        }
         VolumeSnapshot.Builder current = new VolumeSnapshot.Builder(region);
         int index = 0;
         for (int y = region.minY(); y <= region.maxY(); y++) {
@@ -64,7 +58,17 @@ public final class EvidenceKeeper {
     }
 
     static BlockBox region(BlockBox box, int margin, int minY, int maxY) {
-        return new BlockBox(box.minX() - margin, Math.max(minY, box.minY() - margin), box.minZ() - margin,
-                box.maxX() + margin, Math.min(maxY, box.maxY() + margin), box.maxZ() + margin);
+        int[] x = clamp(box.minX() - margin, box.maxX() + margin, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        int[] y = clamp(box.minY() - margin, box.maxY() + margin, minY, maxY);
+        int[] z = clamp(box.minZ() - margin, box.maxZ() + margin, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        return new BlockBox(x[0], y[0], z[0], x[1], y[1], z[1]);
+    }
+
+    private static int[] clamp(int from, int to, int lowest, int highest) {
+        if (to - from + 1 > MAX_EXTENT) {
+            from = Math.floorDiv(from + to, 2) - MAX_EXTENT / 2 + 1;
+            to = from + MAX_EXTENT - 1;
+        }
+        return new int[]{Math.max(lowest, from), Math.min(highest, to)};
     }
 }

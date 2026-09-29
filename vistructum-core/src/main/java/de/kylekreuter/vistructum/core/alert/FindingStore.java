@@ -103,15 +103,18 @@ public final class FindingStore {
             GROUP BY reviewer
             ORDER BY count(*) DESC, reviewer
             """;
+    private static final String DELETE_REVIEWED = """
+            DELETE FROM findings WHERE verdict = ? AND reviewed_at < ?
+                AND NOT EXISTS (SELECT 1 FROM evidence_shares s WHERE s.finding_id = findings.id AND s.active = 1)
+                AND NOT EXISTS (SELECT 1 FROM share_events e
+                    WHERE e.finding_id = findings.id AND e.kind = 'UNSHARED' AND e.at >= ?)
+            """;
     private static final String ACTIVITY = """
             SELECT at, actor, kind, finding_id FROM (
                 SELECT reviewed_at AS at, reviewer AS actor, verdict AS kind, id AS finding_id, 0 AS rank
                 FROM findings WHERE verdict IS NOT NULL AND reviewed_at < ?
                 UNION ALL
-                SELECT created_at, created_by, 'SHARED', finding_id, id * 2 FROM evidence_shares WHERE created_at < ?
-                UNION ALL
-                SELECT revoked_at, revoked_by, 'UNSHARED', finding_id, id * 2 + 1 FROM evidence_shares
-                WHERE revoked_at IS NOT NULL AND revoked_at < ?)
+                SELECT at, actor, kind, finding_id, id FROM share_events WHERE at < ?)
             ORDER BY at DESC, rank DESC, finding_id DESC
             LIMIT ?
             """;
@@ -346,10 +349,10 @@ public final class FindingStore {
 
     public CompletableFuture<Integer> deleteReviewedBefore(Verdict verdict, Instant cutoff) {
         return database.transaction(connection -> {
-            try (PreparedStatement delete = connection.prepareStatement(
-                    "DELETE FROM findings WHERE verdict = ? AND reviewed_at < ?")) {
+            try (PreparedStatement delete = connection.prepareStatement(DELETE_REVIEWED)) {
                 delete.setString(1, verdict.name());
                 delete.setLong(2, cutoff.toEpochMilli());
+                delete.setLong(3, cutoff.toEpochMilli());
                 return delete.executeUpdate();
             }
         });
@@ -417,8 +420,7 @@ public final class FindingStore {
                 long cursor = before.toEpochMilli();
                 select.setLong(1, cursor);
                 select.setLong(2, cursor);
-                select.setLong(3, cursor);
-                select.setInt(4, limit);
+                select.setInt(3, limit);
                 try (ResultSet rows = select.executeQuery()) {
                     while (rows.next()) {
                         entries.add(new Activity(Instant.ofEpochMilli(rows.getLong(1)), rows.getString(2),

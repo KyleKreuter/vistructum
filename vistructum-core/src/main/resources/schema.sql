@@ -183,15 +183,20 @@ CREATE TABLE IF NOT EXISTS web_sessions (
 ) WITHOUT ROWID;
 
 CREATE TABLE IF NOT EXISTS evidence_shares (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    finding_id INTEGER NOT NULL REFERENCES findings (id) ON DELETE CASCADE,
-    token_hash TEXT    NOT NULL UNIQUE,
-    created_at INTEGER NOT NULL,
-    created_by TEXT    NOT NULL,
-    revoked_at INTEGER,
-    revoked_by TEXT
+    finding_id   INTEGER PRIMARY KEY REFERENCES findings (id) ON DELETE CASCADE,
+    token        TEXT    NOT NULL UNIQUE,
+    active       INTEGER NOT NULL,
+    shared_since INTEGER NOT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS evidence_shares_active ON evidence_shares (finding_id) WHERE revoked_at IS NULL;
+CREATE TABLE IF NOT EXISTS share_events (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    finding_id INTEGER NOT NULL REFERENCES findings (id) ON DELETE CASCADE,
+    at         INTEGER NOT NULL,
+    actor      TEXT    NOT NULL,
+    kind       TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS share_events_by_time ON share_events (at);
 
 CREATE INDEX IF NOT EXISTS findings_by_review_time ON findings (reviewed_at)

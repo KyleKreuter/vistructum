@@ -2,6 +2,7 @@ package de.kylekreuter.vistructum.core;
 
 import de.kylekreuter.vistructum.api.Activity;
 import de.kylekreuter.vistructum.api.Evidence;
+import de.kylekreuter.vistructum.api.EvidenceShare;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.FindingReviewedEvent;
@@ -354,8 +355,8 @@ public final class VistructumService implements Vistructum {
         }
 
         @Override
-        public CompletableFuture<Optional<Instant>> sharedSince(long findingId) {
-            return mainThread.handOff(webStore.sharedSince(findingId));
+        public CompletableFuture<Optional<EvidenceShare>> shared(long findingId) {
+            return mainThread.handOff(webStore.shared(findingId));
         }
     }
 }

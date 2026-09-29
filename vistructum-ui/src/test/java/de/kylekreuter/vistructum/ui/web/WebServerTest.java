@@ -166,6 +166,10 @@ class WebServerTest {
         assertEquals(200, shared.statusCode());
         assertEquals("https://review.example/review/e/share-7", json(shared).get("url").getAsString());
         assertEquals(NOW.toString(), json(shared).get("sharedSince").getAsString());
+        HttpResponse<String> again = post("/review/api/findings/7/share", "", authorized(session));
+        assertEquals(json(shared).get("url"), json(again).get("url"));
+        JsonObject detail = json(get("/review/api/findings/7", Map.of("Cookie", "vistructum_session=" + session)));
+        assertEquals("https://review.example/review/e/share-7", detail.get("shareUrl").getAsString());
         HttpResponse<String> open = post("/review/api/findings/8/share", "", authorized(session));
         assertEquals(409, open.statusCode());
         assertEquals("not_shareable", json(open).get("error").getAsString());
@@ -188,6 +192,7 @@ class WebServerTest {
         assertEquals("fullscan", first.get("source").getAsString());
         assertTrue(first.get("review").isJsonNull());
         assertTrue(first.get("sharedSince").isJsonNull());
+        assertTrue(first.get("shareUrl").isJsonNull());
         assertFalse(first.get("hasEvidence").getAsBoolean());
         JsonObject detail = json(get("/review/api/findings/7", cookie));
         assertTrue(detail.get("hasEvidence").getAsBoolean());
@@ -249,6 +254,17 @@ class WebServerTest {
         assertEquals(404, get("/review/api/public/unknown", Map.of()).statusCode());
         vistructum.unshare(7, "Staff").join();
         assertEquals(404, get("/review/api/public/share-7", Map.of()).statusCode());
+    }
+
+    @Test
+    void publicEvidenceStaysAvailableAfterTheVerdictChanges() throws Exception {
+        vistructum.share(7, "Staff").join();
+        vistructum.findings.put(7L, finding(7, Optional.of(new Review(Verdict.FALSE_ALARM, "Staff", NOW))));
+
+        HttpResponse<String> response = get("/review/api/public/share-7", Map.of());
+
+        assertEquals(200, response.statusCode());
+        assertEquals("FALSE_ALARM", json(response).getAsJsonObject("finding").get("verdict").getAsString());
     }
 
     @Test

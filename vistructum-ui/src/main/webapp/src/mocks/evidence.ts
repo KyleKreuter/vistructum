@@ -83,6 +83,16 @@ function beforeVolume(): Evidence["before"] {
     "minecraft:stone_slab[type=bottom,waterlogged=false]",
     "minecraft:poppy",
     "minecraft:gravel",
+    "minecraft:farmland[moisture=7]",
+    "minecraft:wheat[age=7]",
+    "minecraft:oak_fence[east=false,north=true,south=true,waterlogged=false,west=false]",
+    "minecraft:oak_fence[east=false,north=true,south=false,waterlogged=false,west=false]",
+    "minecraft:oak_fence[east=false,north=false,south=true,waterlogged=false,west=false]",
+    "minecraft:oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]",
+    "minecraft:oak_stairs[facing=north,half=bottom,shape=outer_right,waterlogged=false]",
+    "minecraft:wall_torch[facing=south]",
+    "minecraft:stone_slab[type=top,waterlogged=false]",
+    "minecraft:stone_slab[type=double,waterlogged=false]",
   ];
   const { sizeX, sizeY, sizeZ } = volumeSize;
   const cells = new Array<number>(sizeX * sizeY * sizeZ).fill(0);
@@ -114,6 +124,19 @@ function beforeVolume(): Evidence["before"] {
   set(1, surface + 1, 3, 8);
   set(2, surface + 1, 2, 9);
   set(sizeX - 2, surface + 1, sizeZ - 3, 9);
+  for (let dx = 0; dx < 3; dx++) {
+    for (let dz = 5; dz < 9; dz++) {
+      set(dx, surface, dz, 12);
+      set(dx, surface + 1, dz, 13);
+    }
+  }
+  for (let dz = 5; dz < 10; dz++) set(sizeX - 2, surface + 1, dz, dz === 5 ? 16 : dz === 9 ? 15 : 14);
+  set(sizeX - 3, surface + 1, sizeZ - 3, 17);
+  set(sizeX - 2, surface + 1, sizeZ - 3, 17);
+  set(sizeX - 1, surface + 1, sizeZ - 3, 18);
+  set(sizeX - 2, surface + 2, 2, 19);
+  set(sizeX - 3, surface + 1, 6, 20);
+  set(sizeX - 3, surface + 1, 7, 21);
   const { minX, minY, minZ } = volumeOrigin;
   const clearFrom = { x: centre.x - 3 - minX, z: centre.z - 3 - minZ };
   for (let dx = clearFrom.x - 1; dx <= clearFrom.x + 7; dx++) {

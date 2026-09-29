@@ -9,6 +9,9 @@ import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { useWorldAssets } from "@/features/world/assets";
+import { useBlockLibrary } from "@/features/world/library";
+import { skyTheme } from "@/features/world/skyColours";
 import { displayMaterial } from "@/logic/blocks";
 import { prepareTrack } from "@/logic/motion";
 import { appliedCount, buildTimeline, formatClock, speeds, tallies } from "@/logic/timeline";
@@ -87,16 +90,27 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
   const totalCounts = useMemo(() => tallies(timeline.changes), [timeline.changes]);
   const current = applied > 0 ? timeline.changes[applied - 1] : null;
   const span = timeline.end - timeline.start;
-  const background = resolved === "dark" ? "#101412" : "#28302c";
+  const assets = useWorldAssets(palette);
+  const loaded = useBlockLibrary(assets, indexed.states);
 
   return (
     <div className="space-y-3">
       <div className="relative h-[min(64vh,680px)] min-h-80 overflow-hidden rounded-lg bg-well">
-        <Canvas camera={{ position: [indexed.volume.sizeX / 2 + 14, indexed.volume.sizeY + 12, indexed.volume.sizeZ / 2 + 18], fov: 50, near: 0.1, far: 1000 }} dpr={[1, 2]} frameloop={active ? "always" : "never"}>
-          <color attach="background" args={[background]} />
-          <fog attach="fog" args={[background, 60, 160]} />
-          <ReplayScene indexed={indexed} timeline={timeline} tracks={tracks} palette={palette} clock={clock} skinUrl={skinUrl} colourOf={colourFor} camera={camera} />
+        <Canvas flat camera={{ position: [indexed.volume.sizeX / 2 + 14, indexed.volume.sizeY + 12, indexed.volume.sizeZ / 2 + 18], fov: 50, near: 0.1, far: 1000 }} dpr={[1, 2]} frameloop={active ? "always" : "never"}>
+          <ReplayScene
+            indexed={indexed}
+            timeline={timeline}
+            tracks={tracks}
+            assets={assets}
+            loaded={loaded}
+            clock={clock}
+            skinUrl={skinUrl}
+            colourOf={colourFor}
+            camera={camera}
+            sky={skyTheme(resolved === "dark")}
+          />
         </Canvas>
+        {!loaded && <div className="pointer-events-none absolute inset-x-0 bottom-8 text-center text-xs text-white/80">Loading block textures…</div>}
         <div className="pointer-events-none absolute top-3 left-3 max-w-[70%] rounded-md bg-black/55 px-3 py-2 font-mono text-xs text-white/90 backdrop-blur-sm">
           {current ? (
             <>

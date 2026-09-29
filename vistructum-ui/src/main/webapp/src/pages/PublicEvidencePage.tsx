@@ -70,17 +70,17 @@ export default function PublicEvidencePage() {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <h1 className="text-xl font-semibold tracking-tight">Recorded build</h1>
               {finding.verdict === "CONFIRMED" ? (
-                <Badge variant="outline" className="border-confirmed/50 bg-confirmed/10">
+                <Badge variant="rose">
                   <span className="size-1.5 rounded-full bg-confirmed" />
                   Confirmed by staff
                 </Badge>
               ) : finding.verdict === "FALSE_ALARM" ? (
-                <Badge variant="outline" className="border-false-alarm/50 bg-false-alarm/10">
+                <Badge variant="green">
                   <span className="size-1.5 rounded-full bg-false-alarm" />
                   False alarm
                 </Badge>
               ) : (
-                <Badge variant="outline">Not reviewed</Badge>
+                <Badge variant="amber">Not reviewed</Badge>
               )}
               <span className="text-sm text-muted-foreground">{formatDateTime(finding.createdAt)}</span>
               <span className="flex flex-wrap items-center gap-3">

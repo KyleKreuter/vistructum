@@ -53,7 +53,7 @@ export function PlayerFace({
   if (failed === url) {
     return (
       <span
-        className={cn("inline-flex shrink-0 items-center justify-center rounded-sm bg-muted font-mono text-[9px] font-semibold text-muted-foreground", className)}
+        className={cn("inline-flex shrink-0 items-center justify-center rounded-sm bg-muted text-[9px] font-semibold text-muted-foreground", className)}
         style={style}
         aria-hidden
       >
@@ -69,7 +69,7 @@ export function PlayerChip({ player, link = true }: { player: PlayerRef; link?: 
   const content = (
     <>
       <PlayerFace uuid={player.uuid} name={player.name} size={18} />
-      <span className={cn("truncate", !player.name && "font-mono text-xs")}>{playerLabel(player)}</span>
+      <span className={cn("truncate", !player.name && "text-xs")}>{playerLabel(player)}</span>
     </>
   );
   if (!link) return <span className="inline-flex min-w-0 items-center gap-1.5 text-sm">{content}</span>;

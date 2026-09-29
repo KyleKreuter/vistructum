@@ -297,7 +297,7 @@ export default function FindingDetailPage() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-2xl font-semibold tracking-tight">#{data.id}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">#{data.id}</h1>
             <VerdictBadge review={data.review} />
             <SourceBadge source={data.source} />
             <IndicatorIcons finding={data} />
@@ -383,11 +383,11 @@ export default function FindingDetailPage() {
               )}
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <Fact label="Score">
-                  <span className="font-mono tabular-nums">{formatScore(data.score)}</span>
+                  <span className="tabular-nums">{formatScore(data.score)}</span>
                   {data.votes > 1 && <span className="text-muted-foreground"> · {data.votes} votes</span>}
                 </Fact>
                 <Fact label="Model">
-                  <span className="font-mono">{data.modelVersion}</span>
+                  <span>{data.modelVersion}</span>
                 </Fact>
                 <Fact label="Source">{data.source === "mask" ? "Live check" : "Full scan"}</Fact>
                 <Fact label="Created">
@@ -399,10 +399,10 @@ export default function FindingDetailPage() {
                   </Tooltip>
                 </Fact>
                 <Fact label="World">
-                  <span className="font-mono">{data.world}</span>
+                  <span>{data.world}</span>
                 </Fact>
                 <Fact label="Box">
-                  <span className="font-mono tabular-nums">
+                  <span className="tabular-nums">
                     {size.x}×{size.y}×{size.z}
                   </span>
                 </Fact>
@@ -423,7 +423,7 @@ export default function FindingDetailPage() {
               <div className="space-y-1.5">
                 <div className="text-xs text-muted-foreground">Teleport</div>
                 <div className="flex gap-2">
-                  <code className="min-w-0 flex-1 truncate rounded-md border bg-muted px-2 py-1.5 font-mono text-xs select-all" title={data.teleport}>
+                  <code className="min-w-0 flex-1 truncate rounded-md border bg-muted px-2 py-1.5 text-xs select-all" title={data.teleport}>
                     {data.teleport}
                   </code>
                   <Tooltip>

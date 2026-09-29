@@ -39,7 +39,7 @@ export default function ActivityPage() {
                   <Icon className={cn("size-4 shrink-0", kind.tone)} />
                   <span className="min-w-0 flex-1 truncate">
                     <span className="font-medium">{item.actor}</span> {kind.label}{" "}
-                    <Link to={`/findings/${item.findingId}?state=any`} className="font-mono hover:underline">
+                    <Link to={`/findings/${item.findingId}?state=any`} className="hover:underline">
                       #{item.findingId}
                     </Link>
                   </span>

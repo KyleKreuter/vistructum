@@ -53,7 +53,7 @@ export default function PlayerPage() {
               <PlayerFace uuid={uuid} name={info.name} size={40} />
               <div className="min-w-0">
                 <h1 className="truncate text-lg font-semibold">{info.name ?? "Unknown name"}</h1>
-                <p className="truncate font-mono text-xs text-muted-foreground" title={uuid}>
+                <p className="truncate text-xs text-muted-foreground" title={uuid}>
                   {shortUuid(uuid)}
                 </p>
               </div>

@@ -129,7 +129,7 @@ export function SceneView({ scene, colours, heatmap, heatmapState, layer, onLaye
             maxHeight="68vh"
           />
         </div>
-        <div className="min-h-5 font-mono text-xs text-muted-foreground tabular-nums">
+        <div className="min-h-5 text-xs text-muted-foreground tabular-nums">
           <Readout readout={readout} base={base} />
         </div>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">

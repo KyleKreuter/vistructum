@@ -111,7 +111,7 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
           />
         </Canvas>
         {!loaded && <div className="pointer-events-none absolute inset-x-0 bottom-8 text-center text-xs text-white/80">Loading block textures…</div>}
-        <div className="pointer-events-none absolute top-3 left-3 max-w-[70%] rounded-md bg-black/55 px-3 py-2 font-mono text-xs text-white/90 backdrop-blur-sm">
+        <div className="pointer-events-none absolute top-3 left-3 max-w-[70%] rounded-md bg-black/55 px-3 py-2 text-xs text-white/90 backdrop-blur-sm">
           {current ? (
             <>
               <div>
@@ -181,7 +181,7 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
           <Button size="icon" variant="outline" onClick={() => clock.step(1)} aria-label="Next block change">
             <ChevronRight />
           </Button>
-          <span className="min-w-24 px-2 font-mono text-sm tabular-nums">
+          <span className="min-w-24 px-2 text-sm tabular-nums">
             {formatClock(state.time - timeline.start)} / {formatClock(span)}
           </span>
           <Select value={String(state.speed)} onValueChange={(value) => clock.setSpeed(Number(value))}>
@@ -254,7 +254,7 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
               <span className="size-2.5 rounded-full" style={{ background: colourFor(player.uuid) }} />
               <PlayerFace uuid={player.uuid} name={player.name} size={20} skin={facesFromSkin ? skinUrl(player.uuid) : undefined} />
               <span className="font-medium">{player.name}</span>
-              <span className="font-mono text-xs text-muted-foreground tabular-nums">
+              <span className="text-xs text-muted-foreground tabular-nums">
                 {now?.placed ?? 0}/{total?.placed ?? 0} placed · {now?.broken ?? 0}/{total?.broken ?? 0} broken
               </span>
             </button>

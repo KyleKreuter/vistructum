@@ -33,14 +33,14 @@ export function SignInPage({ reason }: { reason: SignInReason }) {
           <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
             <li>Join the server with a staff account.</li>
             <li>
-              Run <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground">/vis web</code> in chat.
+              Run <code className="rounded bg-muted px-1.5 py-0.5 text-foreground">/vis web</code> in chat.
             </li>
             <li>Click the link in chat. It signs you in for 12 hours.</li>
           </ol>
           <p className="flex items-start gap-2 text-muted-foreground">
             <Terminal className="mt-0.5 size-4 shrink-0" />
             <span>
-              <code className="font-mono text-foreground">/vis evidence &lt;id&gt;</code> opens a finding directly.
+              <code className="text-foreground">/vis evidence &lt;id&gt;</code> opens a finding directly.
             </span>
           </p>
           {__MOCK__ && (

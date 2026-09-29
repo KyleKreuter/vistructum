@@ -43,7 +43,7 @@ export function FindingTable({ items, linkSuffix = "" }: { items: FindingSummary
                 </TableCell>
                 <TableCell className="py-2">
                   <div className="flex flex-col gap-1">
-                    <span className="font-mono text-sm font-semibold">#{finding.id}</span>
+                    <span className="text-sm font-semibold">#{finding.id}</span>
                     <span className="flex items-center gap-2">
                       <SourceBadge source={finding.source} />
                       <IndicatorIcons finding={finding} />
@@ -53,11 +53,11 @@ export function FindingTable({ items, linkSuffix = "" }: { items: FindingSummary
                 <TableCell>
                   <VerdictBadge review={finding.review} />
                 </TableCell>
-                <TableCell className="text-right font-mono tabular-nums">
+                <TableCell className="text-right tabular-nums">
                   <div>{formatScore(finding.score)}</div>
                   <div className="text-xs text-muted-foreground">{finding.modelVersion}</div>
                 </TableCell>
-                <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">
+                <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                   <div className="text-foreground">{finding.world}</div>
                   <div className="tabular-nums">
                     {centre.x} {centre.y} {centre.z}

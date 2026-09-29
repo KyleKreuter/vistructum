@@ -17,12 +17,12 @@ function ScanRow({ scan }: { scan: ScanJob }) {
   return (
     <div className="space-y-2 rounded-lg border p-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="font-mono">#{scan.id}</span>
-        <span className="font-mono text-muted-foreground">{scan.world}</span>
-        <Badge variant="secondary" className="text-[11px] font-normal">
+        <span>#{scan.id}</span>
+        <span className="text-muted-foreground">{scan.world}</span>
+        <Badge variant="slate" className="text-[11px]">
           {scan.cause === "DAILY" ? "Daily" : "Manual"}
         </Badge>
-        <Badge variant={scan.status === "FAILED" ? "destructive" : "outline"} className="text-[11px] font-normal">
+        <Badge variant={scan.status === "FAILED" ? "rose" : "blue"} className="text-[11px]">
           {scan.status.toLowerCase()}
         </Badge>
         <span className="ml-auto text-xs text-muted-foreground" title={formatDateTime(scan.startedAt)}>
@@ -73,7 +73,7 @@ export default function StatusPage() {
                   {data.inference.models.map((model) => (
                     <li key={model.kind} className="flex justify-between gap-2">
                       <span className="text-muted-foreground">{model.kind}</span>
-                      <span className="font-mono">{model.version}</span>
+                      <span>{model.version}</span>
                     </li>
                   ))}
                 </ul>

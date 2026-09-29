@@ -57,7 +57,7 @@ export function SharePanel({ finding, canShare }: { finding: FindingDetail; canS
         {url ? (
           <>
             <div className="flex gap-2">
-              <Input readOnly value={url} aria-label="Public link" className="h-8 font-mono text-xs" onFocus={(event) => event.currentTarget.select()} />
+              <Input readOnly value={url} aria-label="Public link" className="h-8 text-xs" onFocus={(event) => event.currentTarget.select()} />
               <Button size="icon" variant="outline" className="size-8 shrink-0" aria-label="Copy link" onClick={() => void copy(url)}>
                 {copied ? <Check /> : <Copy />}
               </Button>

@@ -1,6 +1,7 @@
 import { Canvas } from "@react-three/fiber";
 import { ChevronLeft, ChevronRight, Orbit, Pause, Play, Video } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState, useSyncExternalStore, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import type { Evidence, Palette } from "@/api/types";
 import { PlayerFace } from "@/components/app/PlayerFace";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ export interface ReplayViewProps {
   showCoordinates: boolean;
   controlsRef?: RefObject<ReplayControls | null>;
   active?: boolean;
+  playersTarget?: HTMLElement | null;
 }
 
 const TimelineMarks = memo(function TimelineMarks({ timeline, applied, colourFor, onSeek }: { timeline: Timeline; applied: number; colourFor: (uuid: string) => string; onSeek: (t: number) => void }) {
@@ -62,7 +64,7 @@ function idleMessage(changes: number, recorded: boolean): string {
   return recorded ? "No block changes recorded" : "Nothing was recorded for this finding";
 }
 
-export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin = false, showCoordinates, controlsRef, active = true }: ReplayViewProps) {
+export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin = false, showCoordinates, controlsRef, active = true, playersTarget }: ReplayViewProps) {
   const timeline = useMemo(() => buildTimeline(evidence), [evidence]);
   const indexed = useMemo(() => indexVolume(evidence.before, timeline.changes), [evidence.before, timeline.changes]);
   const tracks = useMemo(() => evidence.recordings.map(prepareTrack), [evidence.recordings]);
@@ -124,6 +126,34 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
       clock.seek(t);
     },
     [clock],
+  );
+  const stacked = playersTarget !== undefined;
+  const playerList = (
+    <div className={cn("flex gap-2", stacked ? "flex-col" : "flex-wrap")}>
+      {players.map((player) => {
+        const now = counts.get(player.uuid);
+        const total = totalCounts.get(player.uuid);
+        return (
+          <button
+            key={player.uuid}
+            type="button"
+            onClick={() => tracks.some((track) => track.player === player.uuid) && setCamera({ kind: "follow", player: player.uuid })}
+            className={cn("flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left text-sm hover:border-ring", stacked && "w-full")}
+          >
+            <span className="size-2.5 rounded-full" style={{ background: colourFor(player.uuid) }} />
+            <PlayerFace uuid={player.uuid} name={player.name} size={20} skin={facesFromSkin ? skinUrl(player.uuid) : undefined} />
+            <span className={cn("flex min-w-0 gap-x-2", stacked ? "flex-1 flex-col" : "items-center")}>
+              <span className={cn("truncate font-medium", !stacked && "max-w-48")} title={player.name}>
+                {player.name}
+              </span>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {now?.placed ?? 0}/{total?.placed ?? 0} placed · {now?.broken ?? 0}/{total?.broken ?? 0} broken
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
   const assets = useWorldAssets(palette);
   const loaded = useBlockLibrary(assets, indexed.states);
@@ -247,29 +277,7 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {players.map((player) => {
-          const now = counts.get(player.uuid);
-          const total = totalCounts.get(player.uuid);
-          return (
-            <button
-              key={player.uuid}
-              type="button"
-              onClick={() => tracks.some((track) => track.player === player.uuid) && setCamera({ kind: "follow", player: player.uuid })}
-              className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left text-sm hover:border-ring"
-            >
-              <span className="size-2.5 rounded-full" style={{ background: colourFor(player.uuid) }} />
-              <PlayerFace uuid={player.uuid} name={player.name} size={20} skin={facesFromSkin ? skinUrl(player.uuid) : undefined} />
-              <span className="max-w-48 truncate font-medium" title={player.name}>
-                {player.name}
-              </span>
-              <span className="text-xs text-muted-foreground tabular-nums">
-                {now?.placed ?? 0}/{total?.placed ?? 0} placed · {now?.broken ?? 0}/{total?.broken ?? 0} broken
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {!stacked ? playerList : playersTarget && createPortal(playerList, playersTarget)}
     </div>
   );
 }

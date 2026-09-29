@@ -96,6 +96,7 @@ export default function FindingDetailPage() {
   const [overlay, setOverlay] = useState(false);
   const [reviewed, setReviewed] = useState<Set<number>>(() => new Set());
   const [visited, setVisited] = useState<ReadonlySet<Tab>>(() => new Set());
+  const [playerSlot, setPlayerSlot] = useState<HTMLDivElement | null>(null);
   const replayControls = useRef<ReplayControls | null>(null);
 
   const defaultTab: Tab = data?.hasEvidence ? "replay" : "scene";
@@ -264,25 +265,23 @@ export default function FindingDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="min-w-0 space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">#{data.id}</h1>
-            <VerdictBadge review={data.review} />
-            <SourceBadge source={data.source} />
-            <IndicatorIcons finding={data} />
-          </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">#{data.id}</h1>
+        <VerdictBadge review={data.review} />
+        <SourceBadge source={data.source} />
+        <IndicatorIcons finding={data} />
+      </div>
 
-          <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
-            <TabsList>
-              {data.hasEvidence && <TabsTrigger value="replay">Replay</TabsTrigger>}
-              <TabsTrigger value="scene">Scene</TabsTrigger>
-              <TabsTrigger value="3d">
-                3D
-              </TabsTrigger>
-            </TabsList>
+      <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="gap-3">
+        <TabsList>
+          {data.hasEvidence && <TabsTrigger value="replay">Replay</TabsTrigger>}
+          <TabsTrigger value="scene">Scene</TabsTrigger>
+          <TabsTrigger value="3d">3D</TabsTrigger>
+        </TabsList>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-w-0">
             {data.hasEvidence && (
-              <TabsContent value="replay" forceMount className="mt-3 data-[state=inactive]:hidden">
+              <TabsContent value="replay" forceMount className="data-[state=inactive]:hidden">
                 {!visited.has("replay") ? null : evidence.isPending || palette.isPending ? (
                   <PageSpinner className="h-[64vh]" />
                 ) : evidence.isError || palette.isError || !evidence.data || !palette.data ? (
@@ -296,13 +295,14 @@ export default function FindingDetailPage() {
                       skinUrl={urls.skin}
                       showCoordinates
                       controlsRef={replayControls}
+                      playersTarget={playerSlot}
                       active={tab === "replay"}
                     />
                   </Suspense>
                 )}
               </TabsContent>
             )}
-            <TabsContent value="scene" className="mt-3">
+            <TabsContent value="scene">
               {scene.isPending || palette.isPending ? (
                 <PageSpinner className="h-[50vh]" />
               ) : scene.isError || !scene.data ? (
@@ -320,7 +320,7 @@ export default function FindingDetailPage() {
                 />
               )}
             </TabsContent>
-            <TabsContent value="3d" forceMount className="mt-3 data-[state=inactive]:hidden">
+            <TabsContent value="3d" forceMount className="data-[state=inactive]:hidden">
               {!visited.has("3d") ? null : scene.data && palette.data ? (
                 <Suspense fallback={<PageSpinner className="h-[64vh]" />}>
                   <TerrainView
@@ -339,76 +339,79 @@ export default function FindingDetailPage() {
                 <PageSpinner className="h-[50vh]" />
               )}
             </TabsContent>
-          </Tabs>
-        </div>
+          </div>
 
-        <aside className="space-y-4">
-          <Card className="gap-4 py-4">
-            <CardContent className="space-y-4 px-4">
-              <VerdictButtons finding={data} pending={verdict.isPending} onVerdict={judge} />
-              {data.review && (
-                <p className="text-xs text-muted-foreground">
-                  {data.review.verdict === "CONFIRMED" ? "Confirmed" : "Marked as false alarm"} by {data.review.reviewer}, {formatDateTime(data.review.reviewedAt)}
-                </p>
-              )}
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                <Fact label="Score">
-                  <span className="tabular-nums">{formatScore(data.score)}</span>
-                  {data.votes > 1 && <span className="text-muted-foreground"> · {data.votes} votes</span>}
-                </Fact>
-                <Fact label="Model">
-                  <span>{data.modelVersion}</span>
-                </Fact>
-                <Fact label="Source">{data.source === "mask" ? "Live check" : "Full scan"}</Fact>
-                <Fact label="Created">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>{formatRelative(data.createdAt)}</span>
-                    </TooltipTrigger>
-                    <TooltipContent>{formatDateTime(data.createdAt)}</TooltipContent>
-                  </Tooltip>
-                </Fact>
-                <Fact label="World">
-                  <span>{data.world}</span>
-                </Fact>
-                <Fact label="Box">
-                  <span className="tabular-nums">
-                    {size.x}×{size.y}×{size.z}
-                  </span>
-                </Fact>
-              </dl>
-              {data.detail && <p className="text-xs [overflow-wrap:anywhere] text-muted-foreground">{data.detail}</p>}
-              <div className="space-y-1.5">
-                <div className="text-xs text-muted-foreground">Players</div>
-                {data.players.length ? (
-                  <PlayerList players={data.players} />
-                ) : (
-                  <p className="text-sm text-muted-foreground">No players recorded.</p>
+          <aside className={cn("flex flex-col gap-4", tab === "replay" && "lg:h-[max(20rem,min(64vh,680px))]")}>
+            <Card className="shrink-0 gap-4 py-4">
+              <CardContent className="space-y-4 px-4">
+                <VerdictButtons finding={data} pending={verdict.isPending} onVerdict={judge} />
+                {data.review && (
+                  <p className="text-xs text-muted-foreground">
+                    {data.review.verdict === "CONFIRMED" ? "Confirmed" : "Marked as false alarm"} by {data.review.reviewer}, {formatDateTime(data.review.reviewedAt)}
+                  </p>
                 )}
-              </div>
-              <div className="space-y-1.5">
-                <div className="text-xs text-muted-foreground">Teleport</div>
-                <div className="flex gap-2">
-                  <code className="min-w-0 flex-1 truncate rounded-md border bg-muted px-2 py-1.5 text-xs select-all" title={data.teleport}>
-                    {data.teleport}
-                  </code>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={() => void copyTeleport()} aria-label="Copy teleport command">
-                        <Copy />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Copy</TooltipContent>
-                  </Tooltip>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                  <Fact label="Score">
+                    <span className="tabular-nums">{formatScore(data.score)}</span>
+                    {data.votes > 1 && <span className="text-muted-foreground"> · {data.votes} votes</span>}
+                  </Fact>
+                  <Fact label="Model">
+                    <span>{data.modelVersion}</span>
+                  </Fact>
+                  <Fact label="Source">{data.source === "mask" ? "Live check" : "Full scan"}</Fact>
+                  <Fact label="Created">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>{formatRelative(data.createdAt)}</span>
+                      </TooltipTrigger>
+                      <TooltipContent>{formatDateTime(data.createdAt)}</TooltipContent>
+                    </Tooltip>
+                  </Fact>
+                  <Fact label="World">
+                    <span>{data.world}</span>
+                  </Fact>
+                  <Fact label="Box">
+                    <span className="tabular-nums">
+                      {size.x}×{size.y}×{size.z}
+                    </span>
+                  </Fact>
+                </dl>
+                {data.detail && <p className="text-xs [overflow-wrap:anywhere] text-muted-foreground">{data.detail}</p>}
+                {tab !== "replay" && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs text-muted-foreground">Players</div>
+                    {data.players.length ? (
+                      <PlayerList players={data.players} />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No players recorded.</p>
+                    )}
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <div className="text-xs text-muted-foreground">Teleport</div>
+                  <div className="flex gap-2">
+                    <code className="min-w-0 flex-1 truncate rounded-md border bg-muted px-2 py-1.5 text-xs select-all" title={data.teleport}>
+                      {data.teleport}
+                    </code>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={() => void copyTeleport()} aria-label="Copy teleport command">
+                          <Copy />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy</TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {shareView(data, canShare) !== "hidden" && <SharePanel finding={data} canShare={canShare} />}
+            {shareView(data, canShare) !== "hidden" && <SharePanel finding={data} canShare={canShare} />}
+            {tab === "replay" && <div ref={setPlayerSlot} className="min-h-0 flex-1 overflow-y-auto pr-1" />}
 
-        </aside>
-      </div>
+          </aside>
+        </div>
+      </Tabs>
     </div>
   );
 }

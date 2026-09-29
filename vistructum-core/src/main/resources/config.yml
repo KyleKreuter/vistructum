@@ -42,5 +42,14 @@ scan:
 alerts:
   dedupe-days: 14
 
+# Records player movement and secures block changes, the prior block states and nearby players as evidence
+# when the live check creates a finding.
+recording:
+  enabled: false
+  radius: 32
+  lead-seconds: 30
+  margin: 4
+
 retention:
   reviewed-days: 90
+  confirmed-days: 365

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MotionFrame } from "@/api/types";
-import { bodyYawFor, flags, followCameraOffset, frameIndexAt, lerpAngle, poseAt, prepareTrack, skeletonFor, swingProgressAt, wrapDegrees, yawOfDirection } from "./motion";
+import { bodyYawFor, flags, followCameraOffset, frameIndexAt, poseAt, prepareTrack, skeletonFor, swingProgressAt, wrapDegrees, yawOfDirection } from "./motion";
 
 const frame = (t: number, x: number, z: number, extra: Partial<MotionFrame> = {}): MotionFrame => ({
   t,
@@ -20,11 +20,6 @@ describe("angles", () => {
     expect(wrapDegrees(-190)).toBe(170);
     expect(wrapDegrees(180)).toBe(180);
     expect(wrapDegrees(-180)).toBe(180);
-  });
-
-  it("interpolates along the shortest arc", () => {
-    expect(lerpAngle(170, -170, 0.5)).toBe(180);
-    expect(lerpAngle(-10, 10, 0.25)).toBeCloseTo(-5);
   });
 
   it("uses the Minecraft yaw convention", () => {

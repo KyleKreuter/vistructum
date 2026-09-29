@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Scene } from "@/api/types";
-import { heatAlpha, median, paintLayer, pointToCell, readCell, sceneColours, terrainColumns, windowBaseHeight } from "./sceneLayers";
+import { heatAlpha, median, paintLayer, pointToCell, readCell, sceneColours, windowBaseHeight } from "./sceneLayers";
 
 const scene: Scene = {
   source: "fullscan",
@@ -55,12 +55,5 @@ describe("scene layers", () => {
     const rect = { left: 0, top: 0, width: 300, height: 300 };
     expect(pointToCell(rect, { width: 3, height: 2 }, 150, 100)).toEqual({ row: 0, col: 1 });
     expect(pointToCell(rect, { width: 3, height: 2 }, 150, 10)).toBeNull();
-  });
-
-  it("builds terrain columns", () => {
-    const terrain = terrainColumns(scene, colours, null);
-    expect(terrain.columns).toHaveLength(5);
-    expect(terrain.floor).toBe(1);
-    expect(terrain.columns[1]).toMatchObject({ row: 0, col: 1, top: 4, colour: 0x00ff00 });
   });
 });

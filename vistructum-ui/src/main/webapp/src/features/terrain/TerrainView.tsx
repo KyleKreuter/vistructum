@@ -1,6 +1,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { useMemo, type Ref } from "react";
+import { useEffect, useMemo, type Ref } from "react";
+import { BufferAttribute, BufferGeometry } from "three";
 import type { Box, Heatmap, Palette, Terrain } from "@/api/types";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -33,28 +34,30 @@ function TerrainBlocks({ grid, loaded }: { grid: Grid; loaded: LoadedLibrary }) 
 }
 
 function HeatLayer({ surface }: { surface: HeatSurface }) {
+  const geometry = useMemo(() => {
+    const built = new BufferGeometry();
+    built.setAttribute("position", new BufferAttribute(surface.positions, 3));
+    built.setAttribute("color", new BufferAttribute(surface.colours, 4));
+    built.setIndex(new BufferAttribute(surface.indices, 1));
+    return built;
+  }, [surface]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
   return (
-    <mesh renderOrder={2}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[surface.positions, 3]} />
-        <bufferAttribute attach="attributes-color" args={[surface.colours, 4]} />
-        <bufferAttribute attach="index" args={[surface.indices, 1]} />
-      </bufferGeometry>
+    <mesh renderOrder={2} geometry={geometry}>
       <meshBasicMaterial vertexColors transparent depthWrite={false} polygonOffset polygonOffsetFactor={-1} />
     </mesh>
   );
 }
 
 function BoxOutline({ outline, height }: { outline: Outline; height: number }) {
-  const points = useMemo(() => {
+  const geometry = useMemo(() => {
     const { x0, x1, z0, z1 } = outline;
-    return new Float32Array([x0, 0, z0, x1, 0, z0, x1, 0, z0, x1, 0, z1, x1, 0, z1, x0, 0, z1, x0, 0, z1, x0, 0, z0]);
+    const points = new Float32Array([x0, 0, z0, x1, 0, z0, x1, 0, z0, x1, 0, z1, x1, 0, z1, x0, 0, z1, x0, 0, z1, x0, 0, z0]);
+    return new BufferGeometry().setAttribute("position", new BufferAttribute(points, 3));
   }, [outline]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
   return (
-    <lineSegments position={[0, height, 0]}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[points, 3]} />
-      </bufferGeometry>
+    <lineSegments position={[0, height, 0]} geometry={geometry}>
       <lineBasicMaterial color="#ffffff" transparent opacity={0.9} fog={false} />
     </lineSegments>
   );

@@ -31,7 +31,7 @@ function ScanRow({ scan }: { scan: ScanJob }) {
           {scan.status === "QUEUED" ? "queued" : "started"} {formatRelative(scan.startedAt)}
         </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={scan.totalTiles} aria-valuenow={scan.doneTiles}>
+      <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={`Scan ${scan.id} progress`} aria-valuemin={0} aria-valuemax={Math.max(1, scan.totalTiles)} aria-valuenow={scan.doneTiles}>
         <div className="h-full bg-primary transition-[width] duration-700" style={{ width: `${fraction * 100}%` }} />
       </div>
       <div className="flex flex-wrap gap-x-4 text-xs text-muted-foreground tabular-nums">

@@ -1,5 +1,5 @@
 import type { BlockChange, BlockVolume } from "@/api/types";
-import { isAir, isFullOpaque } from "./blocks";
+import { isAir } from "./blocks";
 
 export interface Cell {
   dx: number;
@@ -88,33 +88,3 @@ export function dynamicStates(indexed: IndexedVolume, applied: number): Int32Arr
   return result;
 }
 
-export function isExposed(indexed: IndexedVolume, index: number, dynamic: Set<number>, opaque: boolean[]): boolean {
-  const { volume, cells } = indexed;
-  const { dx, dy, dz } = cellOf(volume, index);
-  const neighbours: [number, number, number][] = [
-    [dx + 1, dy, dz],
-    [dx - 1, dy, dz],
-    [dx, dy + 1, dz],
-    [dx, dy - 1, dz],
-    [dx, dy, dz + 1],
-    [dx, dy, dz - 1],
-  ];
-  for (const [x, y, z] of neighbours) {
-    if (!contains(volume, x, y, z)) return true;
-    const neighbour = cellIndex(volume, x, y, z);
-    if (dynamic.has(neighbour) || !opaque[cells[neighbour]]) return true;
-  }
-  return false;
-}
-
-export function staticVisibleCells(indexed: IndexedVolume): number[] {
-  const dynamic = new Set(indexed.dynamicCells);
-  const opaque = indexed.states.map((state) => isFullOpaque(state));
-  const empty = indexed.states.map((state) => isAir(state));
-  const result: number[] = [];
-  for (let i = 0; i < indexed.cells.length; i++) {
-    if (dynamic.has(i) || empty[indexed.cells[i]]) continue;
-    if (isExposed(indexed, i, dynamic, opaque)) result.push(i);
-  }
-  return result;
-}

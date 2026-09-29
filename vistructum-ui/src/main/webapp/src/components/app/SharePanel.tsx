@@ -1,5 +1,5 @@
 import { Check, Copy, ExternalLink, Link2, Link2Off } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
 import { useShare } from "@/api/queries";
@@ -13,6 +13,8 @@ import { shareView } from "@/logic/share";
 export function SharePanel({ finding, canShare }: { finding: FindingDetail; canShare: boolean }) {
   const { activate, deactivate } = useShare(finding.id);
   const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(copiedTimer.current), []);
   const busy = activate.isPending || deactivate.isPending;
   const url = finding.shareUrl;
   const view = shareView(finding, canShare);
@@ -20,7 +22,8 @@ export function SharePanel({ finding, canShare }: { finding: FindingDetail; canS
   const copy = async (value: string) => {
     if (await copyText(value)) {
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
+      window.clearTimeout(copiedTimer.current);
+      copiedTimer.current = window.setTimeout(() => setCopied(false), 1500);
       return true;
     }
     toast.error("Copy failed. Select the link and copy it by hand.");

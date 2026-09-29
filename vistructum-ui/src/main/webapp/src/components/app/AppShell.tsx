@@ -13,10 +13,10 @@ import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
 const links = [
-  { to: "/findings?state=open", match: "/findings", label: "Findings" },
-  { to: "/stats", match: "/stats", label: "Stats" },
-  { to: "/status", match: "/status", label: "Status" },
-  { to: "/activity", match: "/activity", label: "Activity" },
+  { to: "/findings?state=open", label: "Findings" },
+  { to: "/stats", label: "Stats" },
+  { to: "/status", label: "Status" },
+  { to: "/activity", label: "Activity" },
 ];
 
 export function AppShell({ me, children }: { me: Me; children: ReactNode }) {

@@ -14,11 +14,13 @@ export function FindingFilters({
   onChange,
   playerName,
   hidePlayer = false,
+  defaultState = defaultFilter.state,
 }: {
   filter: FindingFilter;
   onChange: (filter: FindingFilter) => void;
   playerName?: string | null;
   hidePlayer?: boolean;
+  defaultState?: FindingState;
 }) {
   const [world, setWorld] = useState(filter.world);
   const [syncedWorld, setSyncedWorld] = useState(filter.world);
@@ -33,7 +35,7 @@ export function FindingFilters({
     return () => window.clearTimeout(timer);
   }, [world, filter, onChange]);
 
-  const dirty = filter.source !== "" || filter.world !== "" || filter.since !== "" || (!hidePlayer && filter.player !== "") || filter.state !== defaultFilter.state;
+  const dirty = filter.source !== "" || filter.world !== "" || filter.since !== "" || (!hidePlayer && filter.player !== "") || filter.state !== defaultState;
 
   return (
     <div className="flex flex-wrap items-end gap-3">
@@ -93,7 +95,7 @@ export function FindingFilters({
         </div>
       )}
       {dirty && (
-        <Button variant="ghost" size="sm" onClick={() => onChange({ ...defaultFilter, player: hidePlayer ? filter.player : "" })}>
+        <Button variant="ghost" size="sm" onClick={() => onChange({ ...defaultFilter, state: defaultState, player: hidePlayer ? filter.player : "" })}>
           Reset
         </Button>
       )}

@@ -144,10 +144,6 @@ export function lerp(a: number, b: number, f: number): number {
   return a + (b - a) * f;
 }
 
-export function lerpAngle(a: number, b: number, f: number): number {
-  return wrapDegrees(a + wrapDegrees(b - a) * f);
-}
-
 export function yawOfDirection(dx: number, dz: number): number {
   return wrapDegrees((Math.atan2(-dx, dz) * 180) / Math.PI);
 }

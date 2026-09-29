@@ -4,8 +4,10 @@ export type ThemePreference = "light" | "dark" | "system";
 
 const storageKey = "vistructum-theme";
 const listeners = new Set<() => void>();
+let unstoredPreference: ThemePreference | null = null;
 
 function readPreference(): ThemePreference {
+  if (unstoredPreference) return unstoredPreference;
   try {
     const value = localStorage.getItem(storageKey);
     return value === "light" || value === "dark" ? value : "system";
@@ -18,7 +20,7 @@ function systemDark() {
   return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-export function resolvedTheme(preference: ThemePreference): "light" | "dark" {
+function resolvedTheme(preference: ThemePreference): "light" | "dark" {
   if (preference === "system") return systemDark() ? "dark" : "light";
   return preference;
 }
@@ -32,8 +34,9 @@ export function setThemePreference(preference: ThemePreference) {
   try {
     if (preference === "system") localStorage.removeItem(storageKey);
     else localStorage.setItem(storageKey, preference);
+    unstoredPreference = null;
   } catch {
-    document.documentElement.classList.toggle("dark", resolvedTheme(preference) === "dark");
+    unstoredPreference = preference;
   }
   apply();
 }

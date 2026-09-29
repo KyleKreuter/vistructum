@@ -1,6 +1,6 @@
 import { OrbitControls } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { PlayerObject } from "skinview3d/libs/model.js";
 import { BoxGeometry, EdgesGeometry, Group, LineBasicMaterial, LineSegments, Vector3 } from "three";
 import { isAir, isFullOpaque } from "@/logic/blocks";
@@ -16,7 +16,7 @@ import { Sky } from "@/features/world/Sky";
 import { fogRange, type SkyColours } from "@/features/world/skyColours";
 import { useWorldMesh } from "@/features/world/useWorldMesh";
 import type { ReplayClock } from "./clock";
-import { loadSkin, type LoadedSkin } from "./skin";
+import { disposeModel, loadSkin, type LoadedSkin } from "./skin";
 
 interface OrbitLike {
   target: Vector3;
@@ -169,6 +169,15 @@ function PlayerAvatar({
 }) {
   const avatar = useMemo(() => createAvatar(), []);
 
+  useEffect(
+    () => () => {
+      avatar.held = "";
+      avatar.hand.clear();
+      disposeModel(avatar.player);
+    },
+    [avatar],
+  );
+
   useEffect(() => {
     let active = true;
     void loadSkin(skinUrl).then((skin) => {
@@ -183,6 +192,9 @@ function PlayerAvatar({
 
   return <primitive object={avatar.root} />;
 }
+
+const followHead = new Vector3();
+const followDelta = new Vector3();
 
 function CameraRig({
   mode,
@@ -216,25 +228,25 @@ function CameraRig({
     const track = tracks.find((entry) => entry.player === mode.player);
     const pose = track ? poseAt(track, clock.getSnapshot().time) : null;
     if (!pose) return;
-    const head = new Vector3(pose.x - origin[0], pose.y - origin[1] + eyeHeight(pose) - 0.2, pose.z - origin[2]);
+    const head = followHead.set(pose.x - origin[0], pose.y - origin[1] + eyeHeight(pose) - 0.2, pose.z - origin[2]);
     if (!snapped.current) {
       const [ox, oy, oz] = followCameraOffset(pose, 6, 2.5);
       camera.position.set(head.x + ox, pose.y - origin[1] + oy, head.z + oz);
       controls.target.copy(head);
       snapped.current = true;
     } else if (previous.current) {
-      const delta = head.clone().sub(previous.current);
+      const delta = followDelta.subVectors(head, previous.current);
       camera.position.add(delta);
       controls.target.add(delta);
     }
-    previous.current = head;
+    previous.current = (previous.current ?? new Vector3()).copy(head);
     controls.update();
   });
 
   return null;
 }
 
-export interface ReplaySceneProps {
+interface ReplaySceneProps {
   indexed: IndexedVolume;
   timeline: Timeline;
   tracks: Track[];
@@ -272,7 +284,7 @@ function groundLevel(indexed: IndexedVolume): number {
   return best;
 }
 
-export function ReplayScene({ indexed, timeline, tracks, assets, loaded, clock, skinUrl, colourOf: playerColour, camera, sky }: ReplaySceneProps) {
+export const ReplayScene = memo(function ReplayScene({ indexed, timeline, tracks, assets, loaded, clock, skinUrl, colourOf: playerColour, camera, sky }: ReplaySceneProps) {
   const { volume } = indexed;
   const origin: [number, number, number] = useMemo(() => [volume.minX, volume.minY, volume.minZ], [volume.minX, volume.minY, volume.minZ]);
   const ground = useMemo(() => groundLevel(indexed), [indexed]);
@@ -285,11 +297,11 @@ export function ReplayScene({ indexed, timeline, tracks, assets, loaded, clock, 
       <EntityLights />
       {loaded && <ReplayBlocks indexed={indexed} loaded={loaded} clock={clock} timeline={timeline} />}
       <ChangeHighlight indexed={indexed} clock={clock} timeline={timeline} highlightColour={playerColour} />
-      {tracks.map((track) => (
-        <PlayerAvatar key={track.player} track={track} skinUrl={skinUrl(track.player)} clock={clock} assets={assets} origin={origin} />
+      {tracks.map((track, index) => (
+        <PlayerAvatar key={`${track.player}-${index}`} track={track} skinUrl={skinUrl(track.player)} clock={clock} assets={assets} origin={origin} />
       ))}
       <OrbitControls makeDefault enableDamping target={centre} maxPolarAngle={Math.PI * 0.495} />
       <CameraRig mode={camera} tracks={tracks} clock={clock} origin={origin} centre={centre} />
     </>
   );
-}
+});

@@ -80,14 +80,17 @@ export function loadHeldItem(name: string, assets: WorldAssets): Promise<ItemAss
   const key = `${assets.key}:${name}`;
   const known = cache.get(key);
   if (known) return known;
-  const promise = buildItem(name, assets).catch(() => null);
+  const promise = buildItem(name, assets).catch(() => {
+    cache.delete(key);
+    return null;
+  });
   cache.set(key, promise);
   return promise;
 }
 
 const degrees = Math.PI / 180;
 
-export function handTransform(display: DisplayTransform): Matrix4 {
+function handTransform(display: DisplayTransform): Matrix4 {
   const matrix = new Matrix4().makeRotationX(-90 * degrees);
   matrix.multiply(new Matrix4().makeRotationY(180 * degrees));
   matrix.multiply(new Matrix4().makeTranslation(1 / 16, 0.125, -0.625));

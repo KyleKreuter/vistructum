@@ -64,14 +64,15 @@ export function useFindings(filter: FindingFilter, paging: Paging) {
   return useQuery({ ...findingsOptions(filter, paging), placeholderData: keepPreviousData });
 }
 
-export function useFinding(id: number) {
+export function useFinding(id: number, enabled: boolean) {
   return useQuery({
     queryKey: keys.finding(id),
     queryFn: () => request<FindingDetail>(`/findings/${id}`),
+    enabled,
   });
 }
 
-export function useScene(id: number, enabled = true) {
+export function useScene(id: number, enabled: boolean) {
   return useQuery({
     queryKey: keys.scene(id),
     queryFn: () => request<Scene>(`/findings/${id}/scene`),
@@ -144,10 +145,11 @@ export function useActivity() {
   });
 }
 
-export function usePlayer(uuid: string) {
+export function usePlayer(uuid: string, enabled: boolean) {
   return useQuery({
     queryKey: keys.player(uuid),
-    queryFn: () => request<PlayerInfo>(`/players/${uuid}`),
+    queryFn: () => request<PlayerInfo>(`/players/${encodeURIComponent(uuid)}`),
+    enabled,
   });
 }
 

@@ -188,7 +188,7 @@ export function fallbackPlacements(state: BlockState): ModelPlacement[] {
   }
   if (/(_button|_sign|_banner|^lever|^flower_pot|^potted_.*|^conduit)$/.test(name)) return [place("small", name)];
   if (materialClass(name) === "plant") return [place("cross", name)];
-  if (/_log$|_wood$|_stem$|_hyphae$|^bamboo_block$|^basalt$|^hay_block$|_pillar$/.test(name)) {
+  if (/_log$|_wood$|^(crimson|warped|mushroom)_stem$|_hyphae$|^bamboo_block$|^basalt$|^hay_block$|_pillar$/.test(name)) {
     const axis = properties.axis ?? "y";
     return [place("cube", name, axis === "y" ? 0 : 90, axis === "x" ? 90 : 0)];
   }

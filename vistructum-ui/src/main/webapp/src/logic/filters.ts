@@ -59,9 +59,12 @@ export function listParams(filter: FindingFilter, paging: Paging): URLSearchPara
 }
 
 export function sinceInstant(day: string): string | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
-  const date = new Date(`${day}T00:00:00Z`);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!match) return null;
+  const [year, month, date] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const midnight = new Date(year, month - 1, date);
+  if (midnight.getFullYear() !== year || midnight.getMonth() !== month - 1 || midnight.getDate() !== date) return null;
+  return midnight.toISOString();
 }
 
 export function findingsQuery(filter: FindingFilter, paging: Paging): string {

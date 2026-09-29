@@ -30,5 +30,5 @@ export function isEditableTarget(target: EventTarget | null): boolean {
   if (tag === "TEXTAREA" || tag === "SELECT") return true;
   if (tag === "INPUT") return !["checkbox", "radio", "range", "button"].includes(element.type ?? "text");
   const role = element.getAttribute?.("role");
-  return role === "combobox" || role === "listbox" || role === "option" || role === "menuitem";
+  return role !== null && role !== undefined && ["combobox", "listbox", "option", "menuitem", "slider", "tab", "radio"].includes(role);
 }

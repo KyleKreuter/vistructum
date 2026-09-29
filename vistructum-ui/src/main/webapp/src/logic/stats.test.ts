@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxCentre, boxSize, localPosition } from "./coords";
+import { boxCentre, boxSize } from "./coords";
 import { dayRange, formatRelative, precision } from "./format";
 import { axisWidth, compactCount, dayRows, rangeBounds, reviewerRows, totals, weekRows } from "./stats";
 
@@ -47,10 +47,6 @@ describe("coordinates", () => {
   it("computes box centre and size", () => {
     expect(boxCentre(box)).toEqual({ x: -7, y: 60, z: 8 });
     expect(boxSize(box)).toEqual({ x: 7, y: 1, z: 7 });
-  });
-
-  it("converts world to local coordinates", () => {
-    expect(localPosition({ minX: -10, minY: 56, minZ: 1 }, -9.5, 64, 3.25)).toEqual([0.5, 8, 2.25]);
   });
 });
 

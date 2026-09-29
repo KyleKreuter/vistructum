@@ -43,7 +43,7 @@ const TimelineMarks = memo(function TimelineMarks({ timeline, applied, colourFor
         <button
           key={`${change.t}-${index}`}
           type="button"
-          className="absolute top-0 h-3 w-[3px] -translate-x-1/2 rounded-full opacity-80 hover:opacity-100 focus-visible:outline-2"
+          className="absolute top-0 h-3 w-[3px] -translate-x-1/2 rounded-full hover:opacity-100! focus-visible:outline-2"
           style={{
             left: `${span > 0 ? ((change.t - timeline.start) / span) * 100 : 0}%`,
             background: change.action === "BREAK" ? "#ff4d4f" : colourFor(change.player),

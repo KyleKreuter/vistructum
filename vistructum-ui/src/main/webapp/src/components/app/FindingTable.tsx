@@ -46,7 +46,7 @@ export function FindingTable({
                 tabIndex={0}
                 onClick={() => void navigate(href)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") void navigate(href);
+                  if (event.key === "Enter" && event.target === event.currentTarget) void navigate(href);
                 }}
               >
                 <TableCell className="py-2">

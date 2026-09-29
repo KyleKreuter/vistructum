@@ -6,7 +6,7 @@ const airMaterials = new Set(["minecraft:air", "minecraft:cave_air", "minecraft:
 const transparentPattern = /(^|_)(glass|glass_pane)$|^(water|ice|frosted_ice|bubble_column)$/;
 const thinPattern = /(_carpet|_pressure_plate|^minecraft:rail|_rail|^minecraft:redstone_wire|^minecraft:snow|_trapdoor|^minecraft:lily_pad|^minecraft:moss_carpet)$/;
 const smallPattern =
-  /(^minecraft:(short_grass|grass|tall_grass|fern|large_fern|dead_bush|torch|wall_torch|soul_torch|redstone_torch|lever|dandelion|poppy|cornflower|allium|azure_bluet|oxeye_daisy|lily_of_the_valley|sugar_cane|flower_pot|button))|(_sapling|_tulip|_button|_sign|_wall_sign|_hanging_sign|_banner|_wall_banner|_flower|_mushroom|_torch|_orchid)$/;
+  /(^minecraft:(short_grass|grass|tall_grass|fern|large_fern|dead_bush|torch|wall_torch|soul_torch|redstone_torch|lever|dandelion|poppy|cornflower|allium|azure_bluet|oxeye_daisy|lily_of_the_valley|sugar_cane|flower_pot|button)$)|(_sapling|_tulip|_button|_sign|_wall_sign|_hanging_sign|_banner|_wall_banner|_flower|_mushroom|_torch|_orchid)$/;
 
 export const fallbackColour = 0x9e9e9e;
 
@@ -74,27 +74,8 @@ export function colourOf(blockData: string, palette: Palette): number {
   return fallbackColour;
 }
 
-export function shapeBox(shape: BlockShape): { height: number; offset: number; width: number } {
-  switch (shape) {
-    case "bottomSlab":
-      return { height: 0.5, offset: 0.25, width: 1 };
-    case "topSlab":
-      return { height: 0.5, offset: 0.75, width: 1 };
-    case "thin":
-      return { height: 0.0625, offset: 0.03125, width: 1 };
-    case "small":
-      return { height: 0.6, offset: 0.3, width: 0.4 };
-    default:
-      return { height: 1, offset: 0.5, width: 1 };
-  }
-}
-
 export function rgbTriple(rgb: number): [number, number, number] {
   return [(rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255];
-}
-
-export function rgbHex(rgb: number): string {
-  return `#${(rgb & 0xffffff).toString(16).padStart(6, "0")}`;
 }
 
 export function displayMaterial(value: string): string {

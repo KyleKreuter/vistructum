@@ -1,4 +1,4 @@
-import { BufferAttribute, BufferGeometry, FrontSide, Group, Mesh, MeshBasicMaterial, type Camera, type Texture } from "three";
+import { BufferAttribute, BufferGeometry, FrontSide, Group, Mesh, MeshBasicMaterial, Vector3, type Camera, type Texture } from "three";
 import { blitWithGutter, frameImage, animationFrameAt } from "@/logic/mc/atlas";
 import { meshSection, sortTranslucent, type Grid, type LayerGeometry } from "@/logic/mc/mesher";
 import { dirtySections, sectionCoordinates, sectionLayout } from "@/logic/mc/sections";
@@ -42,7 +42,7 @@ function geometryOf(layer: LayerGeometry): BufferGeometry {
   geometry.setAttribute("position", new BufferAttribute(layer.positions, 3));
   geometry.setAttribute("uv", new BufferAttribute(layer.uvs, 2));
   geometry.setAttribute("color", new BufferAttribute(layer.colours, 3));
-  geometry.setIndex(new BufferAttribute(layer.indices, 1));
+  geometry.setIndex(new BufferAttribute(layer.indices.slice(), 1));
   geometry.computeBoundingSphere();
   return geometry;
 }
@@ -85,8 +85,9 @@ export function createWorldMesh(grid: Grid, loaded: LoadedLibrary, materials: Bl
     return elapsed;
   };
 
+  const eye = new Vector3();
   const sort = (camera: Camera) => {
-    const eye = camera.position.clone();
+    eye.copy(camera.position);
     group.worldToLocal(eye);
     for (const section of sections) {
       const layer = section.translucent;

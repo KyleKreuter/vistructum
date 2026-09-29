@@ -71,7 +71,7 @@ function parseFace(value: unknown): ModelFace | null {
     uv: uv ? [uv[0], uv[1], uv[2], uv[3]] : null,
     texture,
     cullface: cullIndex < 0 ? null : (cullIndex as Direction),
-    rotation: ((numberOf(value.rotation, 0) % 360) + 360) % 360,
+    rotation: (((Math.round(numberOf(value.rotation, 0) / 90) * 90) % 360) + 360) % 360,
     tintindex: numberOf(value.tintindex, -1),
   };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BlockChange, BlockVolume } from "@/api/types";
-import { cellIndex, cellOf, dynamicStates, indexVolume, staticVisibleCells, worldIndex } from "./volume";
+import { cellIndex, cellOf, dynamicStates, indexVolume, worldIndex } from "./volume";
 
 const volume: BlockVolume = {
   minX: 10,
@@ -54,18 +54,5 @@ describe("volume indexing", () => {
     expect([...dynamicStates(indexed, 2)]).toEqual([0, wool]);
     expect([...dynamicStates(indexed, 3)]).toEqual([0, 0]);
     expect([...dynamicStates(indexed, 99)]).toEqual([0, 0]);
-  });
-
-  it("culls hidden cells", () => {
-    const solid: BlockVolume = { ...volume, cells: new Array(27).fill(1) };
-    const centre = cellIndex(solid, 1, 1, 1);
-    const visible = staticVisibleCells(indexVolume(solid, []));
-    expect(visible).toHaveLength(26);
-    expect(visible).not.toContain(centre);
-    const broken = staticVisibleCells(indexVolume(solid, [change(1, "BREAK", 11, 62, -4)]));
-    expect(broken).toContain(centre);
-    expect(broken).not.toContain(cellIndex(solid, 1, 2, 1));
-    const withAir = staticVisibleCells(indexVolume(volume, []));
-    expect(withAir).toHaveLength(18);
   });
 });

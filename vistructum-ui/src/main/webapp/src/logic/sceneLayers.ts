@@ -154,7 +154,7 @@ export function readCell(scene: Scene, base: number, heatmap: Heatmap | null, ro
     height: scene.heights[i],
     relative: scene.heights[i] - base,
     luminance: scene.luminance[i],
-    heat: heatmap && heatmap.width === scene.width ? (heatmap.values[i] ?? 0) : 0,
+    heat: heatmap && heatmap.width === scene.width && heatmap.height === scene.height ? (heatmap.values[i] ?? 0) : 0,
   };
 }
 
@@ -174,24 +174,4 @@ export function pointToCell(
   return { row, col };
 }
 
-export interface TerrainColumn {
-  row: number;
-  col: number;
-  top: number;
-  colour: number;
-  heat: number;
-}
 
-export function terrainColumns(scene: Scene, colours: number[], heatmap: Heatmap | null): { columns: TerrainColumn[]; floor: number; peak: number } {
-  const columns: TerrainColumn[] = [];
-  const heat = heatmap && heatmap.width === scene.width && heatmap.height === scene.height ? heatmap.values : null;
-  let floor = Number.POSITIVE_INFINITY;
-  for (let i = 0; i < scene.blocks.length; i++) {
-    if (scene.blocks[i] < 0) continue;
-    const col = i % scene.width;
-    const row = (i - col) / scene.width;
-    floor = Math.min(floor, scene.heights[i]);
-    columns.push({ row, col, top: scene.heights[i], colour: colours[scene.blocks[i]] ?? 0x9e9e9e, heat: heat ? heat[i] : 0 });
-  }
-  return { columns, floor: Number.isFinite(floor) ? floor - 1 : -1, peak: heat ? heatPeak(heat) : 0 };
-}

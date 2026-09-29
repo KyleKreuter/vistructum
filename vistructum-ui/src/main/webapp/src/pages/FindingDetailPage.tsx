@@ -38,6 +38,8 @@ const TerrainView = lazy(() => import("@/features/terrain/TerrainView"));
 
 type Tab = "replay" | "scene" | "3d";
 
+const noTabs: ReadonlySet<Tab> = new Set();
+
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -79,6 +81,7 @@ function VerdictButtons({ finding, pending, onVerdict }: { finding: FindingDetai
 export default function FindingDetailPage() {
   const params = useParams();
   const id = Number(params.id);
+  const validId = Number.isInteger(id) && id > 0;
   const [search] = useSearchParams();
   const navigate = useNavigate();
   const filter = useMemo(() => parseFilter(search), [search]);
@@ -86,7 +89,7 @@ export default function FindingDetailPage() {
   const listSuffix = `?${listParams(filter, paging).toString()}`;
   const client = useQueryClient();
   const me = useMe();
-  const finding = useFinding(id);
+  const finding = useFinding(id, validId);
   const list = useFindings(filter, paging);
   const palette = usePalette();
   const verdict = useVerdict();
@@ -95,7 +98,7 @@ export default function FindingDetailPage() {
   const [chosen, setChosen] = useState<{ id: number; tab: Tab; previous: Tab } | null>(null);
   const [layer, setLayer] = useState(0);
   const [overlay, setOverlay] = useState(false);
-  const [visited, setVisited] = useState<ReadonlySet<Tab>>(() => new Set());
+  const [visitedTabs, setVisitedTabs] = useState<{ id: number; tabs: ReadonlySet<Tab> }>(() => ({ id, tabs: new Set() }));
   const [playerSlot, setPlayerSlot] = useState<HTMLDivElement | null>(null);
   const [stage, setStage] = useState<HTMLDivElement | null>(null);
   const [aside, setAside] = useState<HTMLElement | null>(null);
@@ -107,10 +110,11 @@ export default function FindingDetailPage() {
   const tab: Tab = chosen?.id === id && available(chosen.tab) ? chosen.tab : defaultTab;
   const setTab = useCallback((next: Tab) => setChosen({ id, tab: next, previous: tab }), [id, tab]);
 
-  if (!visited.has(tab)) setVisited(new Set(visited).add(tab));
+  const visited = visitedTabs.id === id ? visitedTabs.tabs : noTabs;
+  if (!visited.has(tab)) setVisitedTabs({ id, tabs: new Set(visited).add(tab) });
 
   const heatmapWanted = overlay || layer === 4;
-  const scene = useScene(id);
+  const scene = useScene(id, finding.isSuccess);
   const heatmap = useHeatmap(id, heatmapWanted);
   const evidence = useEvidence(id, !!data?.hasEvidence);
   const terrain = useTerrain(id, !!data?.hasTerrain && visited.has("3d"));
@@ -135,16 +139,32 @@ export default function FindingDetailPage() {
     [client, filter, paging.pageSize],
   );
 
+  const lookup = useRef<{ ticket: number; pending: boolean }>({ ticket: 0, pending: false });
+  useEffect(() => {
+    const current = lookup.current;
+    return () => {
+      current.ticket++;
+      current.pending = false;
+    };
+  }, [id]);
+
   const goNeighbour = useCallback(
     async (delta: 1 | -1) => {
       const cached = neighbour(entries, id, delta);
       if (cached !== null) return go(cached, paging.page);
+      const state = lookup.current;
+      if (state.pending) return;
+      state.pending = true;
+      const ticket = ++state.ticket;
       try {
         const located = await locateNeighbour(paging.page, id, delta, load);
+        if (ticket !== state.ticket) return;
         if (located) go(located.id, located.page);
         else toast.info(delta > 0 ? "This is the last finding in this list." : "This is the first finding in this list.");
       } catch (error) {
-        toast.error(errorMessage(error));
+        if (ticket === state.ticket) toast.error(errorMessage(error));
+      } finally {
+        if (ticket === state.ticket) state.pending = false;
       }
     },
     [entries, id, paging.page, load, go],
@@ -182,6 +202,7 @@ export default function FindingDetailPage() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       const action = detailAction({
         key: event.key,
         metaKey: event.metaKey,
@@ -199,7 +220,7 @@ export default function FindingDetailPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [goNeighbour, showReplay]);
 
-  if (!Number.isInteger(id) || id <= 0) return <EmptyState title="Unknown finding" />;
+  if (!validId) return <EmptyState title="Unknown finding" />;
   if (finding.isPending) return <PageSpinner />;
   if (finding.isError || !data) {
     const notFound = finding.error instanceof ApiError && finding.error.status === 404;
@@ -214,6 +235,14 @@ export default function FindingDetailPage() {
     );
   }
 
+  const retryReplay = () => {
+    if (evidence.isError) void evidence.refetch();
+    if (palette.isError) void palette.refetch();
+  };
+  const retryTerrain = () => {
+    if (terrain.isError) void terrain.refetch();
+    if (palette.isError) void palette.refetch();
+  };
   const size = boxSize(data.box);
   const canShare = !!me.data?.canShare;
   const heatmapState = !heatmapWanted ? "idle" : heatmap.isPending ? "loading" : heatmap.isError ? "unavailable" : "ready";
@@ -271,7 +300,7 @@ export default function FindingDetailPage() {
                 {!visited.has("replay") ? null : evidence.isPending || palette.isPending ? (
                   <PageSpinner className="h-[64vh]" />
                 ) : evidence.isError || palette.isError || !evidence.data || !palette.data ? (
-                  <ErrorState error={evidence.error ?? palette.error} onRetry={() => void evidence.refetch()} />
+                  <ErrorState error={evidence.error ?? palette.error} onRetry={retryReplay} />
                 ) : (
                   <Suspense fallback={<PageSpinner className="h-[64vh]" />}>
                     <ReplayView
@@ -324,8 +353,8 @@ export default function FindingDetailPage() {
                       active={tab === "3d"}
                     />
                   </Suspense>
-                ) : terrain.isError ? (
-                  <ErrorState error={terrain.error} onRetry={() => void terrain.refetch()} />
+                ) : terrain.isError || palette.isError ? (
+                  <ErrorState error={terrain.error ?? palette.error} onRetry={retryTerrain} />
                 ) : (
                   <PageSpinner className="h-[50vh]" />
                 )}
@@ -393,7 +422,7 @@ export default function FindingDetailPage() {
 
             {shareView(data, canShare) !== "hidden" && (
               <div className="shrink-0">
-                <SharePanel finding={data} canShare={canShare} />
+                <SharePanel key={data.id} finding={data} canShare={canShare} />
               </div>
             )}
             <div className="min-h-24 flex-1 overflow-y-auto pr-1">

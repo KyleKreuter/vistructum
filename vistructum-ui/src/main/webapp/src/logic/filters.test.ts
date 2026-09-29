@@ -16,13 +16,14 @@ describe("finding filters", () => {
 
   it("builds the API query", () => {
     const query = new URLSearchParams(findingsQuery({ state: "open", source: "", world: "", player: "", since: "2026-09-01" }, { page: 3, pageSize: 500 }));
-    expect(query.get("since")).toBe("2026-09-01T00:00:00.000Z");
+    expect(query.get("since")).toBe(new Date(2026, 8, 1).toISOString());
     expect(query.get("page")).toBe("3");
     expect(query.get("pageSize")).toBe("100");
     expect(query.has("before")).toBe(false);
     expect(query.has("limit")).toBe(false);
     expect(query.has("source")).toBe(false);
     expect(sinceInstant("2026-13-45")).toBeNull();
+    expect(sinceInstant("2026-02-31")).toBeNull();
   });
 
   it("parses and sanitises paging", () => {

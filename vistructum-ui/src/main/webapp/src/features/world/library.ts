@@ -10,7 +10,7 @@ export interface LoadedLibrary {
   texture: DataTexture;
 }
 
-export function atlasTexture(library: BlockLibrary): DataTexture {
+function atlasTexture(library: BlockLibrary): DataTexture {
   const { atlas } = library;
   const texture = new DataTexture(new Uint8Array(atlas.pixels.buffer, atlas.pixels.byteOffset, atlas.pixels.byteLength), atlas.width, atlas.height, RGBAFormat, UnsignedByteType);
   texture.magFilter = NearestFilter;
@@ -22,12 +22,12 @@ export function atlasTexture(library: BlockLibrary): DataTexture {
   return texture;
 }
 
-export async function loadImages(assets: WorldAssets, ids: string[]): Promise<Map<string, TextureImage>> {
+async function loadImages(assets: WorldAssets, ids: string[]): Promise<Map<string, TextureImage>> {
   const entries = await Promise.all(ids.map(async (id) => [id, await assets.image(id)] as const));
   return new Map(entries);
 }
 
-export async function loadLibrary(assets: WorldAssets, raws: RawBlock[], textures: string[]): Promise<LoadedLibrary> {
+async function loadLibrary(assets: WorldAssets, raws: RawBlock[], textures: string[]): Promise<LoadedLibrary> {
   const images = await loadImages(assets, textures);
   const library = buildLibrary(raws, images, assets.animated, assets.colours);
   return { library, texture: atlasTexture(library) };

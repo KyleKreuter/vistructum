@@ -39,18 +39,24 @@ function decodePng(url: string): Promise<TextureImage | null> {
       canvas.width = bitmap.width;
       canvas.height = bitmap.height;
       const context = canvas.getContext("2d", { willReadFrequently: true });
-      if (!context) return null;
+      if (!context) {
+        bitmap.close();
+        return null;
+      }
       context.drawImage(bitmap, 0, 0);
       const data = context.getImageData(0, 0, bitmap.width, bitmap.height);
       bitmap.close();
       return { width: data.width, height: data.height, pixels: data.data };
     })
-    .catch(() => null);
+    .catch(() => {
+      decoded.delete(url);
+      return null;
+    });
   decoded.set(url, promise);
   return promise;
 }
 
-export function textureUrl(version: string, id: string): string {
+function textureUrl(version: string, id: string): string {
   return `${apiBase}/assets/${encodeURIComponent(version)}/textures/${id}.png`;
 }
 

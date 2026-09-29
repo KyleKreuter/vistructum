@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blockProperties, colourOf, isAir, isFullOpaque, isTransparent, materialOf, shapeBox, shapeOf } from "./blocks";
+import { blockProperties, colourOf, isAir, isFullOpaque, isTransparent, materialOf, shapeOf } from "./blocks";
 
 describe("blocks", () => {
   it("extracts the material part of block data", () => {
@@ -20,8 +20,9 @@ describe("blocks", () => {
     expect(shapeOf("minecraft:stone_slab[type=double]")).toBe("cube");
     expect(shapeOf("minecraft:white_carpet")).toBe("thin");
     expect(shapeOf("minecraft:poppy")).toBe("small");
+    expect(shapeOf("minecraft:grass_block[snowy=false]")).toBe("cube");
+    expect(shapeOf("minecraft:torchflower")).toBe("cube");
     expect(shapeOf("minecraft:oak_stairs[facing=north]")).toBe("cube");
-    expect(shapeBox("bottomSlab")).toEqual({ height: 0.5, offset: 0.25, width: 1 });
   });
 
   it("recognises transparent and air blocks", () => {

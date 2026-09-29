@@ -72,7 +72,7 @@ export function materialClass(name: string): MaterialClass {
   if (/(^|_)glass($|_pane$)|^(ice|packed_ice|blue_ice|frosted_ice)$/.test(name)) return "glass";
   if (/_ore$|^ancient_debris$/.test(name)) return "ore";
   if (/^(grass_block|mycelium|podzol)$/.test(name)) return "grass";
-  if (/(_log|_wood|_stem|_hyphae)$|^bamboo_block$/.test(name)) return "log";
+  if (/(_log|_wood|^crimson_stem|^warped_stem|^mushroom_stem|_hyphae)$|^bamboo_block$/.test(name)) return "log";
   if (new RegExp(`^(${woodTypes})_`).test(name) || /^(crafting_table|bookshelf|chest|barrel|composter|note_block|jukebox|ladder)$/.test(name)) return "planks";
   if (/(wool|carpet)$/.test(name)) return "wool";
   if (/(concrete|concrete_powder|terracotta)$/.test(name)) return "concrete";

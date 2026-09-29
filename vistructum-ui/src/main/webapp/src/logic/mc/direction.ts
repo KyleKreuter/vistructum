@@ -24,11 +24,6 @@ export const directionAxis: readonly (0 | 1 | 2)[] = [1, 1, 2, 2, 0, 0];
 
 export const directionShade: readonly number[] = [0.5, 1, 0.8, 0.8, 0.6, 0.6];
 
-export function directionOfName(name: string): Direction | null {
-  const index = directionNames.indexOf(name as DirectionName);
-  return index < 0 ? null : (index as Direction);
-}
-
 export function nearestDirection(x: number, y: number, z: number): Direction {
   let best: Direction = UP;
   let bestDot = Number.NEGATIVE_INFINITY;
@@ -42,6 +37,3 @@ export function nearestDirection(x: number, y: number, z: number): Direction {
   return best;
 }
 
-export function opposite(direction: Direction): Direction {
-  return (direction ^ 1) as Direction;
-}

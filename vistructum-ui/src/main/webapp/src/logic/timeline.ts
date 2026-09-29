@@ -13,7 +13,7 @@ export function buildTimeline(evidence: Pick<Evidence, "changes" | "recordings">
   let start = Number.POSITIVE_INFINITY;
   let end = Number.NEGATIVE_INFINITY;
   for (const change of changes) {
-    start = Math.min(start, change.t);
+    start = Math.min(start, change.t - 1);
     end = Math.max(end, change.t);
   }
   for (const recording of evidence.recordings) {
@@ -43,8 +43,8 @@ export function stepTime(timeline: Timeline, time: number, delta: 1 | -1): numbe
   if (!changes.length) return time;
   const applied = appliedCount(timeline, time);
   if (delta > 0) return applied < changes.length ? changes[applied].t : time;
-  if (applied <= 1) return Math.min(timeline.start, changes[0].t - 1);
-  return changes[applied - 2].t;
+  const before = applied === 0 ? 0 : appliedCount(timeline, changes[applied - 1].t - 1);
+  return before === 0 ? Math.min(timeline.start, changes[0].t - 1) : changes[before - 1].t;
 }
 
 export function clampTime(timeline: Timeline, time: number): number {
@@ -62,11 +62,6 @@ export function nextSpeed(current: number, delta: 1 | -1): number {
   const base = index < 0 ? speeds.length - 1 : index;
   const target = Math.min(speeds.length - 1, Math.max(0, base + delta));
   return speeds[target];
-}
-
-export function markerPositions(timeline: Timeline): number[] {
-  const span = timeline.end - timeline.start || 1;
-  return timeline.changes.map((change) => (change.t - timeline.start) / span);
 }
 
 export function formatClock(ms: number): string {

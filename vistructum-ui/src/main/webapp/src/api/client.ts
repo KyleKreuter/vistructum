@@ -15,7 +15,7 @@ export function isUnauthorized(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401;
 }
 
-export function csrfToken(): string {
+function csrfToken(): string {
   const match = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith("vistructum_csrf="));
   return match ? decodeURIComponent(match.slice("vistructum_csrf=".length)) : "";
 }

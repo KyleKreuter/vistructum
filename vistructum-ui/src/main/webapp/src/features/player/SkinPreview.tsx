@@ -8,7 +8,7 @@ import { useTheme } from "@/lib/theme";
 import { EntityLights } from "@/features/world/EntityLights";
 import { Sky } from "@/features/world/Sky";
 import { skyTheme } from "@/features/world/skyColours";
-import { loadSkin, type LoadedSkin } from "@/features/replay/skin";
+import { disposeModel, loadSkin, type LoadedSkin } from "@/features/replay/skin";
 
 function createPlayer(): PlayerObject {
   const player = new PlayerObject();
@@ -32,6 +32,8 @@ function play(animation: PlayerAnimation, player: PlayerObject, delta: number) {
 function Player({ url, onMissing }: { url: string; onMissing: () => void }) {
   const player = useMemo(() => createPlayer(), []);
   const animation = useMemo<PlayerAnimation>(() => new IdleAnimation(), []);
+
+  useEffect(() => () => disposeModel(player), [player]);
 
   useEffect(() => {
     let active = true;

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { useSearchParams } from "react-router";
-import type { FindingFilter, Paging } from "@/api/types";
+import type { FindingFilter, FindingState, Paging } from "@/api/types";
 import { useFindings } from "@/api/queries";
 import { FindingFilters } from "@/components/app/FindingFilters";
 import { FindingTable } from "@/components/app/FindingTable";
@@ -11,12 +11,14 @@ import { cn } from "@/lib/utils";
 import { listParams, parseFilter, parsePaging } from "@/logic/filters";
 import { pageCount } from "@/logic/pagination";
 
+const playerDefaultState: FindingState = "any";
+
 export function FindingList({ player, header }: { player?: string; header: (total: number | undefined) => ReactNode }) {
   const [params, setParams] = useSearchParams();
   const filter = useMemo<FindingFilter>(() => {
     const parsed = parseFilter(params);
     if (!player) return parsed;
-    return { ...parsed, player, state: params.has("state") ? parsed.state : "any" };
+    return { ...parsed, player, state: params.has("state") ? parsed.state : playerDefaultState };
   }, [params, player]);
   const paging = useMemo(() => parsePaging(params), [params]);
   const findings = useFindings(filter, paging);
@@ -39,7 +41,7 @@ export function FindingList({ player, header }: { player?: string; header: (tota
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       {header(total)}
-      <FindingFilters filter={filter} onChange={change} playerName={playerName} hidePlayer={!!player} />
+      <FindingFilters filter={filter} onChange={change} playerName={playerName} hidePlayer={!!player} defaultState={player ? playerDefaultState : undefined} />
       {findings.isPending ? (
         <PageSpinner />
       ) : findings.isError ? (

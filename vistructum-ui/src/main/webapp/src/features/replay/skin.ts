@@ -1,4 +1,4 @@
-import { CanvasTexture, NearestFilter, SRGBColorSpace, type Texture } from "three";
+import { CanvasTexture, Mesh, NearestFilter, SRGBColorSpace, type Object3D, type Texture } from "three";
 import { inferModelType, loadSkinToCanvas } from "skinview-utils";
 
 export interface LoadedSkin {
@@ -7,6 +7,15 @@ export interface LoadedSkin {
 }
 
 const cache = new Map<string, Promise<LoadedSkin | null>>();
+
+export function disposeModel(model: Object3D) {
+  model.traverse((node) => {
+    if (!(node instanceof Mesh)) return;
+    node.geometry.dispose();
+    const materials: { dispose: () => void }[] = Array.isArray(node.material) ? node.material : [node.material];
+    for (const material of materials) material.dispose();
+  });
+}
 
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -31,7 +40,10 @@ export function loadSkin(url: string): Promise<LoadedSkin | null> {
       texture.colorSpace = SRGBColorSpace;
       return { texture, slim: inferModelType(canvas) === "slim" };
     })
-    .catch(() => null);
+    .catch(() => {
+      cache.delete(url);
+      return null;
+    });
   cache.set(url, promise);
   return promise;
 }

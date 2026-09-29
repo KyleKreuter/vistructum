@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
-export type SignInReason = "signed-out" | "session-expired" | "link-expired";
+type SignInReason = "signed-out" | "session-expired" | "link-expired";
 
 const messages: Record<SignInReason, string | null> = {
   "signed-out": null,

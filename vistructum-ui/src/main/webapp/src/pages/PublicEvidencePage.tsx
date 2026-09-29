@@ -23,6 +23,7 @@ export default function PublicEvidencePage() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       const action = detailAction({
         key: event.key,
         metaKey: event.metaKey,
@@ -50,7 +51,10 @@ export default function PublicEvidencePage() {
             <p className="text-sm text-muted-foreground">The evidence was never shared under this link, or the link has been deactivated.</p>
           </div>
         ) : evidence.isError || palette.isError || !evidence.data || !palette.data || !finding ? (
-          <ErrorState error={evidence.error ?? palette.error} onRetry={() => void evidence.refetch()} />
+          <ErrorState error={evidence.error ?? palette.error} onRetry={() => {
+              if (evidence.isError) void evidence.refetch();
+              if (palette.isError) void palette.refetch();
+            }} />
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

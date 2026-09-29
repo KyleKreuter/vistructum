@@ -14,7 +14,7 @@ const SkinPreview = lazy(() => import("@/features/player/SkinPreview"));
 export default function PlayerPage() {
   const uuid = useParams().uuid ?? "";
   const valid = isUuid(uuid);
-  const player = usePlayer(uuid);
+  const player = usePlayer(uuid, valid);
   const [missingSkin, setMissingSkin] = useState<string | null>(null);
   const onMissing = useCallback(() => setMissingSkin(uuid), [uuid]);
 

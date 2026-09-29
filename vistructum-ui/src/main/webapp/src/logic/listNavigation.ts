@@ -25,10 +25,6 @@ export function neighbour(entries: ListEntry[], currentId: number, delta: 1 | -1
   return result;
 }
 
-export function positionOf(entries: ListEntry[], currentId: number): number {
-  return entries.findIndex((entry) => entry.id === currentId);
-}
-
 export async function locate(
   start: number,
   step: 1 | -1,

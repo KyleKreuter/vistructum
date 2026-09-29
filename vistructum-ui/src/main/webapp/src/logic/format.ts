@@ -6,18 +6,10 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
   minute: "2-digit",
 });
 
-const dateOnly = new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "short", day: "2-digit" });
-
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "–";
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? iso : dateTime.format(date);
-}
-
-export function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "–";
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : dateOnly.format(date);
 }
 
 export function formatRelative(iso: string | null | undefined, now: number = Date.now()): string {
@@ -33,8 +25,10 @@ export function formatRelative(iso: string | null | undefined, now: number = Dat
     [3600, "h"],
     [86400, "d"],
   ];
-  if (abs < 3600) return `${Math.round(abs / units[0][0])} ${units[0][1]} ${suffix}`;
-  if (abs < 86400) return `${Math.round(abs / units[1][0])} ${units[1][1]} ${suffix}`;
+  const minutes = Math.round(abs / units[0][0]);
+  if (minutes < 60) return `${minutes} ${units[0][1]} ${suffix}`;
+  const hours = Math.round(abs / units[1][0]);
+  if (hours < 24) return `${hours} ${units[1][1]} ${suffix}`;
   return `${Math.round(abs / units[2][0])} ${units[2][1]} ${suffix}`;
 }
 

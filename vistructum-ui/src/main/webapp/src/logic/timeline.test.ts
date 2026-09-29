@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BlockChange } from "@/api/types";
-import { advance, appliedCount, buildTimeline, formatClock, markerPositions, nextSpeed, stepTime, tallies } from "./timeline";
+import { advance, appliedCount, buildTimeline, formatClock, nextSpeed, stepTime, tallies } from "./timeline";
 
 const change = (t: number, player = "a", action: "PLACE" | "BREAK" = "PLACE"): BlockChange => ({
   t,
@@ -43,6 +43,13 @@ describe("timeline", () => {
     expect(appliedCount(timeline, stepTime(timeline, 3000, -1))).toBe(0);
   });
 
+  it("can undo the first change and steps over equal timestamps", () => {
+    const tied = buildTimeline({ changes: [change(3000), change(3000), change(4000)], recordings: [] });
+    expect(appliedCount(tied, tied.start)).toBe(0);
+    expect(stepTime(tied, 4000, -1)).toBe(3000);
+    expect(appliedCount(tied, stepTime(tied, 3000, -1))).toBe(0);
+  });
+
   it("handles empty evidence", () => {
     const empty = buildTimeline({ changes: [], recordings: [] });
     expect(empty.end - empty.start).toBe(1000);
@@ -61,8 +68,7 @@ describe("timeline", () => {
     expect(nextSpeed(1, -1)).toBe(0.5);
   });
 
-  it("places markers and tallies players", () => {
-    expect(markerPositions(timeline)).toEqual([2 / 7, 3 / 7, 4 / 7]);
+  it("tallies players", () => {
     const counts = tallies(timeline.changes);
     expect(counts.get("a")).toEqual({ player: "a", playerName: "A", placed: 2, broken: 0 });
     expect(counts.get("b")?.broken).toBe(1);

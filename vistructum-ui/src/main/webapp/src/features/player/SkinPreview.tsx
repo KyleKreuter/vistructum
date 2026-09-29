@@ -7,6 +7,9 @@ import { PlayerObject } from "skinview3d/libs/model.js";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/lib/theme";
+import { EntityLights } from "@/features/world/EntityLights";
+import { Sky } from "@/features/world/Sky";
+import { skyTheme } from "@/features/world/skyColours";
 import { loadSkin, type LoadedSkin } from "@/features/replay/skin";
 
 function createPlayer(): PlayerObject {
@@ -52,14 +55,12 @@ function Player({ url, walking, onMissing }: { url: string; walking: boolean; on
 export default function SkinPreview({ url, onMissing }: { url: string; onMissing: () => void }) {
   const [walking, setWalking] = useState(false);
   const { resolved } = useTheme();
-  const background = resolved === "dark" ? "#141816" : "#262c29";
   return (
     <div className="space-y-2">
       <div className="h-72 overflow-hidden rounded-lg bg-well">
-        <Canvas camera={{ position: [26, 6, 58], fov: 45, near: 1, far: 400 }} dpr={[1, 2]} aria-label="3D skin preview">
-          <color attach="background" args={[background]} />
-          <ambientLight intensity={2.2} />
-          <directionalLight position={[20, 40, 30]} intensity={1.4} />
+        <Canvas flat camera={{ position: [26, 6, 58], fov: 45, near: 1, far: 400 }} dpr={[1, 2]} aria-label="3D skin preview">
+          <Sky colours={skyTheme(resolved === "dark")} near={300} far={600} />
+          <EntityLights />
           <Player url={url} walking={walking} onMissing={onMissing} />
           <OrbitControls target={[0, 0, 0]} enablePan={false} minDistance={30} maxDistance={90} autoRotate autoRotateSpeed={1.2} makeDefault />
         </Canvas>

@@ -20,8 +20,8 @@ interface TerrainViewProps {
   colours: number[];
   heatmap: Heatmap | null;
   heatmapState: HeatmapState;
-  tint: boolean;
-  onTint: (value: boolean) => void;
+  overlay: boolean;
+  onOverlay: (value: boolean) => void;
   active?: boolean;
 }
 
@@ -82,14 +82,14 @@ function Outline({ scene, height }: { scene: Scene; height: number }) {
   );
 }
 
-export default function TerrainView({ scene, colours, heatmap, heatmapState, tint, onTint, active = true }: TerrainViewProps) {
+export default function TerrainView({ scene, colours, heatmap, heatmapState, overlay, onOverlay, active = true }: TerrainViewProps) {
   const { resolved } = useTheme();
   const terrain = useMemo(() => terrainGrid(scene), [scene]);
   const palette = useMemo(() => scenePalette(scene, colours), [scene, colours]);
   const assets = useWorldAssets(palette);
   const loaded = useBlockLibrary(assets, terrain.states, prepareColumns);
   const heatNote = heatmapNote(heatmapState);
-  const surface = useMemo(() => (tint ? heatSurface(terrain, heatmap) : null), [tint, terrain, heatmap]);
+  const surface = useMemo(() => (overlay ? heatSurface(terrain, heatmap) : null), [overlay, terrain, heatmap]);
   const top = terrain.floor + terrain.grid.sizeY;
   const extent = Math.max(scene.width, scene.height);
   const [near, far] = fogRange(extent);
@@ -116,8 +116,8 @@ export default function TerrainView({ scene, colours, heatmap, heatmapState, tin
       </div>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
         <div className="flex items-center gap-2">
-          <Switch id="tint" checked={tint} onCheckedChange={onTint} />
-          <Label htmlFor="tint">Heatmap tint</Label>
+          <Switch id="terrain-overlay" checked={overlay} onCheckedChange={onOverlay} />
+          <Label htmlFor="terrain-overlay">Heatmap overlay</Label>
         </div>
         {heatNote && <span className="text-muted-foreground">{heatNote}</span>}
       </div>

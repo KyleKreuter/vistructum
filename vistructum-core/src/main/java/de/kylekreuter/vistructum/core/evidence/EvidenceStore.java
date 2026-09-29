@@ -117,7 +117,7 @@ public final class EvidenceStore {
                     int sizeZ = rows.getInt(6);
                     BlockVolume before = new BlockVolume(rows.getInt(1), rows.getInt(2), rows.getInt(3), sizeX, sizeY,
                             sizeZ, Arrays.asList(rows.getString(7).split(PALETTE_SEPARATOR, -1)),
-                            decodeCells(rows.getBytes(8), sizeX * sizeY * sizeZ));
+                            Packed.unpackCells(rows.getBytes(8), sizeX * sizeY * sizeZ));
                     long from = rows.getLong(9);
                     long to = rows.getLong(10);
                     return Optional.of(new Evidence(findingId, before, storedChanges(connection, findingId),
@@ -173,7 +173,7 @@ public final class EvidenceStore {
             insert.setInt(5, before.sizeY());
             insert.setInt(6, before.sizeZ());
             insert.setString(7, String.join(PALETTE_SEPARATOR, before.palette()));
-            insert.setBytes(8, encodeCells(before.cells()));
+            insert.setBytes(8, Packed.packCells(before.cells()));
             insert.setLong(9, from);
             insert.setLong(10, to);
             insert.setLong(11, findingId);
@@ -280,23 +280,6 @@ public final class EvidenceStore {
         List<Recording> recordings = new ArrayList<>();
         frames.forEach((player, recorded) -> recordings.add(new Recording(player, names.get(player), recorded)));
         return recordings;
-    }
-
-    static byte[] encodeCells(int[] cells) {
-        Packed.Writer out = new Packed.Writer();
-        for (int cell : cells) {
-            out.unsigned(cell);
-        }
-        return Packed.deflate(out.bytes());
-    }
-
-    static int[] decodeCells(byte[] packed, int count) {
-        Packed.Reader in = new Packed.Reader(Packed.inflate(packed));
-        int[] cells = new int[count];
-        for (int i = 0; i < count; i++) {
-            cells[i] = in.count();
-        }
-        return cells;
     }
 
     record LoggedChange(int x, int y, int z, UUID player, String playerName, BlockAction action, String blockData,

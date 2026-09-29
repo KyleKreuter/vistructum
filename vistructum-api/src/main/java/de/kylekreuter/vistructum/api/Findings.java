@@ -171,6 +171,24 @@ public interface Findings {
     CompletableFuture<Optional<Heatmap>> heatmap(long id);
 
     /**
+     * Reports whether a terrain volume was stored for a finding.
+     *
+     * @param id identifier of the finding
+     * @return a future completing with {@code true} if {@link #terrain(long)} would return a value
+     */
+    CompletableFuture<Boolean> hasTerrain(long id);
+
+    /**
+     * Loads the blocks around a full scan finding as the world scan read them.
+     *
+     * @param id identifier of the finding
+     * @return a future completing with the terrain, or with an empty {@link Optional} if no finding has this
+     *         identifier or no terrain was stored for it
+     * @see FindingTerrain
+     */
+    CompletableFuture<Optional<FindingTerrain>> terrain(long id);
+
+    /**
      * Reports whether evidence was secured for a finding.
      *
      * @param id identifier of the finding

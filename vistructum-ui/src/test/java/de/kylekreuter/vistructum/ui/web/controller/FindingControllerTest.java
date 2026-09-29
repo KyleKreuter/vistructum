@@ -2,6 +2,8 @@ package de.kylekreuter.vistructum.ui.web.controller;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import de.kylekreuter.vistructum.api.BlockVolume;
+import de.kylekreuter.vistructum.api.FindingTerrain;
 import de.kylekreuter.vistructum.ui.web.WebFixture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,7 +14,9 @@ import java.io.ByteArrayInputStream;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 
 import static de.kylekreuter.vistructum.ui.web.WebFixture.BUILDER;
@@ -159,5 +163,25 @@ class FindingControllerTest {
         assertEquals(503, web.get("/review/api/findings/7/heatmap", cookie(session)).statusCode());
         assertEquals(404, web.get("/review/api/findings/99/heatmap", cookie(session)).statusCode());
         assertEquals(404, web.get("/review/api/findings/8/evidence", cookie(session)).statusCode());
+    }
+
+    @Test
+    void terrainIsServedWithItsSceneOrigin() throws Exception {
+        web.vistructum.terrain.put(8L, new FindingTerrain(new BlockVolume(100, 60, 200, 2, 1, 1,
+                List.of("minecraft:stone", "minecraft:oak_leaves[distance=1]"), new int[]{0, 1}),
+                Optional.of(new FindingTerrain.SceneOrigin(96, 192))));
+        String session = web.session();
+        JsonObject detail = json(web.get("/review/api/findings/8", cookie(session)));
+        assertTrue(detail.get("hasTerrain").getAsBoolean());
+        assertFalse(json(web.get("/review/api/findings/7", cookie(session))).get("hasTerrain").getAsBoolean());
+        JsonObject terrain = json(web.get("/review/api/findings/8/terrain", cookie(session)));
+        JsonObject blocks = terrain.getAsJsonObject("blocks");
+        assertEquals(100, blocks.get("minX").getAsInt());
+        assertEquals(2, blocks.get("sizeX").getAsInt());
+        assertEquals("minecraft:oak_leaves[distance=1]", blocks.getAsJsonArray("palette").get(1).getAsString());
+        assertEquals(1, blocks.getAsJsonArray("cells").get(1).getAsInt());
+        assertEquals(96, terrain.getAsJsonObject("sceneOrigin").get("x").getAsInt());
+        assertEquals(192, terrain.getAsJsonObject("sceneOrigin").get("z").getAsInt());
+        assertEquals(404, web.get("/review/api/findings/7/terrain", cookie(session)).statusCode());
     }
 }

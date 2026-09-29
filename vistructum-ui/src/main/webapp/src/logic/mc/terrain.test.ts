@@ -1,55 +1,47 @@
 import { describe, expect, it } from "vitest";
-import type { Scene } from "@/api/types";
-import { fixtureSource } from "./fixtures";
-import { rawBlock } from "./library";
-import { columnBlock, terrainGrid, heatSurface } from "./terrain";
+import type { Terrain } from "@/api/types";
+import { boxOutline, columnTops, heatSurface, terrainGrid, typicalTop } from "./terrain";
 
-const scene: Scene = {
-  source: "mask",
-  width: 2,
-  height: 2,
-  window: { top: 0, left: 0, bottom: 1, right: 1 },
-  palette: ["minecraft:stone", "minecraft:oak_slab"],
-  blocks: [0, 1, -1, 0],
-  heights: [64, 66, 0, 65],
-  luminance: [0, 0, 0, 0],
+const terrain: Terrain = {
+  blocks: {
+    minX: 100,
+    minY: 60,
+    minZ: 200,
+    sizeX: 2,
+    sizeY: 3,
+    sizeZ: 2,
+    palette: ["minecraft:air", "minecraft:stone", "minecraft:oak_leaves[distance=1]"],
+    cells: [1, 1, 1, 0, 0, 1, 0, 0, 2, 0, 0, 0],
+  },
+  sceneOrigin: { x: 99, z: 200 },
 };
 
-describe("terrain grid", () => {
-  const terrain = terrainGrid(scene);
-
-  it("fills every column from the floor to its height", () => {
-    expect(terrain.floor).toBe(63);
-    expect(terrain.grid.sizeY).toBe(4);
-    const at = (x: number, y: number, z: number) => terrain.grid.cells[(y * 2 + z) * 2 + x];
-    expect([0, 1, 2, 3].map((y) => at(0, y, 0))).toEqual([1, 1, 0, 0]);
-    expect([0, 1, 2, 3].map((y) => at(1, y, 0))).toEqual([2, 2, 2, 2]);
-    expect([0, 1, 2, 3].map((y) => at(0, y, 1))).toEqual([0, 0, 0, 0]);
-    expect(terrain.states[0]).toBe("minecraft:air");
+describe("terrain", () => {
+  it("meshes the stored palette indices unchanged", () => {
+    const grid = terrainGrid(terrain);
+    expect([grid.sizeX, grid.sizeY, grid.sizeZ]).toEqual([2, 3, 2]);
+    expect([...grid.cells]).toEqual(terrain.blocks.cells);
   });
 
-  it("lays a heat quad on top of every hot column", () => {
-    const surface = heatSurface(terrain, { width: 2, height: 2, values: [0, 200, 0, 0] });
+  it("finds the highest block of every column", () => {
+    const tops = columnTops(terrain);
+    expect([...tops]).toEqual([2, 1, 0, -1]);
+    expect(typicalTop(tops)).toBe(2);
+    expect(typicalTop(new Int32Array([-1]))).toBe(0);
+  });
+
+  it("maps the finding box into volume coordinates", () => {
+    expect(boxOutline(terrain, { minX: 101, minY: 60, minZ: 200, maxX: 101, maxY: 62, maxZ: 201 })).toEqual({ x0: 1, x1: 2, z0: 0, z1: 2 });
+  });
+
+  it("lays heat on the column the scene cell covers", () => {
+    const tops = columnTops(terrain);
+    const surface = heatSurface(terrain, tops, { width: 3, height: 2, values: [0, 200, 0, 0, 0, 0] }, 1);
     expect(surface?.indices).toHaveLength(6);
-    expect(surface?.positions[1]).toBeCloseTo(4, 1);
-    expect(surface?.positions[0]).toBe(1);
-    expect(surface?.colours[3]).toBeGreaterThan(0);
-    expect(heatSurface(terrain, null)).toBeNull();
-  });
-
-  it("turns partial blocks into full columns with their textures", () => {
-    const slab = columnBlock(rawBlock("minecraft:oak_slab[type=bottom]", fixtureSource), null);
-    expect(slab.quads).toHaveLength(6);
-    expect(new Set(slab.quads.map((quad) => quad.flush)).size).toBe(6);
-    expect(slab.quads.every((quad) => quad.texture === "block/oak_planks")).toBe(true);
-    const log = columnBlock(rawBlock("minecraft:oak_log[axis=y]", fixtureSource), null);
-    expect(log.quads.find((quad) => quad.normal === 1)?.texture).toBe("block/oak_log_top");
-  });
-
-  it("shows the ground block below crops and plants", () => {
-    const ground = rawBlock("minecraft:stone", fixtureSource);
-    const wheat = columnBlock(rawBlock("minecraft:wheat[age=7]", fixtureSource), ground);
-    expect(wheat.state.name).toBe("stone");
-    expect(wheat.quads).toBe(ground.quads);
+    expect(surface?.positions[0]).toBe(0);
+    expect(surface?.positions[1]).toBeCloseTo(3, 1);
+    expect(surface?.positions[2]).toBe(0);
+    expect(heatSurface(terrain, tops, null)).toBeNull();
+    expect(heatSurface({ ...terrain, sceneOrigin: null }, tops, { width: 3, height: 2, values: [0, 200, 0, 0, 0, 0] })).toBeNull();
   });
 });

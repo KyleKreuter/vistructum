@@ -6,6 +6,7 @@ import de.kylekreuter.vistructum.api.EvidenceShare;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.FindingScene;
+import de.kylekreuter.vistructum.api.FindingTerrain;
 import de.kylekreuter.vistructum.api.FindingStats;
 import de.kylekreuter.vistructum.api.Findings;
 import de.kylekreuter.vistructum.api.Heatmap;
@@ -47,6 +48,7 @@ public final class FakeVistructum implements Vistructum, Findings, Scans, Player
 
     public final Map<Long, Finding> findings = new TreeMap<>();
     public final Map<Long, Evidence> evidence = new ConcurrentHashMap<>();
+    public final Map<Long, FindingTerrain> terrain = new ConcurrentHashMap<>();
     public final Map<String, IssuedSession> logins = new ConcurrentHashMap<>();
     public final Map<String, WebSession> sessions = new ConcurrentHashMap<>();
     public final Map<String, Long> shares = new ConcurrentHashMap<>();
@@ -183,6 +185,16 @@ public final class FakeVistructum implements Vistructum, Findings, Scans, Player
     @Override
     public CompletableFuture<Optional<Heatmap>> heatmap(long id) {
         return completedFuture(Optional.empty());
+    }
+
+    @Override
+    public CompletableFuture<Boolean> hasTerrain(long id) {
+        return completedFuture(terrain.containsKey(id));
+    }
+
+    @Override
+    public CompletableFuture<Optional<FindingTerrain>> terrain(long id) {
+        return completedFuture(Optional.ofNullable(terrain.get(id)));
     }
 
     @Override

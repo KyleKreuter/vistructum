@@ -129,12 +129,16 @@ public final class FindingStore {
                                                                      Duration dedupe) {
         FindingCandidate candidate = detected.candidate();
         byte[] channels = SceneBlob.encode(detected.input().scene());
+        Optional<TerrainStore.PackedTerrain> terrain = detected.terrain().map(TerrainStore::pack);
         return database.transaction(connection -> {
             if (overlapsRecent(connection, candidate, now.minus(dedupe))) {
                 return Optional.empty();
             }
             long id = insert(connection, candidate, now);
             insertScene(connection, id, detected.input(), channels);
+            if (terrain.isPresent()) {
+                TerrainStore.insert(connection, id, terrain.get());
+            }
             return select(connection, id);
         });
     }

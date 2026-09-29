@@ -7,6 +7,7 @@ import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingQuery;
 import de.kylekreuter.vistructum.api.FindingReviewedEvent;
 import de.kylekreuter.vistructum.api.FindingScene;
+import de.kylekreuter.vistructum.api.FindingTerrain;
 import de.kylekreuter.vistructum.api.FindingStats;
 import de.kylekreuter.vistructum.api.Heatmap;
 import de.kylekreuter.vistructum.api.IssuedSession;
@@ -35,6 +36,7 @@ import de.kylekreuter.vistructum.core.alert.FindingStore;
 import de.kylekreuter.vistructum.core.alert.MaterialKeys;
 import de.kylekreuter.vistructum.core.alert.PreviewImage;
 import de.kylekreuter.vistructum.core.alert.SceneView;
+import de.kylekreuter.vistructum.core.alert.TerrainStore;
 import de.kylekreuter.vistructum.core.evidence.EvidenceStore;
 import de.kylekreuter.vistructum.core.skin.SkinCache;
 import de.kylekreuter.vistructum.core.web.WebStore;
@@ -67,6 +69,7 @@ public final class VistructumService implements Vistructum {
     private final SkinCache skins;
     private final FindingHeatmaps heatmaps;
     private final EvidenceStore evidenceStore;
+    private final TerrainStore terrainStore;
     private final WebStore webStore;
     private final boolean recordingEnabled;
     private final Clock clock;
@@ -77,7 +80,8 @@ public final class VistructumService implements Vistructum {
 
     public VistructumService(MainThread mainThread, BlockChangeStore changes, FindingStore findingStore,
                              FindingExporter exporter, ScanStore scanStore, WorldScanner scanner, Inference inference,
-                             SkinCache skins, FindingHeatmaps heatmaps, EvidenceStore evidenceStore, WebStore webStore,
+                             SkinCache skins, FindingHeatmaps heatmaps, EvidenceStore evidenceStore,
+                             TerrainStore terrainStore, WebStore webStore,
                              boolean recordingEnabled, Clock clock) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.changes = Objects.requireNonNull(changes, "changes");
@@ -89,6 +93,7 @@ public final class VistructumService implements Vistructum {
         this.skins = Objects.requireNonNull(skins, "skins");
         this.heatmaps = Objects.requireNonNull(heatmaps, "heatmaps");
         this.evidenceStore = Objects.requireNonNull(evidenceStore, "evidenceStore");
+        this.terrainStore = Objects.requireNonNull(terrainStore, "terrainStore");
         this.webStore = Objects.requireNonNull(webStore, "webStore");
         this.recordingEnabled = recordingEnabled;
         this.clock = Objects.requireNonNull(clock, "clock");
@@ -205,6 +210,16 @@ public final class VistructumService implements Vistructum {
         @Override
         public CompletableFuture<Optional<Heatmap>> heatmap(long id) {
             return mainThread.handOff(heatmaps.heatmap(id));
+        }
+
+        @Override
+        public CompletableFuture<Boolean> hasTerrain(long id) {
+            return mainThread.handOff(terrainStore.hasTerrain(id));
+        }
+
+        @Override
+        public CompletableFuture<Optional<FindingTerrain>> terrain(long id) {
+            return mainThread.handOff(terrainStore.terrain(id));
         }
 
         @Override

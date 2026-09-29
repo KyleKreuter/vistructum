@@ -9,6 +9,7 @@ import de.kylekreuter.vistructum.core.alert.FindingHeatmaps;
 import de.kylekreuter.vistructum.core.alert.FindingReporter;
 import de.kylekreuter.vistructum.core.alert.FindingRetention;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
+import de.kylekreuter.vistructum.core.alert.TerrainStore;
 import de.kylekreuter.vistructum.core.evidence.EvidenceKeeper;
 import de.kylekreuter.vistructum.core.evidence.EvidenceSettings;
 import de.kylekreuter.vistructum.core.evidence.EvidenceStore;
@@ -161,7 +162,7 @@ public final class VistructumCore extends JavaPlugin {
                 new VistructumService(mainThread, changes, findings,
                         new FindingExporter(findings, getDataFolder().toPath().resolve(EXPORT_FOLDER), clock), scans,
                         scanner, inference, new SkinCache(skins, new MojangSkins(), clock),
-                        new FindingHeatmaps(findings, occlusion), evidence, web, recordingEnabled, clock), this,
+                        new FindingHeatmaps(findings, occlusion), evidence, new TerrainStore(database), web, recordingEnabled, clock), this,
                 ServicePriority.Normal);
 
         metrics = UsageMetrics.start(this, settings, config.getBoolean("scan.enabled"),

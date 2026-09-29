@@ -50,6 +50,23 @@ public final class Packed {
         }
     }
 
+    public static byte[] packCells(int[] cells) {
+        Writer out = new Writer();
+        for (int cell : cells) {
+            out.unsigned(cell);
+        }
+        return deflate(out.bytes());
+    }
+
+    public static int[] unpackCells(byte[] packed, int count) {
+        Reader in = new Reader(inflate(packed));
+        int[] cells = new int[count];
+        for (int i = 0; i < count; i++) {
+            cells[i] = in.count();
+        }
+        return cells;
+    }
+
     public static final class Writer {
 
         private final ByteArrayOutputStream out = new ByteArrayOutputStream();

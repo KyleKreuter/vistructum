@@ -12,14 +12,14 @@ import java.util.UUID;
 
 public record FindingView(long id, String source, String world, BoxView box, double score, long votes, String detail,
                           String modelVersion, String createdAt, List<PlayerView> players, ReviewView review,
-                          boolean hasEvidence, String sharedSince, String shareUrl, Optional<String> teleport) {
+                          boolean hasEvidence, boolean hasTerrain, String sharedSince, String shareUrl, Optional<String> teleport) {
 
     public static FindingView of(Finding finding, Map<UUID, Optional<String>> names, boolean hasEvidence,
-                                 Optional<ShareView> share) {
+                                 boolean hasTerrain, Optional<ShareView> share) {
         return new FindingView(finding.id(), source(finding.source()), finding.world(), BoxView.of(finding.box()),
                 finding.score(), finding.votes(), finding.detail(), finding.modelVersion(),
                 finding.createdAt().toString(), PlayerView.of(finding.players(), names),
-                finding.review().map(ReviewView::of).orElse(null), hasEvidence,
+                finding.review().map(ReviewView::of).orElse(null), hasEvidence, hasTerrain,
                 share.map(ShareView::sharedSince).orElse(null), share.map(ShareView::url).orElse(null),
                 Optional.empty());
     }
@@ -28,7 +28,7 @@ public record FindingView(long id, String source, String world, BoxView box, dou
         String tp = "tp @s " + box.centerX() + " " + Math.floorDiv(box.minY() + box.maxY(), 2) + " " + box.centerZ();
         String command = dimension.map(key -> "/execute in " + key + " run " + tp).orElse("/" + tp);
         return new FindingView(id, source, world, this.box, score, votes, detail, modelVersion, createdAt, players,
-                review, hasEvidence, sharedSince, shareUrl, Optional.of(command));
+                review, hasEvidence, hasTerrain, sharedSince, shareUrl, Optional.of(command));
     }
 
     public static String source(Source source) {

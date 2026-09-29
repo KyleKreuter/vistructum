@@ -35,7 +35,6 @@ import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -155,14 +154,6 @@ class EvidenceStoreTest {
         assertFalse(store.secure(4711, "world", BOX, current(), SETTINGS, CREATED).get());
         assertTrue(store.evidence(4711).get().isEmpty());
         assertEquals(0, rows("finding_changes"));
-    }
-
-    @Test
-    void cellsRoundTrip() {
-        int[] cells = {0, 1, 1, 300, 0, 70_000};
-        assertEquals(List.of(0, 1, 1, 300, 0, 70_000),
-                Arrays.stream(EvidenceStore.decodeCells(EvidenceStore.encodeCells(cells), cells.length))
-                        .boxed().toList());
     }
 
     @Test

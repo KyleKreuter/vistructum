@@ -93,6 +93,7 @@ export interface FindingSummary {
   players: PlayerRef[];
   review: Review | null;
   hasEvidence: boolean;
+  hasTerrain: boolean;
   sharedSince: string | null;
   shareUrl: string | null;
 }
@@ -134,6 +135,11 @@ export interface BlockVolume {
   sizeZ: number;
   palette: string[];
   cells: number[];
+}
+
+export interface Terrain {
+  blocks: BlockVolume;
+  sceneOrigin: { x: number; z: number } | null;
 }
 
 export type BlockAction = "PLACE" | "BREAK";

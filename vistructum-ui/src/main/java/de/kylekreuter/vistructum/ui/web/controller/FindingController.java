@@ -25,6 +25,7 @@ import de.kylekreuter.vistructum.ui.web.view.FindingView;
 import de.kylekreuter.vistructum.ui.web.view.HeatmapView;
 import de.kylekreuter.vistructum.ui.web.view.SceneView;
 import de.kylekreuter.vistructum.ui.web.view.ShareView;
+import de.kylekreuter.vistructum.ui.web.view.TerrainView;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
 
@@ -70,6 +71,7 @@ public final class FindingController {
         Routes.read(config, FINDING + "/scene", this::scene);
         Routes.read(config, FINDING + "/heatmap", this::heatmap);
         Routes.read(config, FINDING + "/evidence", this::evidence);
+        Routes.read(config, FINDING + "/terrain", this::terrain);
         config.routes.post(FINDING + "/verdict", this::verdict);
         Routes.writing(config, FINDING, FindingController::unknown);
         Routes.any(config, FINDING + "/<rest>", FindingController::unknown);
@@ -127,6 +129,12 @@ public final class FindingController {
                 Responses.json(ctx, EvidenceView.of(found.orElseThrow(ApiError::notFound)))));
     }
 
+    private void terrain(Context ctx) {
+        long id = id(ctx);
+        ctx.future(() -> handoff.off(vistructum.findings().terrain(id)).thenAccept(found ->
+                Responses.json(ctx, TerrainView.of(found.orElseThrow(ApiError::notFound)))));
+    }
+
     private void verdict(Context ctx) {
         long id = id(ctx);
         Verdict verdict = verdictOf(body(ctx));
@@ -143,10 +151,11 @@ public final class FindingController {
 
     CompletableFuture<FindingView> summary(Finding finding) {
         CompletableFuture<Boolean> evidence = handoff.off(vistructum.findings().hasEvidence(finding.id()));
+        CompletableFuture<Boolean> terrain = handoff.off(vistructum.findings().hasTerrain(finding.id()));
         CompletableFuture<Optional<EvidenceShare>> shared = handoff.off(vistructum.web().shared(finding.id()));
         CompletableFuture<Map<UUID, Optional<String>>> players = names.of(finding.players());
-        return CompletableFuture.allOf(evidence, shared, players).thenApply(ignored ->
-                FindingView.of(finding, players.join(), evidence.join(), shared.join()
+        return CompletableFuture.allOf(evidence, terrain, shared, players).thenApply(ignored ->
+                FindingView.of(finding, players.join(), evidence.join(), terrain.join(), shared.join()
                         .map(link -> ShareView.of(settings.shareLink(link.token()), link.sharedSince()))));
     }
 

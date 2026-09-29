@@ -4,6 +4,7 @@ import { matchesState } from "@/logic/filters";
 import { paintLayer, sceneColours } from "@/logic/sceneLayers";
 import { publicUrl, type MockDb, type MockFinding } from "./data";
 import { relativeEvidence } from "./evidence";
+import { sceneTerrain } from "./terrain";
 import { activeSettings, type EndpointKey } from "./settings";
 import { facePng, imagePng, lookFor, skinPng } from "./skins";
 
@@ -55,6 +56,7 @@ function summary(finding: MockFinding): FindingSummary {
     players: finding.players,
     review: finding.review,
     hasEvidence: finding.hasEvidence,
+    hasTerrain: finding.hasTerrain,
     sharedSince: finding.sharedSince,
     shareUrl: finding.shareActive && finding.shareToken ? publicUrl(finding.shareToken) : null,
   };
@@ -187,6 +189,14 @@ export function handlers(db: MockDb) {
       const finding = byId(params.id);
       if (!finding) return error(404, "not_found");
       return finding.heatmap ? HttpResponse.json(finding.heatmap) : error(503, "unavailable");
+    }),
+
+    http.get(`${api}/findings/:id/terrain`, async ({ params }) => {
+      const blocked = await gate("terrain", 400);
+      if (blocked) return blocked;
+      const finding = byId(params.id);
+      const terrain = finding?.hasTerrain && finding.scene ? sceneTerrain(finding.scene, finding.box) : null;
+      return terrain ? HttpResponse.json(terrain) : error(404, "not_found");
     }),
 
     http.get(`${api}/findings/:id/evidence`, async ({ params }) => {

@@ -2,8 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DataTexture, NearestFilter, RGBAFormat, SRGBColorSpace, UnsignedByteType } from "three";
 import type { TextureImage } from "@/logic/mc/atlas";
 import { buildLibrary, planBlocks, type BlockLibrary } from "@/logic/mc/world";
-import { rawTextures, type RawBlock } from "@/logic/mc/library";
-import { missingTexture } from "@/logic/mc/models";
+import type { RawBlock } from "@/logic/mc/library";
 import type { WorldAssets } from "./assets";
 
 export interface LoadedLibrary {
@@ -34,15 +33,13 @@ export async function loadLibrary(assets: WorldAssets, raws: RawBlock[], texture
   return { library, texture: atlasTexture(library) };
 }
 
-export function useBlockLibrary(assets: WorldAssets | null, states: string[], prepare?: (raws: RawBlock[]) => RawBlock[]): LoadedLibrary | null {
+export function useBlockLibrary(assets: WorldAssets | null, states: string[]): LoadedLibrary | null {
   const query = useQuery({
-    queryKey: ["block-library", assets?.key ?? "none", prepare ? "columns" : "blocks", states.join("|")],
+    queryKey: ["block-library", assets?.key ?? "none", states.join("|")],
     queryFn: async () => {
       if (!assets) throw new Error("assets");
       const plan = planBlocks(states, assets.source);
-      const raws = prepare ? prepare(plan.raws) : plan.raws;
-      const textures = prepare ? planTextures(raws) : plan.textures;
-      return loadLibrary(assets, raws, textures);
+      return loadLibrary(assets, plan.raws, plan.textures);
     },
     enabled: !!assets,
     staleTime: Number.POSITIVE_INFINITY,
@@ -51,8 +48,4 @@ export function useBlockLibrary(assets: WorldAssets | null, states: string[], pr
     retry: false,
   });
   return query.data ?? null;
-}
-
-function planTextures(raws: RawBlock[]): string[] {
-  return [...rawTextures(raws).add(missingTexture)].sort();
 }

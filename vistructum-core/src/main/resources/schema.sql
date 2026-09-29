@@ -199,4 +199,18 @@ CREATE TABLE IF NOT EXISTS share_events (
 
 CREATE INDEX IF NOT EXISTS share_events_by_time ON share_events (at);
 
-CREATE INDEX IF NOT EXISTS findings_by_review_time ON findings (reviewed_at)
+CREATE INDEX IF NOT EXISTS findings_by_review_time ON findings (reviewed_at);
+
+CREATE TABLE IF NOT EXISTS finding_terrain (
+    finding_id INTEGER PRIMARY KEY REFERENCES findings (id) ON DELETE CASCADE,
+    min_x      INTEGER NOT NULL,
+    min_y      INTEGER NOT NULL,
+    min_z      INTEGER NOT NULL,
+    size_x     INTEGER NOT NULL,
+    size_y     INTEGER NOT NULL,
+    size_z     INTEGER NOT NULL,
+    palette    TEXT    NOT NULL,
+    cells      BLOB    NOT NULL,
+    scene_x    INTEGER,
+    scene_z    INTEGER
+);

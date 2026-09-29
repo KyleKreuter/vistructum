@@ -18,6 +18,7 @@ import type {
   ShareResult,
   Stats,
   Status,
+  Terrain,
   Verdict,
 } from "./types";
 
@@ -26,6 +27,7 @@ export const keys = {
   findings: (filter: FindingFilter, paging: Paging) => ["findings", filter, paging.page, paging.pageSize] as const,
   finding: (id: number) => ["finding", id] as const,
   scene: (id: number) => ["scene", id] as const,
+  terrain: (id: number) => ["terrain", id] as const,
   heatmap: (id: number) => ["heatmap", id] as const,
   evidence: (id: number) => ["evidence", id] as const,
   palette: ["palette"] as const,
@@ -73,6 +75,15 @@ export function useScene(id: number, enabled = true) {
   return useQuery({
     queryKey: keys.scene(id),
     queryFn: () => request<Scene>(`/findings/${id}/scene`),
+    enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function useTerrain(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.terrain(id),
+    queryFn: () => request<Terrain>(`/findings/${id}/terrain`),
     enabled,
     staleTime: Number.POSITIVE_INFINITY,
   });

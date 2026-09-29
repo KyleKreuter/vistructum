@@ -126,7 +126,7 @@ function srgb(rgb: number): [number, number, number] {
   return [((rgb >> 16) & 255) / 255, ((rgb >> 8) & 255) / 255, (rgb & 255) / 255];
 }
 
-export function isFullFace(quad: RawQuad): boolean {
+function isFullFace(quad: RawQuad): boolean {
   if (quad.flush < 0) return false;
   const axis = directionAxis[quad.flush];
   const t1 = (axis + 1) % 3;

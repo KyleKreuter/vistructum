@@ -4,7 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { ApiError, errorMessage } from "@/api/client";
-import { findingsOptions, useEvidence, useFinding, useFindings, useHeatmap, useMe, usePalette, useScene, useVerdict } from "@/api/queries";
+import { findingsOptions, useEvidence, useFinding, useFindings, useHeatmap, useMe, usePalette, useScene, useTerrain, useVerdict } from "@/api/queries";
 import { urls } from "@/api/client";
 import type { FindingDetail, FindingSummary, Verdict } from "@/api/types";
 import { IndicatorIcons, SourceBadge, VerdictBadge } from "@/components/app/Badges";
@@ -103,7 +103,8 @@ export default function FindingDetailPage() {
   const replayControls = useRef<ReplayControls | null>(null);
 
   const defaultTab: Tab = data?.hasEvidence ? "replay" : "scene";
-  const tab: Tab = chosen?.id === id && (chosen.tab !== "replay" || data?.hasEvidence) ? chosen.tab : defaultTab;
+  const available = (next: Tab) => (next === "replay" ? !!data?.hasEvidence : next === "3d" ? !!data?.hasTerrain : true);
+  const tab: Tab = chosen?.id === id && available(chosen.tab) ? chosen.tab : defaultTab;
   const setTab = useCallback((next: Tab) => setChosen({ id, tab: next, previous: tab }), [id, tab]);
 
   if (!visited.has(tab)) setVisited(new Set(visited).add(tab));
@@ -112,6 +113,7 @@ export default function FindingDetailPage() {
   const scene = useScene(id);
   const heatmap = useHeatmap(id, heatmapWanted);
   const evidence = useEvidence(id, !!data?.hasEvidence);
+  const terrain = useTerrain(id, !!data?.hasTerrain && visited.has("3d"));
   const colours = useMemo(() => (scene.data && palette.data ? sceneColours(scene.data, palette.data) : []), [scene.data, palette.data]);
 
   const entries: ListEntry[] = useMemo(() => (list.data?.items ?? []).map(toEntry), [list.data]);
@@ -260,7 +262,7 @@ export default function FindingDetailPage() {
         <TabsList>
           {data.hasEvidence && <TabsTrigger value="replay">Replay</TabsTrigger>}
           <TabsTrigger value="scene">Scene</TabsTrigger>
-          <TabsTrigger value="3d">3D</TabsTrigger>
+          {data.hasTerrain && <TabsTrigger value="3d">3D</TabsTrigger>}
         </TabsList>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0">
@@ -305,27 +307,30 @@ export default function FindingDetailPage() {
                 />
               )}
             </TabsContent>
-            <TabsContent value="3d" forceMount className="data-[state=inactive]:hidden">
-              {!visited.has("3d") ? null : scene.data && palette.data ? (
-                <Suspense fallback={<PageSpinner className="h-[64vh]" />}>
-                  <TerrainView
-                    stageRef={tab === "3d" ? setStage : undefined}
-                    key={data.id}
-                    scene={scene.data}
-                    colours={colours}
-                    heatmap={overlay ? (heatmap.data ?? null) : null}
-                    heatmapState={heatmapState}
-                    overlay={overlay}
-                    onOverlay={setOverlay}
-                    active={tab === "3d"}
-                  />
-                </Suspense>
-              ) : scene.isError ? (
-                <ErrorState error={scene.error} />
-              ) : (
-                <PageSpinner className="h-[50vh]" />
-              )}
-            </TabsContent>
+            {data.hasTerrain && (
+              <TabsContent value="3d" forceMount className="data-[state=inactive]:hidden">
+                {!visited.has("3d") ? null : terrain.data && palette.data ? (
+                  <Suspense fallback={<PageSpinner className="h-[64vh]" />}>
+                    <TerrainView
+                      stageRef={tab === "3d" ? setStage : undefined}
+                      key={data.id}
+                      terrain={terrain.data}
+                      box={data.box}
+                      palette={palette.data}
+                      heatmap={overlay ? (heatmap.data ?? null) : null}
+                      heatmapState={heatmapState}
+                      overlay={overlay}
+                      onOverlay={setOverlay}
+                      active={tab === "3d"}
+                    />
+                  </Suspense>
+                ) : terrain.isError ? (
+                  <ErrorState error={terrain.error} onRetry={() => void terrain.refetch()} />
+                ) : (
+                  <PageSpinner className="h-[50vh]" />
+                )}
+              </TabsContent>
+            )}
           </div>
 
           <aside

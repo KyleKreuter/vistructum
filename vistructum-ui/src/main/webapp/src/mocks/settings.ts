@@ -12,6 +12,7 @@ export const endpointKeys = [
   "thumbnail",
   "scene",
   "heatmap",
+  "terrain",
   "evidence",
   "verdict",
   "share",

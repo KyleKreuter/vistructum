@@ -89,6 +89,41 @@ public interface Findings {
     CompletableFuture<Optional<byte[]>> previewPng(long id);
 
     /**
+     * Loads the thumbnail stored for a finding.
+     *
+     * @param id identifier of the finding
+     * @return a future completing with the thumbnail, or with an empty {@link Optional} if no finding has this
+     *         identifier or no thumbnail has been stored for it yet
+     * @see #storeThumbnail(long, Thumbnail)
+     */
+    CompletableFuture<Optional<Thumbnail>> thumbnail(long id);
+
+    /**
+     * Stores the thumbnail of a finding, replacing a thumbnail stored earlier.
+     *
+     * <p>The thumbnail is deleted together with its finding.
+     *
+     * @param id identifier of the finding
+     * @param thumbnail thumbnail to store
+     * @return a future completing with {@code true} once the thumbnail is stored, or with {@code false} if no
+     *         finding has this identifier
+     * @throws NullPointerException if {@code thumbnail} is {@code null}
+     */
+    CompletableFuture<Boolean> storeThumbnail(long id, Thumbnail thumbnail);
+
+    /**
+     * Selects findings for which no thumbnail has been stored, ordered by ascending identifier.
+     *
+     * @param afterId only findings with an identifier greater than this value are selected; {@code 0} selects from
+     *                the first finding on
+     * @param limit maximum number of findings to return, at least {@code 1}
+     * @return a future completing with at most {@code limit} findings without thumbnail; the list is unmodifiable
+     *         and empty if there are none
+     * @throws IllegalArgumentException if {@code limit} is smaller than {@code 1}
+     */
+    CompletableFuture<List<Finding>> withoutThumbnail(long afterId, int limit);
+
+    /**
      * Counts the verdicts of all reviewed findings per detection path.
      *
      * @return a future completing with one entry per {@link Source}, in declaration order of the enum; paths without

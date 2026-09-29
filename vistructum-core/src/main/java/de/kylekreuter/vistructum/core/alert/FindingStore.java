@@ -8,6 +8,7 @@ import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Review;
 import de.kylekreuter.vistructum.api.SourcePrecision;
 import de.kylekreuter.vistructum.api.Source;
+import de.kylekreuter.vistructum.api.Thumbnail;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.core.store.Binder;
 import de.kylekreuter.vistructum.core.store.Database;
@@ -61,6 +62,19 @@ public final class FindingStore {
             SELECT count(*) FROM findings f
             WHERE f.verdict IS NOT NULL AND NOT EXISTS (SELECT 1 FROM finding_scenes s WHERE s.finding_id = f.id)
             """;
+
+    private static final String STORE_THUMBNAIL = """
+            INSERT INTO finding_thumbnails (finding_id, width, height, pixels)
+            SELECT id, ?, ?, ? FROM findings WHERE id = ?
+            ON CONFLICT (finding_id) DO UPDATE SET width = excluded.width, height = excluded.height,
+                pixels = excluded.pixels
+            """;
+    private static final String WITHOUT_THUMBNAIL = "SELECT " + COLUMNS + """
+             FROM findings f
+            WHERE id > ? AND NOT EXISTS (SELECT 1 FROM finding_thumbnails t WHERE t.finding_id = f.id)
+            ORDER BY id LIMIT ?
+            """;
+    private static final int THUMBNAIL_PIXEL_BYTES = 3;
 
     private final Database database;
 
@@ -176,6 +190,61 @@ public final class FindingStore {
                 }
             }
         });
+    }
+
+    public CompletableFuture<Optional<Thumbnail>> thumbnail(long id) {
+        return database.transaction(connection -> {
+            try (PreparedStatement select = connection.prepareStatement(
+                    "SELECT width, height, pixels FROM finding_thumbnails WHERE finding_id = ?")) {
+                select.setLong(1, id);
+                try (ResultSet rows = select.executeQuery()) {
+                    return rows.next()
+                            ? Optional.of(decodeThumbnail(rows.getInt(1), rows.getInt(2), rows.getBytes(3)))
+                            : Optional.empty();
+                }
+            }
+        });
+    }
+
+    public CompletableFuture<Boolean> storeThumbnail(long id, Thumbnail thumbnail) {
+        byte[] pixels = encodeThumbnail(thumbnail);
+        return database.transaction(connection -> {
+            try (PreparedStatement insert = connection.prepareStatement(STORE_THUMBNAIL)) {
+                insert.setInt(1, thumbnail.width());
+                insert.setInt(2, thumbnail.height());
+                insert.setBytes(3, pixels);
+                insert.setLong(4, id);
+                return insert.executeUpdate() > 0;
+            }
+        });
+    }
+
+    public CompletableFuture<List<Finding>> withoutThumbnail(long afterId, int limit) {
+        return database.transaction(connection -> List.copyOf(list(connection, WITHOUT_THUMBNAIL, statement -> {
+            statement.setLong(1, afterId);
+            statement.setInt(2, limit);
+        })));
+    }
+
+    private static byte[] encodeThumbnail(Thumbnail thumbnail) {
+        int[] pixels = thumbnail.pixels();
+        byte[] bytes = new byte[pixels.length * THUMBNAIL_PIXEL_BYTES];
+        for (int i = 0; i < pixels.length; i++) {
+            bytes[i * THUMBNAIL_PIXEL_BYTES] = (byte) (pixels[i] >> 16);
+            bytes[i * THUMBNAIL_PIXEL_BYTES + 1] = (byte) (pixels[i] >> 8);
+            bytes[i * THUMBNAIL_PIXEL_BYTES + 2] = (byte) pixels[i];
+        }
+        return bytes;
+    }
+
+    private static Thumbnail decodeThumbnail(int width, int height, byte[] bytes) {
+        int[] pixels = new int[bytes.length / THUMBNAIL_PIXEL_BYTES];
+        for (int i = 0; i < pixels.length; i++) {
+            pixels[i] = (bytes[i * THUMBNAIL_PIXEL_BYTES] & 0xFF) << 16
+                    | (bytes[i * THUMBNAIL_PIXEL_BYTES + 1] & 0xFF) << 8
+                    | bytes[i * THUMBNAIL_PIXEL_BYTES + 2] & 0xFF;
+        }
+        return new Thumbnail(width, height, pixels);
     }
 
     public CompletableFuture<List<SourcePrecision>> precision() {

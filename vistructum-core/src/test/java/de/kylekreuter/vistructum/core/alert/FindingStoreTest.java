@@ -8,6 +8,7 @@ import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.ReviewState;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.api.SourcePrecision;
+import de.kylekreuter.vistructum.api.Thumbnail;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.core.store.Database;
 import de.kylekreuter.vistructum.core.store.TestDatabase;
@@ -248,6 +249,52 @@ class FindingStoreTest {
             }
         }).get();
         assertEquals(0L, scenes);
+    }
+
+    @Test
+    void storedThumbnailRoundTripsAndIsReplaced() throws Exception {
+        Finding finding = store.insertUnlessDuplicate(detected("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE)
+                .get().orElseThrow();
+        assertTrue(store.thumbnail(finding.id()).get().isEmpty());
+
+        assertTrue(store.storeThumbnail(finding.id(), new Thumbnail(2, 1, new int[]{0x102030, 0xFFFFFF})).get());
+        assertTrue(store.storeThumbnail(finding.id(), new Thumbnail(1, 2, new int[]{0xA0B0C0, 0x000001})).get());
+
+        assertEquals(new Thumbnail(1, 2, new int[]{0xA0B0C0, 0x000001}), store.thumbnail(finding.id()).get().orElseThrow());
+    }
+
+    @Test
+    void thumbnailOfAMissingFindingIsNotStored() throws Exception {
+        assertFalse(store.storeThumbnail(42, new Thumbnail(1, 1, new int[]{0})).get());
+        assertTrue(store.thumbnail(42).get().isEmpty());
+    }
+
+    @Test
+    void findingsWithoutThumbnailAreListedInAscendingOrderAfterTheCursor() throws Exception {
+        Finding first = store.insertUnlessDuplicate(detected("a", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
+                .orElseThrow();
+        Finding second = store.insertUnlessDuplicate(detected("b", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
+                .orElseThrow();
+        Finding third = store.insertUnlessDuplicate(detected("c", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
+                .orElseThrow();
+        Finding fourth = store.insertUnlessDuplicate(detected("d", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE).get()
+                .orElseThrow();
+        store.storeThumbnail(second.id(), new Thumbnail(1, 1, new int[]{0})).get();
+
+        assertEquals(List.of(first, third), store.withoutThumbnail(0, 2).get());
+        assertEquals(List.of(fourth), store.withoutThumbnail(third.id(), 2).get());
+    }
+
+    @Test
+    void retentionDeletesTheStoredThumbnail() throws Exception {
+        Finding finding = store.insertUnlessDuplicate(detected("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE)
+                .get().orElseThrow();
+        store.storeThumbnail(finding.id(), new Thumbnail(1, 1, new int[]{0})).get();
+        store.review(finding.id(), Verdict.CONFIRMED, "Staff", NOW).get();
+
+        store.deleteReviewedBefore(NOW.plusSeconds(1)).get();
+
+        assertTrue(store.thumbnail(finding.id()).get().isEmpty());
     }
 
     static void assertSceneEquals(SurfaceScene expected, SurfaceScene actual) {

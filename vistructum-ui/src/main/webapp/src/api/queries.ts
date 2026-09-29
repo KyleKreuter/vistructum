@@ -1,0 +1,196 @@
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { findingsQuery } from "@/logic/filters";
+import { ApiError, request } from "./client";
+import type {
+  ActivityPage,
+  Evidence,
+  FindingDetail,
+  FindingFilter,
+  FindingPage,
+  FindingSummary,
+  Heatmap,
+  Me,
+  Palette,
+  PlayerInfo,
+  PublicEvidence,
+  Scene,
+  ShareResult,
+  Stats,
+  Status,
+  Verdict,
+} from "./types";
+
+export const pageSize = 50;
+
+export const keys = {
+  me: ["me"] as const,
+  findings: (filter: FindingFilter) => ["findings", filter] as const,
+  finding: (id: number) => ["finding", id] as const,
+  scene: (id: number) => ["scene", id] as const,
+  heatmap: (id: number) => ["heatmap", id] as const,
+  evidence: (id: number) => ["evidence", id] as const,
+  palette: ["palette"] as const,
+  status: ["status"] as const,
+  stats: (from: string, to: string) => ["stats", from, to] as const,
+  activity: ["activity"] as const,
+  player: (uuid: string) => ["player", uuid] as const,
+  publicEvidence: (token: string) => ["public", token] as const,
+};
+
+const noRetryOn = (codes: number[]) => (count: number, error: unknown) =>
+  !(error instanceof ApiError && codes.includes(error.status)) && count < 2;
+
+export function useMe() {
+  return useQuery({
+    queryKey: keys.me,
+    queryFn: () => request<Me>("/me"),
+    retry: noRetryOn([401, 403]),
+    staleTime: 60_000,
+  });
+}
+
+export function useFindings(filter: FindingFilter) {
+  return useInfiniteQuery({
+    queryKey: keys.findings(filter),
+    queryFn: ({ pageParam }) => request<FindingPage>(`/findings?${findingsQuery(filter, pageParam, pageSize)}`),
+    initialPageParam: null as number | null,
+    getNextPageParam: (last) => last.nextBefore,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useFinding(id: number) {
+  return useQuery({
+    queryKey: keys.finding(id),
+    queryFn: () => request<FindingDetail>(`/findings/${id}`),
+    retry: noRetryOn([401, 404]),
+  });
+}
+
+export function useScene(id: number, enabled = true) {
+  return useQuery({
+    queryKey: keys.scene(id),
+    queryFn: () => request<Scene>(`/findings/${id}/scene`),
+    enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: noRetryOn([401, 404]),
+  });
+}
+
+export function useHeatmap(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.heatmap(id),
+    queryFn: () => request<Heatmap>(`/findings/${id}/heatmap`),
+    enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: noRetryOn([401, 404, 503]),
+  });
+}
+
+export function useEvidence(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.evidence(id),
+    queryFn: () => request<Evidence>(`/findings/${id}/evidence`),
+    enabled,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: noRetryOn([401, 404]),
+  });
+}
+
+export function usePalette() {
+  return useQuery({
+    queryKey: keys.palette,
+    queryFn: () => request<Palette>("/palette", {}, { public: true }),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+export function useStatus() {
+  return useQuery({
+    queryKey: keys.status,
+    queryFn: () => request<Status>("/status"),
+    refetchInterval: 2000,
+  });
+}
+
+export function useStats(from: string, to: string) {
+  return useQuery({
+    queryKey: keys.stats(from, to),
+    queryFn: () => request<Stats>(`/stats?${new URLSearchParams({ from, to }).toString()}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useActivity() {
+  return useInfiniteQuery({
+    queryKey: keys.activity,
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams({ limit: "50" });
+      if (pageParam) params.set("before", pageParam);
+      return request<ActivityPage>(`/activity?${params.toString()}`);
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => (last.items.length >= 50 ? last.items[last.items.length - 1].at : null),
+  });
+}
+
+export function usePlayer(uuid: string) {
+  return useQuery({
+    queryKey: keys.player(uuid),
+    queryFn: () => request<PlayerInfo>(`/players/${uuid}`),
+    retry: noRetryOn([401, 404]),
+  });
+}
+
+export function usePublicEvidence(token: string) {
+  return useQuery({
+    queryKey: keys.publicEvidence(token),
+    queryFn: () => request<PublicEvidence>(`/public/${encodeURIComponent(token)}`, {}, { public: true }),
+    retry: noRetryOn([404]),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
+function patchFinding(client: QueryClient, updated: Partial<FindingSummary> & { id: number }) {
+  client.setQueryData<FindingDetail>(keys.finding(updated.id), (current) => (current ? { ...current, ...updated } : current));
+}
+
+export function useVerdict() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, verdict }: { id: number; verdict: Verdict }) =>
+      request<FindingSummary>(`/findings/${id}/verdict`, { method: "POST", body: JSON.stringify({ verdict }) }),
+    onSuccess: (summary) => {
+      patchFinding(client, summary);
+      void client.invalidateQueries({ queryKey: ["findings"], refetchType: "none" });
+      void client.invalidateQueries({ queryKey: keys.activity });
+      void client.invalidateQueries({ queryKey: ["stats"] });
+      void client.invalidateQueries({ queryKey: ["player"] });
+    },
+  });
+}
+
+export function useShare(id: number) {
+  const client = useQueryClient();
+  const share = useMutation({
+    mutationFn: () => request<ShareResult>(`/findings/${id}/share`, { method: "POST" }),
+    onSuccess: (result) => {
+      patchFinding(client, { id, sharedSince: result.sharedSince, shareUrl: result.url });
+      void client.invalidateQueries({ queryKey: ["findings"], refetchType: "none" });
+      void client.invalidateQueries({ queryKey: keys.activity });
+    },
+  });
+  const revoke = useMutation({
+    mutationFn: () => request<undefined>(`/findings/${id}/share`, { method: "DELETE" }),
+    onSuccess: () => {
+      patchFinding(client, { id, sharedSince: null, shareUrl: null });
+      void client.invalidateQueries({ queryKey: ["findings"], refetchType: "none" });
+      void client.invalidateQueries({ queryKey: keys.activity });
+    },
+  });
+  return { activate: share, deactivate: revoke };
+}
+
+export function useLogout() {
+  return useMutation({ mutationFn: () => request<undefined>("/logout", { method: "POST" }) });
+}

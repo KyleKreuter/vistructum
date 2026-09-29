@@ -4,7 +4,9 @@ Vistructum finds swastikas that players build from blocks on your Paper server a
 
 Vistructum never kicks, bans, or rolls back on its own. Every decision stays with your staff.
 
-The gallery shows the web app and the replay with demo data. Symbols in the screenshots are pixelated.
+The screenshots show demo data. Symbols in them are pixelated.
+
+![The finding list in the web app](https://raw.githubusercontent.com/KyleKreuter/vistructum/main/.github/modrinth/gallery/1-findings.png)
 
 ## Why use it
 
@@ -24,6 +26,30 @@ The gallery shows the web app and the replay with demo data. Symbols in the scre
 - **Local or remote inference:** Runs the models inside the server, or on a separate sidecar with a local fallback.
 - **Plugin API:** Query findings, submit reviews, start scans, and listen to events from your own plugin.
 - **Retention:** Deletes false alarms after 90 days and confirmed findings after 365 days. Both periods are configurable.
+
+### Evidence replay
+
+The replay shows how a symbol was built, block by block, and who placed the blocks.
+
+![A 3D replay of a finding in the web app](https://raw.githubusercontent.com/KyleKreuter/vistructum/main/.github/modrinth/gallery/2-replay.png)
+
+A public evidence link shows the same replay without sign-in, world name, or coordinates.
+
+![The public replay page of a confirmed finding](https://raw.githubusercontent.com/KyleKreuter/vistructum/main/.github/modrinth/gallery/3-public-replay.png)
+
+### Finding details
+
+The heatmap shows which blocks the model relied on. The 3D view shows the terrain around the finding.
+
+![The detail view of a finding with the heatmap](https://raw.githubusercontent.com/KyleKreuter/vistructum/main/.github/modrinth/gallery/4-heatmap.png)
+
+![The 3D view of the terrain with the heatmap overlay](https://raw.githubusercontent.com/KyleKreuter/vistructum/main/.github/modrinth/gallery/5-terrain-3d.png)
+
+### Statistics
+
+The statistics page shows findings per day, precision per detection path, and reviews per staff member.
+
+![The statistics page of the web app](https://raw.githubusercontent.com/KyleKreuter/vistructum/main/.github/modrinth/gallery/6-statistics.png)
 
 ## What you install
 

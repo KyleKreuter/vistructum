@@ -308,6 +308,7 @@ export default function FindingDetailPage() {
                     scene={scene.data}
                     colours={colours}
                     heatmap={overlay ? (heatmap.data ?? null) : null}
+                    heatmapState={heatmapState}
                     tint={overlay}
                     onTint={setOverlay}
                     active={tab === "3d"}

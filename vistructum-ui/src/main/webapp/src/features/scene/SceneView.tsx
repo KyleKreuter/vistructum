@@ -5,13 +5,13 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { displayMaterial } from "@/logic/blocks";
-import { layers, paintLayer, pointToCell, readCell, windowBaseHeight, type CellReadout, type LayerKey } from "@/logic/sceneLayers";
+import { heatmapNote, layers, paintLayer, pointToCell, readCell, windowBaseHeight, type CellReadout, type HeatmapState, type LayerKey } from "@/logic/sceneLayers";
 
 interface SceneViewProps {
   scene: Scene;
   colours: number[];
   heatmap: Heatmap | null;
-  heatmapState: "idle" | "loading" | "ready" | "unavailable";
+  heatmapState: HeatmapState;
   layer: number;
   onLayer: (index: number) => void;
   overlay: boolean;
@@ -110,8 +110,7 @@ export function SceneView({ scene, colours, heatmap, heatmapState, layer, onLaye
   const base = useMemo(() => windowBaseHeight(scene), [scene]);
   const readout = hover ? readCell(scene, base, heatmap, hover.row, hover.col) : null;
   const active = layers[layer] ?? layers[0];
-  const heatNote =
-    heatmapState === "loading" ? "Computing heatmap…" : heatmapState === "unavailable" ? "Heatmap not available for this finding" : null;
+  const heatNote = heatmapNote(heatmapState);
 
   return (
     <div className="space-y-3">

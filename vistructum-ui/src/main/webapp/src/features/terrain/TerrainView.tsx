@@ -13,12 +13,14 @@ import { fogRange, skyTheme } from "@/features/world/skyColours";
 import { useWorldMesh } from "@/features/world/useWorldMesh";
 import type { RawBlock } from "@/logic/mc/library";
 import { columnBlock, terrainGrid, heatSurface, type HeatSurface, type TerrainGrid } from "@/logic/mc/terrain";
+import { heatmapNote, type HeatmapState } from "@/logic/sceneLayers";
 import { useTheme } from "@/lib/theme";
 
 interface TerrainViewProps {
   scene: Scene;
   colours: number[];
   heatmap: Heatmap | null;
+  heatmapState: HeatmapState;
   tint: boolean;
   onTint: (value: boolean) => void;
   active?: boolean;
@@ -81,13 +83,14 @@ function Outline({ scene, height }: { scene: Scene; height: number }) {
   );
 }
 
-export default function TerrainView({ scene, colours, heatmap, tint, onTint, active = true }: TerrainViewProps) {
+export default function TerrainView({ scene, colours, heatmap, heatmapState, tint, onTint, active = true }: TerrainViewProps) {
   const [lift, setLift] = useState(1);
   const { resolved } = useTheme();
   const terrain = useMemo(() => terrainGrid(scene), [scene]);
   const palette = useMemo(() => scenePalette(scene, colours), [scene, colours]);
   const assets = useWorldAssets(palette);
   const loaded = useBlockLibrary(assets, terrain.states, prepareColumns);
+  const heatNote = heatmapNote(heatmapState);
   const surface = useMemo(() => (tint ? heatSurface(terrain, heatmap) : null), [tint, terrain, heatmap]);
   const top = terrain.floor + terrain.grid.sizeY;
   const extent = Math.max(scene.width, scene.height);
@@ -115,13 +118,14 @@ export default function TerrainView({ scene, colours, heatmap, tint, onTint, act
       </div>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
         <div className="flex items-center gap-2">
-          <Switch id="tint" checked={tint} onCheckedChange={onTint} disabled={!heatmap} />
+          <Switch id="tint" checked={tint} onCheckedChange={onTint} />
           <Label htmlFor="tint">Heatmap tint</Label>
         </div>
         <div className="flex min-w-60 items-center gap-3">
           <Label className="shrink-0">Exaggeration {lift}×</Label>
           <Slider min={1} max={4} step={0.5} value={[lift]} onValueChange={([value]) => setLift(value)} />
         </div>
+        {heatNote && <span className="text-muted-foreground">{heatNote}</span>}
       </div>
     </div>
   );

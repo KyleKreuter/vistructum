@@ -16,6 +16,13 @@ export const layers: LayerInfo[] = [
   { key: "heatmap", title: "Heatmap" },
 ];
 
+export type HeatmapState = "idle" | "loading" | "ready" | "unavailable";
+
+export function heatmapNote(state: HeatmapState): string | null {
+  if (state === "loading") return "Computing heatmap…";
+  return state === "unavailable" ? "Heatmap not available for this finding" : null;
+}
+
 export interface PaintOptions {
   span: number;
   heatmap: Heatmap | null;

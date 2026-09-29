@@ -1,0 +1,1 @@
+Detects swastikas that players build from blocks and reports them to staff for review. Live check, world scans, review menu, web app with 3D replays, plugin API.

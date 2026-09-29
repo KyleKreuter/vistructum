@@ -1,0 +1,44 @@
+name: modrinth-project
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: modrinth-project
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+      MODRINTH_PROJECT: vistructum
+      API: https://api.modrinth.com/v2
+      AGENT: KyleKreuter/vistructum (project workflow)
+      DEPENDENCIES: '[{"project_id":"P1OZGk5p","dependency_type":"optional"},{"project_id":"NpvuJQoq","dependency_type":"optional"}]'
+    steps:
+      - uses: actions/checkout@v4
+      - name: token
+        run: '[[ -n "$MODRINTH_TOKEN" ]] || { echo "::error::secret MODRINTH_TOKEN is not set"; exit 1; }'
+      - name: update
+        run: |
+          summary=$(tr -d '\n' < .github/modrinth/summary.txt)
+          (( ${#summary} >= 3 && ${#summary} <= 256 )) || { echo "::error::summary.txt must hold 3 to 256 characters"; exit 1; }
+          jq -n --arg summary "$summary" --rawfile body .github/modrinth/description.md \
+            '{description: $summary, body: $body}' > project.json
+          curl -sS --fail-with-body -X PATCH "$API/project/$MODRINTH_PROJECT" \
+            -H "Authorization: $MODRINTH_TOKEN" -H "User-Agent: $AGENT" -H "Content-Type: application/json" \
+            --data @project.json
+          curl -sS --fail-with-body "$API/project/$MODRINTH_PROJECT/version" \
+            -H "Authorization: $MODRINTH_TOKEN" -H "User-Agent: $AGENT" | jq -r '.[].id' | while read -r version; do
+            curl -sS --fail-with-body -X PATCH "$API/version/$version" \
+              -H "Authorization: $MODRINTH_TOKEN" -H "User-Agent: $AGENT" -H "Content-Type: application/json" \
+              --data "{\"dependencies\": $DEPENDENCIES}"
+            echo "dependencies set on version $version"
+          done
+          curl -sS --fail-with-body "$API/project/$MODRINTH_PROJECT" \
+            -H "Authorization: $MODRINTH_TOKEN" -H "User-Agent: $AGENT" \
+            | jq '{slug, status, requested_status, moderator_message, description, body_length: (.body | length), gallery: [.gallery[].title]}'

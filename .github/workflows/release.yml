@@ -118,7 +118,10 @@ jobs:
               version_type: $type,
               game_versions: $games,
               loaders: $loaders,
-              dependencies: [],
+              dependencies: [
+                {project_id: "P1OZGk5p", dependency_type: "optional"},
+                {project_id: "NpvuJQoq", dependency_type: "optional"}
+              ],
               featured: ($type == "release"),
               file_parts: ["core", "ui"],
               primary_file: "core"

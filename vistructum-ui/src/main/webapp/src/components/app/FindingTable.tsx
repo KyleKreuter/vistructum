@@ -2,18 +2,29 @@ import { useNavigate } from "react-router";
 import type { FindingSummary } from "@/api/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { boxCentre } from "@/logic/coords";
 import { formatDateTime, formatRelative, formatScore } from "@/logic/format";
 import { IndicatorIcons, SourceBadge, VerdictBadge } from "./Badges";
 import { PlayerChip } from "./PlayerFace";
 import { Thumbnail } from "./Thumbnail";
 
-export function FindingTable({ items, linkSuffix = "" }: { items: FindingSummary[]; linkSuffix?: string }) {
+export function FindingTable({
+  items,
+  linkSuffix = "",
+  fill = false,
+  className,
+}: {
+  items: FindingSummary[];
+  linkSuffix?: string;
+  fill?: boolean;
+  className?: string;
+}) {
   const navigate = useNavigate();
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <Table>
-        <TableHeader>
+    <div className={cn("overflow-hidden rounded-lg border bg-card", fill && "flex min-h-0 flex-col", className)}>
+      <Table containerClassName={cn(fill && "min-h-0 flex-1 overflow-auto overscroll-contain")}>
+        <TableHeader className={cn(fill && "sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0")}>
           <TableRow className="hover:bg-transparent">
             <TableHead className="w-20">Finding</TableHead>
             <TableHead />

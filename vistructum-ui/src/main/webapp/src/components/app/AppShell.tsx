@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { LogOut } from "lucide-react";
 import type { ReactNode } from "react";
-import { NavLink } from "react-router";
+import { NavLink, useMatch } from "react-router";
 import type { Me } from "@/api/types";
 import { useLogout } from "@/api/queries";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,10 @@ const links = [
 export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const logout = useLogout();
   const client = useQueryClient();
+  const fixed = useMatch({ path: "/findings", end: true }) !== null;
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+    <div className={cn("flex flex-col", fixed ? "min-h-screen md:h-dvh md:min-h-0 md:overflow-hidden" : "min-h-screen")}>
+      <header className="sticky top-0 z-30 shrink-0 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
         <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-4 px-4">
           <NavLink to="/findings?state=open" className="flex shrink-0 items-center rounded-sm" aria-label="Vistructum findings">
             <Logo />
@@ -79,7 +80,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-5">{children}</main>
+      <main className={cn("mx-auto w-full max-w-[1600px] flex-1 px-4 py-5", fixed && "flex flex-col md:min-h-0")}>{children}</main>
     </div>
   );
 }

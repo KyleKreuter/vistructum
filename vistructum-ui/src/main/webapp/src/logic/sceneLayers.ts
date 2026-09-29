@@ -7,15 +7,14 @@ export interface LayerInfo {
   key: LayerKey;
   title: string;
   hint: string;
-  hotkey: string;
 }
 
 export const layers: LayerInfo[] = [
-  { key: "colour", title: "Colour", hint: "Map colour per block, shaded by height", hotkey: "Q" },
-  { key: "height", title: "Height", hint: "Relative to the median of the model window", hotkey: "W" },
-  { key: "relief", title: "Relief", hint: "Hillshade from the height", hotkey: "E" },
-  { key: "luminance", title: "Luminance", hint: "The channel the model sees", hotkey: "R" },
-  { key: "heatmap", title: "Heatmap", hint: "Score drop when a cell is hidden", hotkey: "T" },
+  { key: "colour", title: "Colour", hint: "Map colour per block, shaded by height" },
+  { key: "height", title: "Height", hint: "Relative to the median of the model window" },
+  { key: "relief", title: "Relief", hint: "Hillshade from the height" },
+  { key: "luminance", title: "Luminance", hint: "The channel the model sees" },
+  { key: "heatmap", title: "Heatmap", hint: "Score drop when a cell is hidden" },
 ];
 
 export interface PaintOptions {

@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Keyboard, SkipForward, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, SkipForward, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { boxSize } from "@/logic/coords";
 import { listParams, parseFilter, parsePaging } from "@/logic/filters";
 import { formatDateTime, formatRelative, formatScore } from "@/logic/format";
-import { detailAction, isEditableTarget, shortcutHelp } from "@/logic/keyboard";
+import { detailAction, isEditableTarget } from "@/logic/keyboard";
 import { firstOpen, locateNeighbour, locateNextOpen, neighbour, type ListEntry, type LoadedPage } from "@/logic/listNavigation";
 import { pageCount } from "@/logic/pagination";
 import { sceneColours } from "@/logic/sceneLayers";
@@ -57,25 +57,19 @@ function VerdictButtons({ finding, pending, onVerdict }: { finding: FindingDetai
     <div className="grid grid-cols-2 gap-2">
       <Button
         variant="outline"
-        className={cn("justify-between gap-1.5 px-3", current === "CONFIRMED" && selectedConfirmed)}
+        className={cn("gap-1.5 px-3", current === "CONFIRMED" && selectedConfirmed)}
         onClick={() => onVerdict("CONFIRMED")}
         disabled={pending}
       >
-        <span className="flex items-center gap-1.5">
-          <Check /> Confirm
-        </span>
-        <kbd className={cn(current === "CONFIRMED" && "border-white/40 bg-transparent text-white")}>1</kbd>
+        <Check /> Confirm
       </Button>
       <Button
         variant="outline"
-        className={cn("justify-between gap-1.5 px-3", current === "FALSE_ALARM" && selectedFalseAlarm)}
+        className={cn("gap-1.5 px-3", current === "FALSE_ALARM" && selectedFalseAlarm)}
         onClick={() => onVerdict("FALSE_ALARM")}
         disabled={pending}
       >
-        <span className="flex items-center gap-1.5">
-          <X /> False alarm
-        </span>
-        <kbd className={cn(current === "FALSE_ALARM" && "border-white/40 bg-transparent text-white")}>2</kbd>
+        <X /> False alarm
       </Button>
     </div>
   );
@@ -151,13 +145,11 @@ export default function FindingDetailPage() {
   );
 
   const goNextOpen = useCallback(
-    async (from: number, extra?: number) => {
-      const skip = new Set(reviewed);
-      if (extra !== undefined) skip.add(extra);
-      const cached = firstOpen(entries, from, skip, true);
+    async (from: number) => {
+      const cached = firstOpen(entries, from, reviewed, true);
       if (cached !== null) return go(cached, paging.page);
       try {
-        const located = await locateNextOpen(paging.page, from, skip, load);
+        const located = await locateNextOpen(paging.page, from, reviewed, load);
         if (located) go(located.id, located.page);
         else toast.info("No more open findings in this list.");
       } catch (error) {
@@ -168,7 +160,7 @@ export default function FindingDetailPage() {
   );
 
   const judge = useCallback(
-    (value: Verdict, advance: boolean) => {
+    (value: Verdict) => {
       if (!data) return;
       const findingId = data.id;
       verdict.mutate(
@@ -177,13 +169,12 @@ export default function FindingDetailPage() {
           onSuccess: () => {
             setReviewed((current) => new Set(current).add(findingId));
             toast.success(`#${findingId} marked as ${value === "CONFIRMED" ? "confirmed" : "false alarm"}.`);
-            if (advance) void goNextOpen(findingId, findingId);
           },
           onError: (error) => toast.error(errorMessage(error)),
         },
       );
     },
-    [data, verdict, goNextOpen],
+    [data, verdict],
   );
 
   const copyTeleport = useCallback(async () => {
@@ -191,11 +182,6 @@ export default function FindingDetailPage() {
     if (await copyText(data.teleport)) toast.success("Teleport command copied.");
     else toast.error("Copy failed. Select the command and copy it by hand.");
   }, [data]);
-
-  const toggle3d = useCallback(() => {
-    const back = chosen?.id === id && chosen.previous !== "3d" ? chosen.previous : defaultTab;
-    setTab(tab === "3d" ? back : "3d");
-  }, [tab, chosen, id, defaultTab, setTab]);
 
   const hasEvidence = !!data?.hasEvidence;
   const showReplay = useCallback(() => {
@@ -213,45 +199,15 @@ export default function FindingDetailPage() {
         altKey: event.altKey,
         editable: isEditableTarget(event.target),
       });
-      if (!action || event.repeat && action.type === "verdict") return;
-      switch (action.type) {
-        case "verdict":
-          if (!verdict.isPending) judge(action.verdict, true);
-          break;
-        case "navigate":
-          void goNeighbour(action.delta);
-          break;
-        case "nextOpen":
-          void goNextOpen(id);
-          break;
-        case "layer":
-          setLayer(action.index);
-          setTab("scene");
-          break;
-        case "toggleHeatmap":
-          setOverlay((value) => !value);
-          break;
-        case "toggle3d":
-          toggle3d();
-          break;
-        case "copyTeleport":
-          void copyTeleport();
-          break;
-        case "playPause":
-          if (showReplay()) replayControls.current?.toggle();
-          break;
-        case "step":
-          if (showReplay()) replayControls.current?.step(action.delta);
-          break;
-        case "speed":
-          if (showReplay()) replayControls.current?.changeSpeed(action.delta);
-          break;
-      }
+      if (!action) return;
+      if (action.type === "navigate") void goNeighbour(action.delta);
+      else if (showReplay()) replayControls.current?.toggle();
+      else return;
       event.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [judge, goNeighbour, goNextOpen, id, toggle3d, copyTeleport, showReplay, setTab, verdict.isPending]);
+  }, [goNeighbour, showReplay]);
 
   if (!Number.isInteger(id) || id <= 0) return <EmptyState title="Unknown finding" />;
   if (finding.isPending) return <PageSpinner />;
@@ -292,7 +248,7 @@ export default function FindingDetailPage() {
                 <ChevronLeft />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Previous (← or K)</TooltipContent>
+            <TooltipContent>Previous (←)</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -300,16 +256,11 @@ export default function FindingDetailPage() {
                 <ChevronRight />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Next (→ or J)</TooltipContent>
+            <TooltipContent>Next (→)</TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8" onClick={() => void goNextOpen(id)}>
-                <SkipForward /> Next open
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Space</TooltipContent>
-          </Tooltip>
+          <Button variant="outline" size="sm" className="h-8" onClick={() => void goNextOpen(id)}>
+            <SkipForward /> Next open
+          </Button>
         </div>
       </div>
 
@@ -327,7 +278,7 @@ export default function FindingDetailPage() {
               {data.hasEvidence && <TabsTrigger value="replay">Replay</TabsTrigger>}
               <TabsTrigger value="scene">Scene</TabsTrigger>
               <TabsTrigger value="3d">
-                3D <kbd className="ml-1">V</kbd>
+                3D
               </TabsTrigger>
             </TabsList>
             {data.hasEvidence && (
@@ -394,7 +345,7 @@ export default function FindingDetailPage() {
         <aside className="space-y-4">
           <Card className="gap-4 py-4">
             <CardContent className="space-y-4 px-4">
-              <VerdictButtons finding={data} pending={verdict.isPending} onVerdict={(value) => judge(value, false)} />
+              <VerdictButtons finding={data} pending={verdict.isPending} onVerdict={judge} />
               {data.review && (
                 <p className="text-xs text-muted-foreground">
                   {data.review.verdict === "CONFIRMED" ? "Confirmed" : "Marked as false alarm"} by {data.review.reviewer}, {formatDateTime(data.review.reviewedAt)}
@@ -447,7 +398,7 @@ export default function FindingDetailPage() {
                         <Copy />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Copy (C)</TooltipContent>
+                    <TooltipContent>Copy</TooltipContent>
                   </Tooltip>
                 </div>
               </div>
@@ -456,26 +407,6 @@ export default function FindingDetailPage() {
 
           {shareView(data, canShare) !== "hidden" && <SharePanel finding={data} canShare={canShare} />}
 
-          <Card className="gap-2 py-4">
-            <CardContent className="px-4">
-              <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                <Keyboard className="size-3.5" /> Shortcuts
-              </div>
-              <ul className="grid grid-cols-1 gap-1.5 text-xs">
-                {shortcutHelp.map((entry) => (
-                  <li key={entry.label} className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">{entry.label}</span>
-                    <span className="flex gap-1">
-                      {entry.keys.map((key) => (
-                        <kbd key={key}>{key}</kbd>
-                      ))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-[11px] text-muted-foreground">Keys 1 and 2 record the verdict and open the next open finding.</p>
-            </CardContent>
-          </Card>
         </aside>
       </div>
     </div>

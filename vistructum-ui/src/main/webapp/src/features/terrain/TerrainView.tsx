@@ -116,9 +116,7 @@ export default function TerrainView({ scene, colours, heatmap, tint, onTint, act
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
         <div className="flex items-center gap-2">
           <Switch id="tint" checked={tint} onCheckedChange={onTint} disabled={!heatmap} />
-          <Label htmlFor="tint">
-            Heatmap tint <kbd>H</kbd>
-          </Label>
+          <Label htmlFor="tint">Heatmap tint</Label>
         </div>
         <div className="flex min-w-60 items-center gap-3">
           <Label className="shrink-0">Exaggeration {lift}×</Label>

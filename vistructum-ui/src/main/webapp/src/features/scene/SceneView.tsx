@@ -135,9 +135,7 @@ export function SceneView({ scene, colours, heatmap, heatmapState, layer, onLaye
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
           <div className="flex items-center gap-2">
             <Switch id="overlay" checked={overlay} onCheckedChange={onOverlay} />
-            <Label htmlFor="overlay">
-              Heatmap overlay <kbd>H</kbd>
-            </Label>
+            <Label htmlFor="overlay">Heatmap overlay</Label>
           </div>
           <div className="flex items-center gap-2">
             <Switch id="window" checked={showWindow} onCheckedChange={setShowWindow} />
@@ -166,10 +164,7 @@ export function SceneView({ scene, colours, heatmap, heatmapState, layer, onLaye
             <div className="rounded bg-well p-1">
               <LayerCanvas scene={scene} colours={colours} layer={info.key} heatmap={heatmap} overlay={false} span={span} showWindow={false} />
             </div>
-            <div className="flex items-center justify-between gap-1 px-0.5">
-              <span className="truncate text-xs font-medium">{info.title}</span>
-              <kbd>{info.hotkey}</kbd>
-            </div>
+            <span className="truncate px-0.5 text-xs font-medium">{info.title}</span>
             <span className="hidden px-0.5 text-[11px] leading-tight text-muted-foreground xl:block">{info.hint}</span>
           </button>
         ))}

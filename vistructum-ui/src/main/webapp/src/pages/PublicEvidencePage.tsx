@@ -33,10 +33,8 @@ export default function PublicEvidencePage() {
       });
       const replay = controls.current;
       if (!action || !replay) return;
-      if (action.type === "playPause") replay.toggle();
-      else if (action.type === "step") replay.step(action.delta);
-      else if (action.type === "speed") replay.changeSpeed(action.delta);
-      else return;
+      if (action.type !== "playPause") return;
+      replay.toggle();
       event.preventDefault();
     };
     window.addEventListener("keydown", onKey);

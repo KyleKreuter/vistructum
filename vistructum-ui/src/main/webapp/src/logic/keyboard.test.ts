@@ -5,39 +5,23 @@ const key = (value: string, extra: Partial<{ metaKey: boolean; ctrlKey: boolean;
   detailAction({ key: value, metaKey: false, ctrlKey: false, altKey: false, editable: false, ...extra });
 
 describe("detail keyboard map", () => {
-  it("maps verdict keys", () => {
-    expect(key("1")).toEqual({ type: "verdict", verdict: "CONFIRMED" });
-    expect(key("2")).toEqual({ type: "verdict", verdict: "FALSE_ALARM" });
-    expect(key("3")).toBeNull();
-  });
-
-  it("maps navigation keys", () => {
+  it("maps the arrow keys to the neighbouring findings", () => {
     expect(key("ArrowRight")).toEqual({ type: "navigate", delta: 1 });
     expect(key("ArrowLeft")).toEqual({ type: "navigate", delta: -1 });
-    expect(key("j")).toEqual({ type: "navigate", delta: 1 });
-    expect(key("K")).toEqual({ type: "navigate", delta: -1 });
-    expect(key(" ")).toEqual({ type: "nextOpen" });
   });
 
-  it("maps layers and views", () => {
-    expect(["q", "w", "e", "r", "t"].map((k) => key(k))).toEqual([0, 1, 2, 3, 4].map((index) => ({ type: "layer", index })));
-    expect(key("h")).toEqual({ type: "toggleHeatmap" });
-    expect(key("v")).toEqual({ type: "toggle3d" });
-    expect(key("c")).toEqual({ type: "copyTeleport" });
+  it("maps space to play and pause", () => {
+    expect(key(" ")).toEqual({ type: "playPause" });
   });
 
-  it("maps replay keys", () => {
-    expect(key("p")).toEqual({ type: "playPause" });
-    expect(key(",")).toEqual({ type: "step", delta: -1 });
-    expect(key(".")).toEqual({ type: "step", delta: 1 });
-    expect(key("[")).toEqual({ type: "speed", delta: -1 });
-    expect(key("]")).toEqual({ type: "speed", delta: 1 });
+  it("ignores every other key", () => {
+    expect(["1", "2", "j", "k", "q", "h", "v", "c", "p", ",", ".", "[", "]"].map((value) => key(value))).toEqual(Array(13).fill(null));
   });
 
   it("ignores modified keys and editable targets", () => {
-    expect(key("c", { metaKey: true })).toBeNull();
-    expect(key("1", { ctrlKey: true })).toBeNull();
-    expect(key("1", { editable: true })).toBeNull();
+    expect(key("ArrowLeft", { metaKey: true })).toBeNull();
+    expect(key(" ", { ctrlKey: true })).toBeNull();
+    expect(key(" ", { editable: true })).toBeNull();
   });
 
   it("detects editable targets", () => {

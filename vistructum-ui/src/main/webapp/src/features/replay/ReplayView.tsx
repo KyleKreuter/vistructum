@@ -22,8 +22,6 @@ import { ReplayScene, type CameraMode } from "./ReplayScene";
 
 export interface ReplayControls {
   toggle: () => void;
-  step: (delta: 1 | -1) => void;
-  changeSpeed: (delta: 1 | -1) => void;
 }
 
 export interface ReplayViewProps {
@@ -107,7 +105,7 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
 
   useEffect(() => {
     if (!controlsRef) return;
-    controlsRef.current = { toggle: clock.toggle, step: clock.step, changeSpeed: clock.changeSpeed };
+    controlsRef.current = { toggle: clock.toggle };
     return () => {
       controlsRef.current = null;
     };
@@ -234,17 +232,6 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
               ))}
             </SelectContent>
           </Select>
-          <span className="ml-auto hidden items-center gap-3 text-xs text-muted-foreground md:flex">
-            <span>
-              <kbd>P</kbd> play
-            </span>
-            <span>
-              <kbd>,</kbd> <kbd>.</kbd> step
-            </span>
-            <span>
-              <kbd>[</kbd> <kbd>]</kbd> speed
-            </span>
-          </span>
         </div>
         <div className="relative mt-3 px-1 pt-4">
           <TimelineMarks timeline={timeline} applied={applied} colourFor={colourFor} onSeek={seekTo} />

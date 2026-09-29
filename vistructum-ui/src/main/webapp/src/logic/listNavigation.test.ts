@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { firstOpen, locate, locateNeighbour, locateNextOpen, neighbour, type ListEntry, type LoadedPage } from "./listNavigation";
+import { locate, locateNeighbour, neighbour, type ListEntry, type LoadedPage } from "./listNavigation";
 
 const entries: ListEntry[] = [
-  { id: 50, open: true },
-  { id: 40, open: false },
-  { id: 30, open: true },
-  { id: 20, open: true },
+  { id: 50 },
+  { id: 40 },
+  { id: 30 },
+  { id: 20 },
 ];
 
 function pagesOf(all: ListEntry[], size: number) {
@@ -28,13 +28,6 @@ describe("list navigation", () => {
     expect(neighbour(entries, 35, -1)).toBe(40);
   });
 
-  it("finds the first open finding below or anywhere", () => {
-    expect(firstOpen(entries, 50, new Set(), true)).toBe(30);
-    expect(firstOpen(entries, 30, new Set([20]), true)).toBeNull();
-    expect(firstOpen(entries, 30, new Set([20]), false)).toBe(50);
-    expect(firstOpen([{ id: 1, open: true }], 1, new Set(), false)).toBeNull();
-  });
-
   it("crosses page boundaries to the neighbour", async () => {
     const { load, requested } = pagesOf(entries, 2);
     expect(await locateNeighbour(1, 40, 1, load)).toEqual({ id: 30, page: 2 });
@@ -42,13 +35,6 @@ describe("list navigation", () => {
     expect(await locateNeighbour(2, 30, -1, load)).toEqual({ id: 40, page: 1 });
     expect(await locateNeighbour(2, 20, 1, load)).toBeNull();
     expect(await locateNeighbour(1, 50, -1, load)).toBeNull();
-  });
-
-  it("finds the next open finding on later pages and wraps around", async () => {
-    const { load } = pagesOf(entries, 1);
-    expect(await locateNextOpen(1, 50, new Set(), load)).toEqual({ id: 30, page: 3 });
-    expect(await locateNextOpen(3, 30, new Set([20]), load)).toEqual({ id: 50, page: 1 });
-    expect(await locateNextOpen(1, 50, new Set([30, 20]), load)).toBeNull();
   });
 
   it("steps back from a page beyond the end", async () => {

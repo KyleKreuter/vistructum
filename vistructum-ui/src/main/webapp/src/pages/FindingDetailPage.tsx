@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, SkipForward, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
@@ -23,13 +23,13 @@ import { boxSize } from "@/logic/coords";
 import { listParams, parseFilter, parsePaging } from "@/logic/filters";
 import { formatDateTime, formatRelative, formatScore } from "@/logic/format";
 import { detailAction, isEditableTarget } from "@/logic/keyboard";
-import { firstOpen, locateNeighbour, locateNextOpen, neighbour, type ListEntry, type LoadedPage } from "@/logic/listNavigation";
+import { locateNeighbour, neighbour, type ListEntry, type LoadedPage } from "@/logic/listNavigation";
 import { pageCount } from "@/logic/pagination";
 import { sceneColours } from "@/logic/sceneLayers";
 import { shareView } from "@/logic/share";
 
 function toEntry(item: FindingSummary): ListEntry {
-  return { id: item.id, open: item.review === null };
+  return { id: item.id };
 }
 
 const ReplayView = lazy(() => import("@/features/replay/ReplayView"));
@@ -94,7 +94,6 @@ export default function FindingDetailPage() {
   const [chosen, setChosen] = useState<{ id: number; tab: Tab; previous: Tab } | null>(null);
   const [layer, setLayer] = useState(0);
   const [overlay, setOverlay] = useState(false);
-  const [reviewed, setReviewed] = useState<Set<number>>(() => new Set());
   const [visited, setVisited] = useState<ReadonlySet<Tab>>(() => new Set());
   const [playerSlot, setPlayerSlot] = useState<HTMLDivElement | null>(null);
   const replayControls = useRef<ReplayControls | null>(null);
@@ -145,21 +144,6 @@ export default function FindingDetailPage() {
     [entries, id, paging.page, load, go],
   );
 
-  const goNextOpen = useCallback(
-    async (from: number) => {
-      const cached = firstOpen(entries, from, reviewed, true);
-      if (cached !== null) return go(cached, paging.page);
-      try {
-        const located = await locateNextOpen(paging.page, from, reviewed, load);
-        if (located) go(located.id, located.page);
-        else toast.info("No more open findings in this list.");
-      } catch (error) {
-        toast.error(errorMessage(error));
-      }
-    },
-    [entries, reviewed, paging.page, load, go],
-  );
-
   const judge = useCallback(
     (value: Verdict) => {
       if (!data) return;
@@ -168,7 +152,6 @@ export default function FindingDetailPage() {
         { id: findingId, verdict: value },
         {
           onSuccess: () => {
-            setReviewed((current) => new Set(current).add(findingId));
             toast.success(`#${findingId} marked as ${value === "CONFIRMED" ? "confirmed" : "false alarm"}.`);
           },
           onError: (error) => toast.error(errorMessage(error)),
@@ -259,9 +242,6 @@ export default function FindingDetailPage() {
             </TooltipTrigger>
             <TooltipContent>Next (→)</TooltipContent>
           </Tooltip>
-          <Button variant="outline" size="sm" className="h-8" onClick={() => void goNextOpen(id)}>
-            <SkipForward /> Next open
-          </Button>
         </div>
       </div>
 

@@ -1,6 +1,5 @@
 export interface ListEntry {
   id: number;
-  open: boolean;
 }
 
 export interface LoadedPage {
@@ -24,13 +23,6 @@ export function neighbour(entries: ListEntry[], currentId: number, delta: 1 | -1
     else break;
   }
   return result;
-}
-
-export function firstOpen(entries: ListEntry[], currentId: number, reviewed: ReadonlySet<number>, below: boolean): number | null {
-  const match = entries.find(
-    (entry) => entry.open && entry.id !== currentId && !reviewed.has(entry.id) && (!below || entry.id < currentId),
-  );
-  return match?.id ?? null;
 }
 
 export function positionOf(entries: ListEntry[], currentId: number): number {
@@ -62,14 +54,4 @@ export async function locateNeighbour(
   load: (page: number) => Promise<LoadedPage>,
 ): Promise<Located | null> {
   return locate(page, delta, load, (entries) => neighbour(entries, currentId, delta));
-}
-
-export async function locateNextOpen(
-  page: number,
-  currentId: number,
-  reviewed: ReadonlySet<number>,
-  load: (page: number) => Promise<LoadedPage>,
-): Promise<Located | null> {
-  const below = await locate(page, 1, load, (entries) => firstOpen(entries, currentId, reviewed, true));
-  return below ?? locate(1, 1, load, (entries) => firstOpen(entries, currentId, reviewed, false));
 }

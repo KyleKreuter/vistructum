@@ -1,5 +1,6 @@
 package de.kylekreuter.vistructum.api;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -143,4 +144,66 @@ public interface Findings {
      * @see TrainingExport
      */
     CompletableFuture<TrainingExport> exportTraining();
+
+    /**
+     * Loads the raster the detection model saw for a finding.
+     *
+     * @param id identifier of the finding
+     * @return a future completing with the scene, or with an empty {@link Optional} if no finding has this
+     *         identifier or no scene was stored for it
+     */
+    CompletableFuture<Optional<FindingScene>> scene(long id);
+
+    /**
+     * Loads the heatmap of a finding, computing and storing it first if it does not exist yet.
+     *
+     * <p>Computing a heatmap runs the detection model several hundred times and takes seconds of processor time.
+     * It runs off the main thread; a stored heatmap is returned without computation.
+     *
+     * @param id identifier of the finding
+     * @return a future completing with the heatmap, or with an empty {@link Optional} if no finding has this
+     *         identifier or no scene was stored for it
+     * @see #scene(long)
+     */
+    CompletableFuture<Optional<Heatmap>> heatmap(long id);
+
+    /**
+     * Reports whether evidence was secured for a finding.
+     *
+     * @param id identifier of the finding
+     * @return a future completing with {@code true} if {@link #evidence(long)} would return a value
+     */
+    CompletableFuture<Boolean> hasEvidence(long id);
+
+    /**
+     * Loads the evidence secured when a finding was created.
+     *
+     * @param id identifier of the finding
+     * @return a future completing with the evidence, or with an empty {@link Optional} if no finding has this
+     *         identifier or no evidence was secured for it
+     * @see Evidence
+     */
+    CompletableFuture<Optional<Evidence>> evidence(long id);
+
+    /**
+     * Aggregates finding and review counts for a time range.
+     *
+     * @param from start of the range, inclusive
+     * @param to end of the range, exclusive
+     * @return a future completing with the counts
+     * @throws NullPointerException if an argument is {@code null}
+     * @throws IllegalArgumentException if {@code to} is before {@code from}
+     */
+    CompletableFuture<FindingStats> stats(Instant from, Instant to);
+
+    /**
+     * Loads the activity log of reviews and evidence links, newest first.
+     *
+     * @param before exclusive upper bound for the time of the returned entries, used as the paging cursor
+     * @param limit maximum number of entries, between {@code 1} and {@link FindingQuery#MAX_LIMIT} inclusive
+     * @return a future completing with at most {@code limit} entries; the list is unmodifiable
+     * @throws NullPointerException if {@code before} is {@code null}
+     * @throws IllegalArgumentException if {@code limit} lies outside the permitted range
+     */
+    CompletableFuture<List<Activity>> activity(Instant before, int limit);
 }

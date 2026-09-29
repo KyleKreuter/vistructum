@@ -9,7 +9,8 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>The Vistructum core plugin registers exactly one implementation of this interface with the Bukkit
  * {@link org.bukkit.plugin.ServicesManager} while it is enabled. The facade is divided into the areas
- * {@link #findings()}, {@link #scans()} and {@link #players()}, complemented by the aggregated {@link #status()}.
+ * {@link #findings()}, {@link #scans()}, {@link #players()} and {@link #web()}, complemented by the aggregated
+ * {@link #status()}.
  *
  * <h2>Threading contract</h2>
  * <ul>
@@ -76,6 +77,13 @@ public interface Vistructum {
      * @return the players area, never {@code null}; the same instance is returned on every call
      */
     Players players();
+
+    /**
+     * Returns the sign-in and evidence link area of the API.
+     *
+     * @return the web access area, never {@code null}; the same instance is returned on every call
+     */
+    WebAccess web();
 
     /**
      * Collects an aggregated snapshot of the operational state.

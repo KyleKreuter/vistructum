@@ -18,5 +18,15 @@ public enum ReviewState {
     /**
      * Matches findings with a verdict.
      */
-    REVIEWED
+    REVIEWED,
+
+    /**
+     * Matches findings with the verdict {@link Verdict#CONFIRMED}.
+     */
+    CONFIRMED,
+
+    /**
+     * Matches findings with the verdict {@link Verdict#FALSE_ALARM}.
+     */
+    FALSE_ALARM
 }

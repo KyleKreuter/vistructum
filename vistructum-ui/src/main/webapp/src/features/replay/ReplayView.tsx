@@ -1,9 +1,9 @@
 import { Canvas } from "@react-three/fiber";
 import { ChevronLeft, ChevronRight, Orbit, Pause, Play, Video } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useState, useSyncExternalStore, type RefObject } from "react";
+import { memo, useCallback, useEffect, useMemo, useState, useSyncExternalStore, type Ref, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import type { Evidence, Palette } from "@/api/types";
-import { PlayerFace } from "@/components/app/PlayerFace";
+import type { Evidence, Palette, PlayerRef } from "@/api/types";
+import { PlayerCard } from "@/components/app/PlayerFace";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
@@ -34,6 +34,7 @@ export interface ReplayViewProps {
   controlsRef?: RefObject<ReplayControls | null>;
   active?: boolean;
   playersTarget?: HTMLElement | null;
+  stageRef?: Ref<HTMLDivElement>;
 }
 
 const TimelineMarks = memo(function TimelineMarks({ timeline, applied, colourFor, onSeek }: { timeline: Timeline; applied: number; colourFor: (uuid: string) => string; onSeek: (t: number) => void }) {
@@ -64,7 +65,7 @@ function idleMessage(changes: number, recorded: boolean): string {
   return recorded ? "No block changes recorded" : "Nothing was recorded for this finding";
 }
 
-export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin = false, showCoordinates, controlsRef, active = true, playersTarget }: ReplayViewProps) {
+export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin = false, showCoordinates, controlsRef, active = true, playersTarget, stageRef }: ReplayViewProps) {
   const timeline = useMemo(() => buildTimeline(evidence), [evidence]);
   const indexed = useMemo(() => indexVolume(evidence.before, timeline.changes), [evidence.before, timeline.changes]);
   const tracks = useMemo(() => evidence.recordings.map(prepareTrack), [evidence.recordings]);
@@ -80,7 +81,7 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
   }, [active, clock]);
 
   const players = useMemo(() => {
-    const order: { uuid: string; name: string }[] = [];
+    const order: PlayerRef[] = [];
     const seen = new Set<string>();
     for (const recording of evidence.recordings) {
       if (!seen.has(recording.player)) {
@@ -134,23 +135,15 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
         const now = counts.get(player.uuid);
         const total = totalCounts.get(player.uuid);
         return (
-          <button
+          <PlayerCard
             key={player.uuid}
-            type="button"
-            onClick={() => tracks.some((track) => track.player === player.uuid) && setCamera({ kind: "follow", player: player.uuid })}
-            className={cn("flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left text-sm hover:border-ring", stacked && "w-full")}
-          >
-            <span className="size-2.5 rounded-full" style={{ background: colourFor(player.uuid) }} />
-            <PlayerFace uuid={player.uuid} name={player.name} size={20} skin={facesFromSkin ? skinUrl(player.uuid) : undefined} />
-            <span className={cn("flex min-w-0 gap-x-2", stacked ? "flex-1 flex-col" : "items-center")}>
-              <span className={cn("truncate font-medium", !stacked && "max-w-48")} title={player.name}>
-                {player.name}
-              </span>
-              <span className="text-xs text-muted-foreground tabular-nums">
-                {now?.placed ?? 0}/{total?.placed ?? 0} placed · {now?.broken ?? 0}/{total?.broken ?? 0} broken
-              </span>
-            </span>
-          </button>
+            player={player}
+            skin={facesFromSkin ? skinUrl(player.uuid) : undefined}
+            colour={colourFor(player.uuid)}
+            detail={`${now?.placed ?? 0}/${total?.placed ?? 0} placed · ${now?.broken ?? 0}/${total?.broken ?? 0} broken`}
+            onSelect={() => tracks.some((track) => track.player === player.uuid) && setCamera({ kind: "follow", player: player.uuid })}
+            className={stacked ? "w-full" : "w-60"}
+          />
         );
       })}
     </div>
@@ -160,7 +153,7 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
 
   return (
     <div className="space-y-3">
-      <div className="relative h-[min(64vh,680px)] min-h-80 overflow-hidden rounded-lg bg-well">
+      <div ref={stageRef} className="relative h-[min(64vh,680px)] min-h-80 overflow-hidden rounded-lg bg-well">
         <Canvas flat camera={{ position: [indexed.volume.sizeX / 2 + 14, indexed.volume.sizeY + 12, indexed.volume.sizeZ / 2 + 18], fov: 50, near: 0.1, far: 1000 }} dpr={[1, 2]} frameloop={active ? "always" : "never"}>
           <ReplayScene
             indexed={indexed}

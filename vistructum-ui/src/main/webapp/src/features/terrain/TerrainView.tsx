@@ -1,6 +1,6 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { useMemo } from "react";
+import { useMemo, type Ref } from "react";
 import type { Heatmap, Palette, Scene } from "@/api/types";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +23,7 @@ interface TerrainViewProps {
   overlay: boolean;
   onOverlay: (value: boolean) => void;
   active?: boolean;
+  stageRef?: Ref<HTMLDivElement>;
 }
 
 const groundNames = ["grass_block", "dirt", "stone"];
@@ -82,7 +83,7 @@ function Outline({ scene, height }: { scene: Scene; height: number }) {
   );
 }
 
-export default function TerrainView({ scene, colours, heatmap, heatmapState, overlay, onOverlay, active = true }: TerrainViewProps) {
+export default function TerrainView({ scene, colours, heatmap, heatmapState, overlay, onOverlay, active = true, stageRef }: TerrainViewProps) {
   const { resolved } = useTheme();
   const terrain = useMemo(() => terrainGrid(scene), [scene]);
   const palette = useMemo(() => scenePalette(scene, colours), [scene, colours]);
@@ -100,7 +101,7 @@ export default function TerrainView({ scene, colours, heatmap, heatmapState, ove
   const cz = (frame.top + frame.bottom) / 2 - scene.height / 2;
   return (
     <div className="space-y-3">
-      <div className="relative h-[min(68vh,680px)] min-h-80 overflow-hidden rounded-lg bg-well">
+      <div ref={stageRef} className="relative h-[min(68vh,680px)] min-h-80 overflow-hidden rounded-lg bg-well">
         <Canvas flat camera={{ position: [cx - distance * 0.3, level + distance * 0.7, cz + distance], fov: 45, near: 0.5, far: 4000 }} dpr={[1, 2]} frameloop={active ? "always" : "never"}>
           <Sky colours={skyTheme(resolved === "dark")} near={near} far={far} />
           <EntityLights />

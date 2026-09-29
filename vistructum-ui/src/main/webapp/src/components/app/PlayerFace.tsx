@@ -1,5 +1,5 @@
 import { UserRound } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { urls } from "@/api/client";
 import type { PlayerRef } from "@/api/types";
@@ -78,27 +78,45 @@ export function PlayerChip({ player, link = true }: { player: PlayerRef; link?: 
   );
 }
 
-const collapsedPlayers = 8;
-
-export function PlayerList({ players }: { players: PlayerRef[] }) {
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? players : players.slice(0, collapsedPlayers);
-  const hidden = players.length - visible.length;
+export function PlayerCard({
+  player,
+  skin,
+  colour,
+  detail,
+  onSelect,
+  className,
+}: {
+  player: PlayerRef;
+  skin?: string;
+  colour?: string;
+  detail?: ReactNode;
+  onSelect?: () => void;
+  className?: string;
+}) {
+  const label = playerLabel(player);
+  const body = (
+    <>
+      {colour && <span className="size-2.5 shrink-0 rounded-full" style={{ background: colour }} />}
+      <PlayerFace uuid={player.uuid} name={player.name} size={20} skin={skin} />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className={cn("truncate font-medium", !player.name && "text-xs")} title={label}>
+          {label}
+        </span>
+        {detail && <span className="text-xs text-muted-foreground tabular-nums">{detail}</span>}
+      </span>
+    </>
+  );
+  const style = cn("flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left text-sm transition-colors hover:border-ring", className);
+  if (onSelect) {
+    return (
+      <button type="button" onClick={onSelect} className={style}>
+        {body}
+      </button>
+    );
+  }
   return (
-    <div className="flex flex-col gap-1.5">
-      {visible.map((player) => (
-        <PlayerChip key={player.uuid} player={player} />
-      ))}
-      {hidden > 0 && (
-        <button type="button" className="self-start rounded-sm text-sm text-muted-foreground hover:text-foreground hover:underline" onClick={() => setExpanded(true)}>
-          +{hidden.toLocaleString("en-GB")} more
-        </button>
-      )}
-      {expanded && players.length > collapsedPlayers && (
-        <button type="button" className="self-start rounded-sm text-sm text-muted-foreground hover:text-foreground hover:underline" onClick={() => setExpanded(false)}>
-          Show fewer
-        </button>
-      )}
-    </div>
+    <Link to={`/players/${player.uuid}`} className={style}>
+      {body}
+    </Link>
   );
 }

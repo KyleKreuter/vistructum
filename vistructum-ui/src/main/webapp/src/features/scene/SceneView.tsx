@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type Ref } from "react";
 import type { Heatmap, Scene } from "@/api/types";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -16,6 +16,7 @@ interface SceneViewProps {
   onLayer: (index: number) => void;
   overlay: boolean;
   onOverlay: (value: boolean) => void;
+  stageRef?: Ref<HTMLDivElement>;
 }
 
 function LayerCanvas({
@@ -103,7 +104,7 @@ function Readout({ readout, base }: { readout: CellReadout | null; base: number 
   );
 }
 
-export function SceneView({ scene, colours, heatmap, heatmapState, layer, onLayer, overlay, onOverlay }: SceneViewProps) {
+export function SceneView({ scene, colours, heatmap, heatmapState, layer, onLayer, overlay, onOverlay, stageRef }: SceneViewProps) {
   const [span, setSpan] = useState(4);
   const [showWindow, setShowWindow] = useState(true);
   const [hover, setHover] = useState<{ row: number; col: number } | null>(null);
@@ -123,7 +124,7 @@ export function SceneView({ scene, colours, heatmap, heatmapState, layer, onLaye
           ))}
         </TabsList>
       </Tabs>
-      <div className="rounded-lg bg-well p-3">
+      <div ref={stageRef} className="rounded-lg bg-well p-3">
         <LayerCanvas
           scene={scene}
           colours={colours}

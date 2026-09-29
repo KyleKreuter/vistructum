@@ -1,6 +1,6 @@
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { ApiError, errorMessage } from "@/api/client";
@@ -8,7 +8,7 @@ import { findingsOptions, useEvidence, useFinding, useFindings, useHeatmap, useM
 import { urls } from "@/api/client";
 import type { FindingDetail, FindingSummary, Verdict } from "@/api/types";
 import { IndicatorIcons, SourceBadge, VerdictBadge } from "@/components/app/Badges";
-import { PlayerList } from "@/components/app/PlayerFace";
+import { PlayerCard } from "@/components/app/PlayerFace";
 import { SharePanel } from "@/components/app/SharePanel";
 import { EmptyState, ErrorState, PageSpinner } from "@/components/app/States";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { SceneView } from "@/features/scene/SceneView";
 import type { ReplayControls } from "@/features/replay/ReplayView";
 import { copyText } from "@/lib/clipboard";
+import { useHeightToBottom } from "@/lib/useHeightToBottom";
 import { cn } from "@/lib/utils";
 import { boxSize } from "@/logic/coords";
 import { listParams, parseFilter, parsePaging } from "@/logic/filters";
@@ -96,6 +97,9 @@ export default function FindingDetailPage() {
   const [overlay, setOverlay] = useState(false);
   const [visited, setVisited] = useState<ReadonlySet<Tab>>(() => new Set());
   const [playerSlot, setPlayerSlot] = useState<HTMLDivElement | null>(null);
+  const [stage, setStage] = useState<HTMLDivElement | null>(null);
+  const [aside, setAside] = useState<HTMLElement | null>(null);
+  const stageHeight = useHeightToBottom(stage, aside);
   const replayControls = useRef<ReplayControls | null>(null);
 
   const defaultTab: Tab = data?.hasEvidence ? "replay" : "scene";
@@ -276,6 +280,7 @@ export default function FindingDetailPage() {
                       showCoordinates
                       controlsRef={replayControls}
                       playersTarget={playerSlot}
+                      stageRef={tab === "replay" ? setStage : undefined}
                       active={tab === "replay"}
                     />
                   </Suspense>
@@ -289,6 +294,7 @@ export default function FindingDetailPage() {
                 <ErrorState error={scene.error} onRetry={() => void scene.refetch()} />
               ) : (
                 <SceneView
+                  stageRef={setStage}
                   scene={scene.data}
                   colours={colours}
                   heatmap={heatmap.data ?? null}
@@ -304,6 +310,7 @@ export default function FindingDetailPage() {
               {!visited.has("3d") ? null : scene.data && palette.data ? (
                 <Suspense fallback={<PageSpinner className="h-[64vh]" />}>
                   <TerrainView
+                    stageRef={tab === "3d" ? setStage : undefined}
                     key={data.id}
                     scene={scene.data}
                     colours={colours}
@@ -322,7 +329,11 @@ export default function FindingDetailPage() {
             </TabsContent>
           </div>
 
-          <aside className={cn("flex flex-col gap-4", tab === "replay" && "lg:h-[max(20rem,min(64vh,680px))]", tab === "scene" && "lg:mt-12")}>
+          <aside
+            ref={setAside}
+            className={cn("flex flex-col gap-4", tab === "scene" && "lg:mt-12", stageHeight !== null && "lg:h-(--stage-height)")}
+            style={stageHeight !== null ? ({ "--stage-height": `${stageHeight}px` } as CSSProperties) : undefined}
+          >
             <Card className="shrink-0 gap-4 py-4">
               <CardContent className="space-y-4 px-4">
                 <VerdictButtons finding={data} pending={verdict.isPending} onVerdict={judge} />
@@ -357,16 +368,6 @@ export default function FindingDetailPage() {
                     </span>
                   </Fact>
                 </dl>
-                {tab !== "replay" && (
-                  <div className="space-y-1.5">
-                    <div className="text-xs text-muted-foreground">Players</div>
-                    {data.players.length ? (
-                      <PlayerList players={data.players} />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No players recorded.</p>
-                    )}
-                  </div>
-                )}
                 <div className="space-y-1.5">
                   <div className="text-xs text-muted-foreground">Teleport</div>
                   <div className="flex gap-2">
@@ -386,8 +387,24 @@ export default function FindingDetailPage() {
               </CardContent>
             </Card>
 
-            {shareView(data, canShare) !== "hidden" && <SharePanel finding={data} canShare={canShare} />}
-            {tab === "replay" && <div ref={setPlayerSlot} className="min-h-0 flex-1 overflow-y-auto pr-1" />}
+            {shareView(data, canShare) !== "hidden" && (
+              <div className="shrink-0">
+                <SharePanel finding={data} canShare={canShare} />
+              </div>
+            )}
+            <div className="min-h-24 flex-1 overflow-y-auto pr-1">
+              {tab === "replay" ? (
+                <div ref={setPlayerSlot} />
+              ) : data.players.length ? (
+                <div className="flex flex-col gap-2">
+                  {data.players.map((player) => (
+                    <PlayerCard key={player.uuid} player={player} className="w-full" />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No players recorded.</p>
+              )}
+            </div>
 
           </aside>
         </div>

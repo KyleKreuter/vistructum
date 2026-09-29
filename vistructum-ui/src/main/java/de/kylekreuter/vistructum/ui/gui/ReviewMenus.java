@@ -11,6 +11,7 @@ import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.ui.Teleports;
 import de.kylekreuter.vistructum.ui.text.Message;
 import de.kylekreuter.vistructum.ui.text.Messages;
+import de.kylekreuter.vistructum.ui.web.ReviewLinks;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
@@ -45,15 +46,17 @@ public final class ReviewMenus {
     private final Executor mainThread;
     private final Optional<MapCards> mapCards;
     private final Thumbnails thumbnails;
+    private final ReviewLinks links;
 
     public ReviewMenus(Plugin plugin, Vistructum vistructum, Messages messages, Clock clock,
-                       Optional<MapCards> mapCards, Thumbnails thumbnails) {
+                       Optional<MapCards> mapCards, Thumbnails thumbnails, ReviewLinks links) {
         this.vistructum = Objects.requireNonNull(vistructum, "vistructum");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.mainThread = Bukkit.getScheduler().getMainThreadExecutor(plugin);
         this.mapCards = Objects.requireNonNull(mapCards, "mapCards");
         this.thumbnails = Objects.requireNonNull(thumbnails, "thumbnails");
+        this.links = Objects.requireNonNull(links, "links");
     }
 
     public void openList(Player player, ListPosition position) {
@@ -72,7 +75,9 @@ public final class ReviewMenus {
         deliver(player, vistructum.findings().get(id).thenCompose(found -> found
                 .map(finding -> {
                     CompletableFuture<Optional<PlayerFace>> face = face(finding);
-                    return scene(finding).thenApply(scene -> Optional.of(new DetailView(finding, scene, face)));
+                    CompletableFuture<Boolean> evidence = evidence(finding);
+                    return scene(finding).thenCombine(evidence,
+                            (scene, secured) -> Optional.of(new DetailView(finding, scene, face, secured)));
                 })
                 .orElseGet(() -> CompletableFuture.completedFuture(Optional.empty()))), view -> view.ifPresentOrElse(
                 detail -> showDetail(player, detail, back),
@@ -180,6 +185,12 @@ public final class ReviewMenus {
                 clicked -> judge(clicked, finding.id(), Verdict.FALSE_ALARM, back));
         menu.put(Layout.BACK, icon("list", messages.item(Message.MENU_BACK), List.of()),
                 clicked -> openList(clicked, back));
+        if (view.evidence()) {
+            menu.put(Layout.EVIDENCE, icon("evidence", messages.item(Message.MENU_EVIDENCE), List.of()), clicked -> {
+                clicked.closeInventory();
+                deliver(clicked, links.evidence(clicked, finding.id()), clicked::sendMessage);
+            });
+        }
         player.openInventory(menu.getInventory());
         return menu;
     }
@@ -204,6 +215,13 @@ public final class ReviewMenus {
 
     private CompletableFuture<Picture> scene(Finding finding) {
         return thumbnails.picture(finding).exceptionally(error -> Scene.empty());
+    }
+
+    private CompletableFuture<Boolean> evidence(Finding finding) {
+        if (!links.enabled()) {
+            return CompletableFuture.completedFuture(false);
+        }
+        return vistructum.findings().hasEvidence(finding.id()).exceptionally(error -> false);
     }
 
     private CompletableFuture<Optional<PlayerFace>> face(Finding finding) {
@@ -267,6 +285,7 @@ public final class ReviewMenus {
     private record ListView(Page<Finding> page, long total) {
     }
 
-    private record DetailView(Finding finding, Picture scene, CompletableFuture<Optional<PlayerFace>> face) {
+    private record DetailView(Finding finding, Picture scene, CompletableFuture<Optional<PlayerFace>> face,
+                              boolean evidence) {
     }
 }

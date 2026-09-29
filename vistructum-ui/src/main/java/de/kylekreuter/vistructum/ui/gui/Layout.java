@@ -13,6 +13,7 @@ final class Layout {
     static final int TELEPORT = 13;
     static final int DENY = 15;
     static final int BACK = 18;
+    static final int EVIDENCE = 26;
     static final List<Integer> DETAIL_BUTTONS = List.of(CONFIRM, TELEPORT, DENY, BACK);
     static final List<Integer> LIST_CARDS = cards();
     static final int PREVIOUS_PAGE = 45;

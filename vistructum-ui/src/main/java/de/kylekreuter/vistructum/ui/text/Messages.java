@@ -4,6 +4,8 @@ import de.kylekreuter.vistructum.api.BlockBox;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.Source;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -98,6 +100,10 @@ public final class Messages {
 
     public static TagResolver number(String key, long value) {
         return Placeholder.parsed(key, Long.toString(value));
+    }
+
+    public static TagResolver link(String key, String url) {
+        return Placeholder.styling(key, ClickEvent.openUrl(url), HoverEvent.showText(Component.text(url)));
     }
 
     public static TagResolver text(String key, String value) {

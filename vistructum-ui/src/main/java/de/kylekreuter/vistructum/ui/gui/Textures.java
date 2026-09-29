@@ -20,6 +20,7 @@ final class Textures {
     private static final Color FILTER = new Color(0xF5, 0xB0, 0x2A);
     private static final Color BUTTON = new Color(0x4A, 0x4A, 0x4A);
     private static final Color ARROW = new Color(0xA0, 0xA0, 0xA0);
+    private static final Color EVIDENCE = new Color(0xB0, 0x7C, 0xF0);
     private static final Color ARROW_DISABLED = new Color(0x5A, 0x5A, 0x5A);
     private static final Color BAR_EDGE = new Color(0x1E, 0x1E, 0x1E);
     private static final Color BAR_WELL = new Color(0x3A, 0x3A, 0x3A);
@@ -153,6 +154,14 @@ final class Textures {
             }
             case "filter_open" -> disc(image, 3.0, 5.0, FILTER);
             case "filter_closed" -> disc(image, 0, 5.0, FILTER);
+            case "evidence" -> {
+                g.setColor(BORDER);
+                g.fillRect(0, 0, 16, 16);
+                g.setColor(BUTTON);
+                g.fillRect(1, 1, 14, 14);
+                g.setColor(EVIDENCE);
+                g.fillPolygon(new int[]{5, 5, 12}, new int[]{4, 12, 8}, 3);
+            }
             case "card_confirmed" -> card(g, new Color(0x9E, 0x1F, 0x1F), new Color(0xD3, 0x3B, 0x3B));
             case "card_dismissed" -> card(g, new Color(0x7A, 0x7A, 0x7A), new Color(0x9E, 0x9E, 0x9E));
             default -> card(g, new Color(0x1E, 0x4F, 0xC2), new Color(0x3F, 0x74, 0xE8));

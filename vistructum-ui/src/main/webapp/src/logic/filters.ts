@@ -1,4 +1,4 @@
-import type { FindingFilter, FindingState, Source } from "@/api/types";
+import type { FindingFilter, FindingState, Paging, Source } from "@/api/types";
 
 export const states: { value: FindingState; label: string }[] = [
   { value: "open", label: "Open" },
@@ -13,6 +13,10 @@ const sourceValues = new Set<string>(["mask", "fullscan"]);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const defaultFilter: FindingFilter = { state: "open", source: "", world: "", player: "", since: "" };
+
+export const pageSizes = [25, 50, 100] as const;
+
+export const defaultPaging: Paging = { page: 1, pageSize: pageSizes[0] };
 
 export function parseFilter(params: URLSearchParams): FindingFilter {
   const state = params.get("state") ?? "";
@@ -38,13 +42,29 @@ export function filterParams(filter: FindingFilter): URLSearchParams {
   return params;
 }
 
+export function parsePaging(params: URLSearchParams): Paging {
+  const page = Number(params.get("page") ?? "1");
+  const pageSize = Number(params.get("pageSize") ?? String(defaultPaging.pageSize));
+  return {
+    page: Number.isSafeInteger(page) && page >= 1 ? page : defaultPaging.page,
+    pageSize: pageSizes.some((size) => size === pageSize) ? pageSize : defaultPaging.pageSize,
+  };
+}
+
+export function listParams(filter: FindingFilter, paging: Paging): URLSearchParams {
+  const params = filterParams(filter);
+  if (paging.page > 1) params.set("page", String(paging.page));
+  if (paging.pageSize !== defaultPaging.pageSize) params.set("pageSize", String(paging.pageSize));
+  return params;
+}
+
 export function sinceInstant(day: string): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
   const date = new Date(`${day}T00:00:00Z`);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-export function findingsQuery(filter: FindingFilter, before: number | null, limit: number): string {
+export function findingsQuery(filter: FindingFilter, paging: Paging): string {
   const params = new URLSearchParams();
   params.set("state", filter.state);
   if (filter.source) params.set("source", filter.source);
@@ -52,8 +72,8 @@ export function findingsQuery(filter: FindingFilter, before: number | null, limi
   if (filter.player) params.set("player", filter.player);
   const since = sinceInstant(filter.since);
   if (since) params.set("since", since);
-  if (before !== null) params.set("before", String(before));
-  params.set("limit", String(Math.max(1, Math.min(100, limit))));
+  params.set("page", String(Math.max(1, Math.floor(paging.page))));
+  params.set("pageSize", String(Math.max(1, Math.min(100, Math.floor(paging.pageSize)))));
   return params.toString();
 }
 

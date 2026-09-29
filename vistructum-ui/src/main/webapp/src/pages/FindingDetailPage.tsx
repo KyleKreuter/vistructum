@@ -1,11 +1,12 @@
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, Copy, Keyboard, SkipForward, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { ApiError, errorMessage } from "@/api/client";
-import { useEvidence, useFinding, useFindings, useHeatmap, useMe, usePalette, useScene, useVerdict } from "@/api/queries";
+import { findingsOptions, useEvidence, useFinding, useFindings, useHeatmap, useMe, usePalette, useScene, useVerdict } from "@/api/queries";
 import { urls } from "@/api/client";
-import type { FindingDetail, Verdict } from "@/api/types";
+import type { FindingDetail, FindingSummary, Verdict } from "@/api/types";
 import { IndicatorIcons, SourceBadge, VerdictBadge } from "@/components/app/Badges";
 import { PlayerChip } from "@/components/app/PlayerFace";
 import { SharePanel } from "@/components/app/SharePanel";
@@ -19,12 +20,17 @@ import type { ReplayControls } from "@/features/replay/ReplayView";
 import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { boxSize } from "@/logic/coords";
-import { filterParams, parseFilter } from "@/logic/filters";
+import { listParams, parseFilter, parsePaging } from "@/logic/filters";
 import { formatDateTime, formatRelative, formatScore } from "@/logic/format";
 import { detailAction, isEditableTarget, shortcutHelp } from "@/logic/keyboard";
-import { neighbour, nextOpen, type ListEntry } from "@/logic/listNavigation";
+import { firstOpen, locateNeighbour, locateNextOpen, neighbour, type ListEntry, type LoadedPage } from "@/logic/listNavigation";
+import { pageCount } from "@/logic/pagination";
 import { sceneColours } from "@/logic/sceneLayers";
 import { shareView } from "@/logic/share";
+
+function toEntry(item: FindingSummary): ListEntry {
+  return { id: item.id, open: item.review === null };
+}
 
 const ReplayView = lazy(() => import("@/features/replay/ReplayView"));
 const TerrainView = lazy(() => import("@/features/terrain/TerrainView"));
@@ -81,10 +87,12 @@ export default function FindingDetailPage() {
   const [search] = useSearchParams();
   const navigate = useNavigate();
   const filter = useMemo(() => parseFilter(search), [search]);
-  const listSuffix = `?${filterParams(filter).toString()}`;
+  const paging = useMemo(() => parsePaging(search), [search]);
+  const listSuffix = `?${listParams(filter, paging).toString()}`;
+  const client = useQueryClient();
   const me = useMe();
   const finding = useFinding(id);
-  const list = useFindings(filter);
+  const list = useFindings(filter, paging);
   const palette = usePalette();
   const verdict = useVerdict();
   const data = finding.data;
@@ -108,44 +116,55 @@ export default function FindingDetailPage() {
   const evidence = useEvidence(id, !!data?.hasEvidence);
   const colours = useMemo(() => (scene.data && palette.data ? sceneColours(scene.data, palette.data) : []), [scene.data, palette.data]);
 
-  const entries: ListEntry[] = useMemo(
-    () =>
-      (list.data?.pages.flatMap((page) => page.items) ?? []).map((item) => ({
-        id: item.id,
-        open: item.review === null && !reviewed.has(item.id),
-      })),
-    [list.data, reviewed],
-  );
+  const entries: ListEntry[] = useMemo(() => (list.data?.items ?? []).map(toEntry), [list.data]);
   const position = entries.findIndex((entry) => entry.id === id);
-  const total = list.data?.pages[0]?.total;
+  const total = list.data?.total;
 
-  const go = useCallback((target: number | null) => {
-    if (target !== null) void navigate(`/findings/${target}${listSuffix}`);
-  }, [navigate, listSuffix]);
+  const go = useCallback(
+    (target: number, page: number) => {
+      void navigate(`/findings/${target}?${listParams(filter, { page, pageSize: paging.pageSize }).toString()}`);
+    },
+    [navigate, filter, paging.pageSize],
+  );
+
+  const load = useCallback(
+    async (page: number): Promise<LoadedPage> => {
+      const loaded = await client.fetchQuery(findingsOptions(filter, { page, pageSize: paging.pageSize }));
+      return { entries: loaded.items.map(toEntry), pageCount: pageCount(loaded.total, paging.pageSize) };
+    },
+    [client, filter, paging.pageSize],
+  );
 
   const goNeighbour = useCallback(
     async (delta: 1 | -1) => {
-      const target = neighbour(entries, id, delta);
-      if (target !== null || delta < 0 || !list.hasNextPage) return go(target);
-      const result = await list.fetchNextPage();
-      const more = (result.data?.pages.flatMap((page) => page.items) ?? []).map((item) => ({ id: item.id, open: item.review === null }));
-      go(neighbour(more, id, delta));
+      const cached = neighbour(entries, id, delta);
+      if (cached !== null) return go(cached, paging.page);
+      try {
+        const located = await locateNeighbour(paging.page, id, delta, load);
+        if (located) go(located.id, located.page);
+        else toast.info(delta > 0 ? "This is the last finding in this list." : "This is the first finding in this list.");
+      } catch (error) {
+        toast.error(errorMessage(error));
+      }
     },
-    [entries, id, list, go],
+    [entries, id, paging.page, load, go],
   );
 
   const goNextOpen = useCallback(
-    (from: number, extra?: number) => {
+    async (from: number, extra?: number) => {
       const skip = new Set(reviewed);
       if (extra !== undefined) skip.add(extra);
-      const target = nextOpen(entries, from, skip);
-      if (target === null) {
-        toast.info("No more open findings in this list.");
-        return;
+      const cached = firstOpen(entries, from, skip, true);
+      if (cached !== null) return go(cached, paging.page);
+      try {
+        const located = await locateNextOpen(paging.page, from, skip, load);
+        if (located) go(located.id, located.page);
+        else toast.info("No more open findings in this list.");
+      } catch (error) {
+        toast.error(errorMessage(error));
       }
-      go(target);
     },
-    [entries, reviewed, go],
+    [entries, reviewed, paging.page, load, go],
   );
 
   const judge = useCallback(
@@ -158,7 +177,7 @@ export default function FindingDetailPage() {
           onSuccess: () => {
             setReviewed((current) => new Set(current).add(findingId));
             toast.success(`#${findingId} marked as ${value === "CONFIRMED" ? "confirmed" : "false alarm"}.`);
-            if (advance) goNextOpen(findingId, findingId);
+            if (advance) void goNextOpen(findingId, findingId);
           },
           onError: (error) => toast.error(errorMessage(error)),
         },
@@ -203,7 +222,7 @@ export default function FindingDetailPage() {
           void goNeighbour(action.delta);
           break;
         case "nextOpen":
-          goNextOpen(id);
+          void goNextOpen(id);
           break;
         case "layer":
           setLayer(action.index);
@@ -264,7 +283,7 @@ export default function FindingDetailPage() {
         <div className="ml-auto flex items-center gap-1 text-sm text-muted-foreground">
           {position >= 0 && total !== undefined && (
             <span className="mr-2 tabular-nums">
-              {position + 1} of {total}
+              {((paging.page - 1) * paging.pageSize + position + 1).toLocaleString("en-GB")} of {total.toLocaleString("en-GB")}
             </span>
           )}
           <Tooltip>
@@ -285,7 +304,7 @@ export default function FindingDetailPage() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8" onClick={() => goNextOpen(id)}>
+              <Button variant="outline" size="sm" className="h-8" onClick={() => void goNextOpen(id)}>
                 <SkipForward /> Next open
               </Button>
             </TooltipTrigger>

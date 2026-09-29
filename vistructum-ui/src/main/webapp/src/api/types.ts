@@ -103,8 +103,9 @@ export interface FindingDetail extends FindingSummary {
 
 export interface FindingPage {
   items: FindingSummary[];
-  nextBefore: number | null;
   total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface Scene {
@@ -224,6 +225,11 @@ export interface PublicFinding {
 export interface PublicEvidence {
   finding: PublicFinding;
   evidence: Evidence;
+}
+
+export interface Paging {
+  page: number;
+  pageSize: number;
 }
 
 export interface FindingFilter {

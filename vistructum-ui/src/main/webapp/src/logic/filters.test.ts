@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterParams, findingsQuery, matchesState, parseFilter, sinceInstant } from "./filters";
-import { neighbour, nextOpen } from "./listNavigation";
+import { defaultFilter, filterParams, findingsQuery, listParams, matchesState, parseFilter, parsePaging, sinceInstant } from "./filters";
 
 describe("finding filters", () => {
   it("parses and sanitises URL parameters", () => {
@@ -16,12 +15,28 @@ describe("finding filters", () => {
   });
 
   it("builds the API query", () => {
-    const query = new URLSearchParams(findingsQuery({ state: "open", source: "", world: "", player: "", since: "2026-09-01" }, 42, 500));
+    const query = new URLSearchParams(findingsQuery({ state: "open", source: "", world: "", player: "", since: "2026-09-01" }, { page: 3, pageSize: 500 }));
     expect(query.get("since")).toBe("2026-09-01T00:00:00.000Z");
-    expect(query.get("before")).toBe("42");
-    expect(query.get("limit")).toBe("100");
+    expect(query.get("page")).toBe("3");
+    expect(query.get("pageSize")).toBe("100");
+    expect(query.has("before")).toBe(false);
+    expect(query.has("limit")).toBe(false);
     expect(query.has("source")).toBe(false);
     expect(sinceInstant("2026-13-45")).toBeNull();
+  });
+
+  it("parses and sanitises paging", () => {
+    expect(parsePaging(new URLSearchParams(""))).toEqual({ page: 1, pageSize: 25 });
+    expect(parsePaging(new URLSearchParams("page=4&pageSize=50"))).toEqual({ page: 4, pageSize: 50 });
+    expect(parsePaging(new URLSearchParams("page=0&pageSize=30"))).toEqual({ page: 1, pageSize: 25 });
+    expect(parsePaging(new URLSearchParams("page=2.5&pageSize=abc"))).toEqual({ page: 1, pageSize: 25 });
+  });
+
+  it("omits default paging from the list URL", () => {
+    expect(listParams(defaultFilter, { page: 1, pageSize: 25 }).toString()).toBe("state=open");
+    const params = listParams(defaultFilter, { page: 3, pageSize: 100 });
+    expect(parsePaging(params)).toEqual({ page: 3, pageSize: 100 });
+    expect(parseFilter(params)).toEqual(defaultFilter);
   });
 
   it("matches states", () => {
@@ -30,29 +45,5 @@ describe("finding filters", () => {
     expect(matchesState("reviewed", "FALSE_ALARM")).toBe(true);
     expect(matchesState("false_alarm", "CONFIRMED")).toBe(false);
     expect(matchesState("any", null)).toBe(true);
-  });
-});
-
-describe("list navigation", () => {
-  const entries = [
-    { id: 50, open: true },
-    { id: 40, open: false },
-    { id: 30, open: true },
-    { id: 20, open: true },
-  ];
-
-  it("moves through a list ordered by descending id", () => {
-    expect(neighbour(entries, 40, 1)).toBe(30);
-    expect(neighbour(entries, 40, -1)).toBe(50);
-    expect(neighbour(entries, 50, -1)).toBeNull();
-    expect(neighbour(entries, 20, 1)).toBeNull();
-    expect(neighbour(entries, 35, 1)).toBe(30);
-    expect(neighbour(entries, 35, -1)).toBe(40);
-  });
-
-  it("finds the next open finding and wraps around", () => {
-    expect(nextOpen(entries, 50)).toBe(30);
-    expect(nextOpen(entries, 30, new Set([20]))).toBe(50);
-    expect(nextOpen([{ id: 1, open: true }], 1)).toBeNull();
   });
 });

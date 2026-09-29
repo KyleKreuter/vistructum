@@ -1,13 +1,15 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import { ApiError, urls } from "@/api/client";
 import { useFindings, usePlayer } from "@/api/queries";
+import type { Paging } from "@/api/types";
 import { FindingTable } from "@/components/app/FindingTable";
+import { Pagination } from "@/components/app/Pagination";
 import { PlayerFace } from "@/components/app/PlayerFace";
 import { EmptyState, ErrorState, PageSpinner } from "@/components/app/States";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { defaultFilter, filterParams, isUuid } from "@/logic/filters";
+import { cn } from "@/lib/utils";
+import { defaultFilter, isUuid, listParams, parsePaging } from "@/logic/filters";
 import { formatPercent, precision, shortUuid } from "@/logic/format";
 
 const SkinPreview = lazy(() => import("@/features/player/SkinPreview"));
@@ -26,11 +28,14 @@ export default function PlayerPage() {
   const valid = isUuid(uuid);
   const player = usePlayer(uuid);
   const filter = useMemo(() => ({ ...defaultFilter, state: "any" as const, player: uuid }), [uuid]);
-  const findings = useFindings(filter);
-  const items = useMemo(() => findings.data?.pages.flatMap((page) => page.items) ?? [], [findings.data]);
+  const [params, setParams] = useSearchParams();
+  const paging = useMemo(() => parsePaging(params), [params]);
+  const findings = useFindings(filter, paging);
+  const items = findings.data?.items ?? [];
   const [missingSkin, setMissingSkin] = useState<string | null>(null);
   const onMissing = useCallback(() => setMissingSkin(uuid), [uuid]);
-  const suffix = `?${filterParams(filter).toString()}`;
+  const suffix = `?${listParams(filter, paging).toString()}`;
+  const turn = (next: Paging) => setParams(listParams(filter, next));
   const listFor = (state: string) => `/findings?${new URLSearchParams({ state, player: uuid }).toString()}`;
 
   if (!valid) return <EmptyState title="This is not a player id" />;
@@ -83,19 +88,17 @@ export default function PlayerPage() {
           <PageSpinner />
         ) : findings.isError ? (
           <ErrorState error={findings.error} onRetry={() => void findings.refetch()} />
-        ) : items.length === 0 ? (
+        ) : items.length === 0 && findings.data.total === 0 ? (
           <EmptyState title="No findings" />
         ) : (
-          <>
-            <FindingTable items={items} linkSuffix={suffix} />
-            {findings.hasNextPage && (
-              <div className="flex justify-center">
-                <Button variant="outline" size="sm" onClick={() => void findings.fetchNextPage()} disabled={findings.isFetchingNextPage}>
-                  {findings.isFetchingNextPage ? "Loading…" : "Load more"}
-                </Button>
-              </div>
+          <div className={cn("space-y-3", findings.isPlaceholderData && "opacity-60 transition-opacity")}>
+            {items.length === 0 ? (
+              <EmptyState title={`Page ${paging.page} is empty`} />
+            ) : (
+              <FindingTable items={items} linkSuffix={suffix} />
             )}
-          </>
+            <Pagination paging={paging} total={findings.data.total} onChange={turn} />
+          </div>
         )}
       </div>
     </div>

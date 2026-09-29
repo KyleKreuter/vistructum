@@ -1,4 +1,4 @@
-import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions, useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { findingsQuery } from "@/logic/filters";
 import { ApiError, request } from "./client";
 import type {
@@ -8,6 +8,7 @@ import type {
   FindingFilter,
   FindingPage,
   FindingSummary,
+  Paging,
   Heatmap,
   Me,
   Palette,
@@ -20,11 +21,9 @@ import type {
   Verdict,
 } from "./types";
 
-export const pageSize = 50;
-
 export const keys = {
   me: ["me"] as const,
-  findings: (filter: FindingFilter) => ["findings", filter] as const,
+  findings: (filter: FindingFilter, paging: Paging) => ["findings", filter, paging.page, paging.pageSize] as const,
   finding: (id: number) => ["finding", id] as const,
   scene: (id: number) => ["scene", id] as const,
   heatmap: (id: number) => ["heatmap", id] as const,
@@ -49,14 +48,15 @@ export function useMe() {
   });
 }
 
-export function useFindings(filter: FindingFilter) {
-  return useInfiniteQuery({
-    queryKey: keys.findings(filter),
-    queryFn: ({ pageParam }) => request<FindingPage>(`/findings?${findingsQuery(filter, pageParam, pageSize)}`),
-    initialPageParam: null as number | null,
-    getNextPageParam: (last) => last.nextBefore,
-    placeholderData: keepPreviousData,
+export function findingsOptions(filter: FindingFilter, paging: Paging) {
+  return queryOptions({
+    queryKey: keys.findings(filter, paging),
+    queryFn: () => request<FindingPage>(`/findings?${findingsQuery(filter, paging)}`),
   });
+}
+
+export function useFindings(filter: FindingFilter, paging: Paging) {
+  return useQuery({ ...findingsOptions(filter, paging), placeholderData: keepPreviousData });
 }
 
 export function useFinding(id: number) {

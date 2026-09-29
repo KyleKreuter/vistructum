@@ -135,9 +135,12 @@ export function handlers(db: MockDb) {
       const world = url.searchParams.get("world");
       const player = url.searchParams.get("player");
       const since = url.searchParams.get("since");
-      const before = url.searchParams.get("before");
-      const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? 50)));
+      const page = Number(url.searchParams.get("page") ?? "1");
+      const pageSize = Number(url.searchParams.get("pageSize") ?? "25");
       if (!["open", "reviewed", "confirmed", "false_alarm", "any"].includes(state)) return error(400, "bad_request");
+      if (!Number.isSafeInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) {
+        return error(400, "bad_request");
+      }
       const matching = db.findings.filter(
         (finding) =>
           matchesState(state, finding.review?.verdict ?? null) &&
@@ -146,13 +149,8 @@ export function handlers(db: MockDb) {
           (!player || finding.players.some((entry) => entry.uuid === player)) &&
           (!since || finding.createdAt >= since),
       );
-      const page = matching.filter((finding) => !before || finding.id < Number(before));
-      const items = page.slice(0, limit);
-      return HttpResponse.json({
-        items: items.map(summary),
-        nextBefore: page.length > limit ? items[items.length - 1].id : null,
-        total: matching.length,
-      });
+      const items = matching.slice((page - 1) * pageSize, page * pageSize);
+      return HttpResponse.json({ items: items.map(summary), total: matching.length, page, pageSize });
     }),
 
     http.get(`${api}/findings/:id`, async ({ params }) => {

@@ -10,6 +10,7 @@ public record WebSettings(boolean enabled, String bindAddress, String publicUrl)
 
     public static final String ROOT = "/review";
     public static final String HOME = ROOT + "/";
+    public static final String API = ROOT + "/api/";
 
     public WebSettings {
         Objects.requireNonNull(bindAddress, "bindAddress");

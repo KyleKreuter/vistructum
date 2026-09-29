@@ -1,10 +1,11 @@
-package de.kylekreuter.vistructum.ui.web;
+package de.kylekreuter.vistructum.ui.web.assets;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import de.kylekreuter.vistructum.ui.gui.ResourcePack;
+import de.kylekreuter.vistructum.ui.web.Responses;
+import de.kylekreuter.vistructum.ui.web.WebFixture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,8 +19,6 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -28,9 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -228,7 +225,7 @@ class GameAssetsTest {
                     Map.of("Accept-Encoding", "gzip"));
             assertEquals(200, gzipped.statusCode());
             assertEquals("gzip", gzipped.headers().firstValue("Content-Encoding").orElseThrow());
-            assertEquals(Reply.IMMUTABLE, gzipped.headers().firstValue("Cache-Control").orElseThrow());
+            assertEquals(Responses.IMMUTABLE, gzipped.headers().firstValue("Cache-Control").orElseThrow());
             assertTrue(gzipped.headers().firstValue("Content-Type").orElseThrow().startsWith("application/json"));
             assertTrue(gzipped.headers().allValues("Vary").contains("Accept-Encoding"));
             String unpacked;
@@ -246,7 +243,7 @@ class GameAssetsTest {
             assertEquals(200, stone.statusCode());
             assertArrayEquals(STONE, stone.body());
             assertEquals("image/png", stone.headers().firstValue("Content-Type").orElseThrow());
-            assertEquals(Reply.IMMUTABLE, stone.headers().firstValue("Cache-Control").orElseThrow());
+            assertEquals(Responses.IMMUTABLE, stone.headers().firstValue("Cache-Control").orElseThrow());
             assertTrue(stone.headers().firstValue("Content-Encoding").isEmpty());
             assertEquals(200, served.get("/review/api/assets/" + VERSION + "/textures/colormap/grass.png", Map.of())
                     .statusCode());
@@ -323,30 +320,8 @@ class GameAssetsTest {
         return "http://127.0.0.1:" + mojang.getAddress().getPort();
     }
 
-    private Served serve(GameAssets assets) throws IOException {
-        FakeVistructum vistructum = new FakeVistructum(NOW);
-        GameServer game = new GameServer() {
-            @Override
-            public Optional<String> playerName(UUID player) {
-                return Optional.empty();
-            }
-
-            @Override
-            public boolean canShare(UUID player) {
-                return false;
-            }
-
-            @Override
-            public Optional<String> dimension(String world) {
-                return Optional.empty();
-            }
-        };
-        URLClassLoader files = new URLClassLoader(new URL[0], null);
-        WebServer server = WebServer.start(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0),
-                ResourcePack.build(), Optional.of(new WebServer.WebApp(vistructum,
-                        new WebSettings(true, "127.0.0.1", "http://localhost"), game, Map.of(), assets, Runnable::run,
-                        files, Clock.fixed(NOW, ZoneOffset.UTC), LOGGER)));
-        return new Served(server, files, vistructum, client);
+    private Served serve(GameAssets assets) {
+        return new Served(WebFixture.serving(folder, assets), client);
     }
 
     private static void respond(HttpExchange exchange, byte[] body) throws IOException {
@@ -416,31 +391,27 @@ class GameAssetsTest {
         }
     }
 
-    private record Served(WebServer server, URLClassLoader files, FakeVistructum vistructum, HttpClient client)
-            implements AutoCloseable {
+    private record Served(WebFixture web, HttpClient client) implements AutoCloseable {
 
         URI uri(String path) {
-            return URI.create("http://127.0.0.1:" + server.port() + path);
+            return web.uri(path);
         }
 
         HttpResponse<String> get(String path, Map<String, String> headers) throws Exception {
-            return send(HttpRequest.newBuilder(uri(path)).GET(), headers);
+            return web.get(path, headers);
         }
 
         HttpResponse<String> send(HttpRequest.Builder request, Map<String, String> headers) throws Exception {
-            headers.forEach(request::header);
-            return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+            return web.send(request, headers);
         }
 
         HttpResponse<byte[]> bytes(String path, Map<String, String> headers) throws Exception {
-            HttpRequest.Builder request = HttpRequest.newBuilder(uri(path)).GET();
-            headers.forEach(request::header);
-            return client.send(request.build(), HttpResponse.BodyHandlers.ofByteArray());
+            return web.bytes(path, headers);
         }
 
         JsonObject status() throws Exception {
-            String login = vistructum.issueLogin(UUID.randomUUID(), "Staff").join();
-            String session = vistructum.redeemLogin(login).join().orElseThrow().token();
+            String login = web.vistructum.issueLogin(UUID.randomUUID(), "Staff").join();
+            String session = web.vistructum.redeemLogin(login).join().orElseThrow().token();
             HttpResponse<String> response = get("/review/api/status", Map.of("Cookie", "vistructum_session=" + session));
             assertEquals(200, response.statusCode());
             return JsonParser.parseString(response.body()).getAsJsonObject();
@@ -448,8 +419,7 @@ class GameAssetsTest {
 
         @Override
         public void close() throws IOException {
-            server.close();
-            files.close();
+            web.close();
         }
     }
 }

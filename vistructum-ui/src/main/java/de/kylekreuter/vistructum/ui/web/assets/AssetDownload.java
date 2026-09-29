@@ -1,4 +1,4 @@
-package de.kylekreuter.vistructum.ui.web;
+package de.kylekreuter.vistructum.ui.web.assets;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

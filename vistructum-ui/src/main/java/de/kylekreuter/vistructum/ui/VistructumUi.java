@@ -9,9 +9,9 @@ import de.kylekreuter.vistructum.ui.gui.ReviewMenus;
 import de.kylekreuter.vistructum.ui.gui.Thumbnails;
 import de.kylekreuter.vistructum.ui.text.Messages;
 import de.kylekreuter.vistructum.ui.web.BukkitGameServer;
-import de.kylekreuter.vistructum.ui.web.GameAssets;
 import de.kylekreuter.vistructum.ui.web.ReviewLinks;
-import de.kylekreuter.vistructum.ui.web.WebServer;
+import de.kylekreuter.vistructum.ui.web.WebApplication;
+import de.kylekreuter.vistructum.ui.web.assets.GameAssets;
 import de.kylekreuter.vistructum.ui.web.WebSettings;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -40,7 +40,7 @@ public final class VistructumUi extends JavaPlugin {
     private static final String MAPS_FILE = "maps.yml";
     private static final String ASSETS_FOLDER = "assets";
 
-    private WebServer webServer;
+    private WebApplication webApplication;
     private GameAssets gameAssets;
     private ScanBossBar scanBossBar;
 
@@ -59,7 +59,7 @@ public final class VistructumUi extends JavaPlugin {
         Messages messages = Messages.from(loadMessages(), clock.getZone());
         ResourcePack pack = ResourcePack.build();
         WebSettings web = WebSettings.from(getConfig());
-        startWebServer(vistructum, pack, web, clock);
+        startWebApplication(vistructum, pack, web, clock);
         ReviewLinks links = new ReviewLinks(vistructum.web(), web, messages);
         Thumbnails thumbnails = new Thumbnails(this, vistructum);
         ReviewMenus menus = new ReviewMenus(this, vistructum, messages, clock, loadMapCards(), thumbnails, links);
@@ -85,9 +85,9 @@ public final class VistructumUi extends JavaPlugin {
             scanBossBar.close();
             scanBossBar = null;
         }
-        if (webServer != null) {
-            webServer.close();
-            webServer = null;
+        if (webApplication != null) {
+            webApplication.close();
+            webApplication = null;
         }
         if (gameAssets != null) {
             gameAssets.close();
@@ -95,20 +95,20 @@ public final class VistructumUi extends JavaPlugin {
         }
     }
 
-    private void startWebServer(Vistructum vistructum, ResourcePack pack, WebSettings web, Clock clock) {
+    private void startWebApplication(Vistructum vistructum, ResourcePack pack, WebSettings web, Clock clock) {
         int port = getConfig().getInt("pack.bind-port");
         InetSocketAddress address = web.enabled() ? new InetSocketAddress(web.bindAddress(), port)
                 : new InetSocketAddress(port);
         gameAssets = new GameAssets(getDataFolder().toPath().resolve(ASSETS_FOLDER), Bukkit.getMinecraftVersion(),
                 web.enabled() && getConfig().getBoolean("web.textures.download"));
-        Optional<WebServer.WebApp> app = web.enabled()
-                ? Optional.of(new WebServer.WebApp(vistructum, web, new BukkitGameServer(SHARE_PERMISSION),
+        Optional<WebApplication.WebApp> app = web.enabled()
+                ? Optional.of(new WebApplication.WebApp(vistructum, web, new BukkitGameServer(SHARE_PERMISSION),
                 BukkitGameServer.palette(), gameAssets, Bukkit.getScheduler().getMainThreadExecutor(this),
-                getClassLoader(), clock, getLogger()))
+                getClassLoader(), clock))
                 : Optional.empty();
         try {
-            webServer = WebServer.start(address, pack, app);
-        } catch (IOException e) {
+            webApplication = WebApplication.start(address, pack, app, getLogger());
+        } catch (RuntimeException e) {
             getLogger().log(Level.SEVERE, "the resource pack and the web app cannot be served on " + address, e);
             return;
         }

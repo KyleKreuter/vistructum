@@ -1,4 +1,4 @@
-package de.kylekreuter.vistructum.ui.web;
+package de.kylekreuter.vistructum.ui.web.assets;
 
 import java.net.URI;
 import java.nio.file.Files;
@@ -81,11 +81,11 @@ public final class GameAssets implements AutoCloseable {
         return done;
     }
 
-    Optional<Path> models(String requested) {
+    public Optional<Path> models(String requested) {
         return matching(requested).map(cache -> cache.resolve(MODELS)).filter(Files::isRegularFile);
     }
 
-    Optional<Path> texture(String requested, String id) {
+    public Optional<Path> texture(String requested, String id) {
         if (!TEXTURE_ID.matcher(id).matches()) {
             return Optional.empty();
         }

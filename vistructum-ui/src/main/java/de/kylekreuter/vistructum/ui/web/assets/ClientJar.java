@@ -1,4 +1,4 @@
-package de.kylekreuter.vistructum.ui.web;
+package de.kylekreuter.vistructum.ui.web.assets;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;

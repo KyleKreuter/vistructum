@@ -43,17 +43,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-final class FakeVistructum implements Vistructum, Findings, Scans, Players, WebAccess {
+public final class FakeVistructum implements Vistructum, Findings, Scans, Players, WebAccess {
 
-    final Map<Long, Finding> findings = new TreeMap<>();
-    final Map<Long, Evidence> evidence = new ConcurrentHashMap<>();
-    final Map<String, IssuedSession> logins = new ConcurrentHashMap<>();
-    final Map<String, WebSession> sessions = new ConcurrentHashMap<>();
-    final Map<String, Long> shares = new ConcurrentHashMap<>();
-    final Map<UUID, PlayerSkin> skins = new ConcurrentHashMap<>();
+    public final Map<Long, Finding> findings = new TreeMap<>();
+    public final Map<Long, Evidence> evidence = new ConcurrentHashMap<>();
+    public final Map<String, IssuedSession> logins = new ConcurrentHashMap<>();
+    public final Map<String, WebSession> sessions = new ConcurrentHashMap<>();
+    public final Map<String, Long> shares = new ConcurrentHashMap<>();
+    public final Map<UUID, PlayerSkin> skins = new ConcurrentHashMap<>();
     final Instant now;
 
-    FakeVistructum(Instant now) {
+    public FakeVistructum(Instant now) {
         this.now = now;
     }
 

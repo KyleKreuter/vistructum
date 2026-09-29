@@ -4,7 +4,7 @@ Vistructum finds swastikas that players build from blocks on your Paper server a
 
 Vistructum never kicks, bans, or rolls back on its own. Every decision stays with your staff.
 
-The gallery shows the web app and the replay. Symbols in the screenshots are pixelated.
+The gallery shows the web app and the replay with demo data. Symbols in the screenshots are pixelated.
 
 ## Why use it
 

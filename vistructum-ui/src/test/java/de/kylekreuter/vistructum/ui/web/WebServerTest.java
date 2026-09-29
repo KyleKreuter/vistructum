@@ -184,9 +184,18 @@ class WebServerTest {
     void findingsAreListedWithEvidenceAndPaging() throws Exception {
         String session = session();
         Map<String, String> cookie = Map.of("Cookie", "vistructum_session=" + session);
-        JsonObject page = json(get("/review/api/findings?state=any&limit=1", cookie));
+        JsonObject page = json(get("/review/api/findings?state=any&pageSize=1", cookie));
         assertEquals(2, page.get("total").getAsLong());
-        assertEquals(8, page.get("nextBefore").getAsLong());
+        assertEquals(1, page.get("page").getAsInt());
+        assertEquals(1, page.get("pageSize").getAsInt());
+        assertFalse(page.has("nextBefore"));
+        JsonObject second = json(get("/review/api/findings?state=any&pageSize=1&page=2", cookie));
+        assertEquals(7, second.getAsJsonArray("items").get(0).getAsJsonObject().get("id").getAsLong());
+        assertEquals(2, second.get("page").getAsInt());
+        JsonObject beyond = json(get("/review/api/findings?pageSize=1&page=3", cookie));
+        assertTrue(beyond.getAsJsonArray("items").isEmpty());
+        assertEquals(2, beyond.get("total").getAsLong());
+        assertEquals(25, json(get("/review/api/findings", cookie)).get("pageSize").getAsInt());
         JsonObject first = page.getAsJsonArray("items").get(0).getAsJsonObject();
         assertEquals(8, first.get("id").getAsLong());
         assertEquals("fullscan", first.get("source").getAsString());
@@ -200,7 +209,10 @@ class WebServerTest {
         assertEquals(BUILDER.toString(), detail.getAsJsonArray("players").get(0).getAsJsonObject().get("uuid")
                 .getAsString());
         assertEquals("Builder", detail.getAsJsonArray("players").get(0).getAsJsonObject().get("name").getAsString());
-        assertEquals(400, get("/review/api/findings?limit=101", cookie).statusCode());
+        assertEquals(400, get("/review/api/findings?pageSize=101", cookie).statusCode());
+        assertEquals(400, get("/review/api/findings?pageSize=0", cookie).statusCode());
+        assertEquals(400, get("/review/api/findings?page=0", cookie).statusCode());
+        assertEquals(400, get("/review/api/findings?page=x", cookie).statusCode());
         assertEquals(400, get("/review/api/findings?state=closed", cookie).statusCode());
         assertEquals(404, get("/review/api/findings/99", cookie).statusCode());
     }

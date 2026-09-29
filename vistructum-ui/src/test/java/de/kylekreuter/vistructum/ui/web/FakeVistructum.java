@@ -93,8 +93,8 @@ final class FakeVistructum implements Vistructum, Findings, Scans, Players, WebA
         List<Finding> matches = matching(query).stream()
                 .filter(finding -> query.beforeId().isEmpty() || finding.id() < query.beforeId().getAsLong())
                 .toList();
-        List<Finding> items = matches.stream().limit(query.limit()).toList();
-        boolean more = matches.size() > items.size();
+        List<Finding> items = matches.stream().skip(query.offset()).limit(query.limit()).toList();
+        boolean more = matches.size() > query.offset() + items.size();
         return completedFuture(new ListPage(items, more));
     }
 

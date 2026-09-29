@@ -2,11 +2,9 @@ package de.kylekreuter.vistructum.ui.web;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
 import de.kylekreuter.vistructum.api.BlockEvent;
 import de.kylekreuter.vistructum.api.BlockVolume;
 import de.kylekreuter.vistructum.api.Evidence;
@@ -52,6 +50,7 @@ final class ReviewApi {
     static final String CSRF_COOKIE = "vistructum_csrf";
     static final String API = WebSettings.ROOT + "/api/";
     static final int MAX_LIMIT = 100;
+    static final int DEFAULT_PAGE_SIZE = 25;
     static final int DEFAULT_ACTIVITY_LIMIT = 50;
     static final Duration DEFAULT_STATS_RANGE = Duration.ofDays(30);
 
@@ -216,18 +215,20 @@ final class ReviewApi {
     }
 
     private CompletableFuture<Reply> findings(Request request) {
-        FindingQuery query = findingQuery(request);
+        int pageSize = request.param("pageSize").map(ReviewApi::limit).orElse(DEFAULT_PAGE_SIZE);
+        int page = request.param("page").map(value -> pageNumber(value, pageSize)).orElse(1);
+        FindingQuery query = findingQuery(request).limit(pageSize).offset((page - 1) * pageSize);
         CompletableFuture<Long> total = off(vistructum.findings().count(query));
-        return off(vistructum.findings().find(query)).thenCompose(page -> {
-            List<CompletableFuture<JsonObject>> items = page.items().stream().map(this::summary).toList();
+        return off(vistructum.findings().find(query)).thenCompose(found -> {
+            List<CompletableFuture<JsonObject>> items = found.items().stream().map(this::summary).toList();
             return CompletableFuture.allOf(items.toArray(CompletableFuture[]::new)).thenCombine(total, (ignored, count) -> {
                 JsonObject json = new JsonObject();
                 JsonArray array = new JsonArray(items.size());
                 items.forEach(item -> array.add(item.join()));
                 json.add("items", array);
-                json.add("nextBefore", page.hasNext() && !page.items().isEmpty()
-                        ? new JsonPrimitive(page.items().getLast().id()) : JsonNull.INSTANCE);
                 json.addProperty("total", count);
+                json.addProperty("page", page);
+                json.addProperty("pageSize", pageSize);
                 return Reply.json(json);
             });
         });
@@ -459,8 +460,7 @@ final class ReviewApi {
     }
 
     static FindingQuery findingQuery(Request request) {
-        FindingQuery query = FindingQuery.all().state(request.param("state").map(ReviewApi::state).orElse(ReviewState.ANY))
-                .limit(request.param("limit").map(ReviewApi::limit).orElse(FindingQuery.DEFAULT_LIMIT));
+        FindingQuery query = FindingQuery.all().state(request.param("state").map(ReviewApi::state).orElse(ReviewState.ANY));
         Optional<String> world = request.param("world");
         if (world.isPresent()) {
             query = query.world(world.get());
@@ -476,10 +476,6 @@ final class ReviewApi {
         Optional<String> since = request.param("since");
         if (since.isPresent()) {
             query = query.since(instant(since.get()));
-        }
-        Optional<String> before = request.param("before");
-        if (before.isPresent()) {
-            query = query.before(id(before.get()));
         }
         return query;
     }
@@ -511,6 +507,14 @@ final class ReviewApi {
             throw ApiError.badRequest();
         }
         return (int) limit;
+    }
+
+    private static int pageNumber(String value, int pageSize) {
+        long page = id(value);
+        if (page < 1 || (page - 1) * pageSize > Integer.MAX_VALUE) {
+            throw ApiError.badRequest();
+        }
+        return (int) page;
     }
 
     private static long id(String value) {

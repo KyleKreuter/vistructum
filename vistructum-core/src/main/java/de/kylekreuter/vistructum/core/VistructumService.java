@@ -13,6 +13,7 @@ import de.kylekreuter.vistructum.api.ScanCause;
 import de.kylekreuter.vistructum.api.ScanJob;
 import de.kylekreuter.vistructum.api.Scans;
 import de.kylekreuter.vistructum.api.SourcePrecision;
+import de.kylekreuter.vistructum.api.Thumbnail;
 import de.kylekreuter.vistructum.api.TrainingExport;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.api.Vistructum;
@@ -132,6 +133,25 @@ public final class VistructumService implements Vistructum {
         public CompletableFuture<Optional<byte[]>> previewPng(long id) {
             return mainThread.handOff(findingStore.preview(id)
                     .thenApply(preview -> preview.map(p -> PreviewImage.png(p, PREVIEW_SCALE))));
+        }
+
+        @Override
+        public CompletableFuture<Optional<Thumbnail>> thumbnail(long id) {
+            return mainThread.handOff(findingStore.thumbnail(id));
+        }
+
+        @Override
+        public CompletableFuture<Boolean> storeThumbnail(long id, Thumbnail thumbnail) {
+            Objects.requireNonNull(thumbnail, "thumbnail");
+            return mainThread.handOff(findingStore.storeThumbnail(id, thumbnail));
+        }
+
+        @Override
+        public CompletableFuture<List<Finding>> withoutThumbnail(long afterId, int limit) {
+            if (limit < 1) {
+                throw new IllegalArgumentException("limit " + limit);
+            }
+            return mainThread.handOff(findingStore.withoutThumbnail(afterId, limit));
         }
 
         @Override

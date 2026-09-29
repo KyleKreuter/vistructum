@@ -7,6 +7,7 @@ import de.kylekreuter.vistructum.ui.gui.PackDelivery;
 import de.kylekreuter.vistructum.ui.gui.PackServer;
 import de.kylekreuter.vistructum.ui.gui.ResourcePack;
 import de.kylekreuter.vistructum.ui.gui.ReviewMenus;
+import de.kylekreuter.vistructum.ui.gui.Thumbnails;
 import de.kylekreuter.vistructum.ui.text.Messages;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -54,7 +55,8 @@ public final class VistructumUi extends JavaPlugin {
         } catch (IOException e) {
             getLogger().log(Level.SEVERE, "the resource pack cannot be served on port " + port, e);
         }
-        ReviewMenus menus = new ReviewMenus(this, vistructum, messages, clock, loadMapCards());
+        Thumbnails thumbnails = new Thumbnails(this, vistructum);
+        ReviewMenus menus = new ReviewMenus(this, vistructum, messages, clock, loadMapCards(), thumbnails);
         VisCommand command = new VisCommand(vistructum, menus, messages, STAFF_PERMISSION, ADMIN_PERMISSION, clock);
         PluginCommand vis = Objects.requireNonNull(getCommand("vis"));
         vis.setExecutor(command);
@@ -63,6 +65,8 @@ public final class VistructumUi extends JavaPlugin {
         scanBossBar = new ScanBossBar(this, STAFF_PERMISSION, messages);
         getServer().getPluginManager().registerEvents(scanBossBar, this);
         getServer().getPluginManager().registerEvents(new MenuListener(), this);
+        getServer().getPluginManager().registerEvents(thumbnails, this);
+        getServer().getScheduler().runTask(this, thumbnails::fillMissing);
         getServer().getPluginManager().registerEvents(new PackDelivery(pack,
                 URI.create(Objects.requireNonNull(getConfig().getString("pack.public-url"), "pack.public-url")),
                 STAFF_PERMISSION, messages), this);

@@ -85,4 +85,11 @@ CREATE TABLE IF NOT EXISTS player_faces (
     name       TEXT,
     pixels     BLOB,
     fetched_at INTEGER NOT NULL
-) WITHOUT ROWID
+) WITHOUT ROWID;
+
+CREATE TABLE IF NOT EXISTS finding_thumbnails (
+    finding_id INTEGER PRIMARY KEY REFERENCES findings (id) ON DELETE CASCADE,
+    width      INTEGER NOT NULL,
+    height     INTEGER NOT NULL,
+    pixels     BLOB    NOT NULL
+)

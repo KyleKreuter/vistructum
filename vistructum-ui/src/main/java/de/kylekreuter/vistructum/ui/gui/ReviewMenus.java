@@ -15,7 +15,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -40,21 +39,21 @@ import static de.kylekreuter.vistructum.ui.text.Messages.text;
 
 public final class ReviewMenus {
 
-    private final Plugin plugin;
     private final Vistructum vistructum;
     private final Messages messages;
     private final Clock clock;
     private final Executor mainThread;
     private final Optional<MapCards> mapCards;
+    private final Thumbnails thumbnails;
 
     public ReviewMenus(Plugin plugin, Vistructum vistructum, Messages messages, Clock clock,
-                       Optional<MapCards> mapCards) {
-        this.plugin = Objects.requireNonNull(plugin, "plugin");
+                       Optional<MapCards> mapCards, Thumbnails thumbnails) {
         this.vistructum = Objects.requireNonNull(vistructum, "vistructum");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.mainThread = Bukkit.getScheduler().getMainThreadExecutor(plugin);
         this.mapCards = Objects.requireNonNull(mapCards, "mapCards");
+        this.thumbnails = Objects.requireNonNull(thumbnails, "thumbnails");
     }
 
     public void openList(Player player, ListPosition position) {
@@ -204,11 +203,7 @@ public final class ReviewMenus {
     }
 
     private CompletableFuture<Picture> scene(Finding finding) {
-        World world = Bukkit.getWorld(finding.world());
-        if (world == null) {
-            return CompletableFuture.completedFuture(Scene.empty());
-        }
-        return Scene.capture(plugin, world, finding.box()).exceptionally(error -> Scene.empty());
+        return thumbnails.picture(finding).exceptionally(error -> Scene.empty());
     }
 
     private CompletableFuture<Optional<PlayerFace>> face(Finding finding) {

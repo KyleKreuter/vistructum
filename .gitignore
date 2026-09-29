@@ -13,6 +13,11 @@ target/
 *.jar
 *.war
 
+# Web app (vistructum-ui/src/main/webapp)
+vistructum-ui/src/main/webapp/node_modules/
+vistructum-ui/src/main/webapp/node/
+vistructum-ui/src/main/webapp/dist/
+
 # Python
 __pycache__/
 *.py[cod]

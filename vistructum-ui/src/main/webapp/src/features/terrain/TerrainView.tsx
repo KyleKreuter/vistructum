@@ -1,9 +1,8 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { Heatmap, Palette, Scene } from "@/api/types";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useWorldAssets } from "@/features/world/assets";
 import { EntityLights } from "@/features/world/EntityLights";
@@ -84,7 +83,6 @@ function Outline({ scene, height }: { scene: Scene; height: number }) {
 }
 
 export default function TerrainView({ scene, colours, heatmap, heatmapState, tint, onTint, active = true }: TerrainViewProps) {
-  const [lift, setLift] = useState(1);
   const { resolved } = useTheme();
   const terrain = useMemo(() => terrainGrid(scene), [scene]);
   const palette = useMemo(() => scenePalette(scene, colours), [scene, colours]);
@@ -106,12 +104,12 @@ export default function TerrainView({ scene, colours, heatmap, heatmapState, tin
         <Canvas flat camera={{ position: [cx - distance * 0.3, level + distance * 0.7, cz + distance], fov: 45, near: 0.5, far: 4000 }} dpr={[1, 2]} frameloop={active ? "always" : "never"}>
           <Sky colours={skyTheme(resolved === "dark")} near={near} far={far} />
           <EntityLights />
-          <group position={[-scene.width / 2, terrain.floor * lift, -scene.height / 2]} scale={[1, lift, 1]}>
+          <group position={[-scene.width / 2, terrain.floor, -scene.height / 2]}>
             {loaded && <TerrainBlocks terrain={terrain} loaded={loaded} />}
             {surface && <HeatLayer surface={surface} />}
           </group>
-          <Outline scene={scene} height={(top + 1.5) * lift} />
-          <OrbitControls target={[cx, level * lift, cz]} enableDamping makeDefault />
+          <Outline scene={scene} height={top + 1.5} />
+          <OrbitControls target={[cx, level, cz]} enableDamping makeDefault />
         </Canvas>
         {!loaded && <div className="pointer-events-none absolute inset-x-0 top-3 text-center text-xs text-white/80">Loading block textures…</div>}
         <div className="pointer-events-none absolute bottom-2 left-3 text-xs text-well-foreground/80">Drag to rotate · right-drag to pan · scroll to zoom</div>
@@ -120,10 +118,6 @@ export default function TerrainView({ scene, colours, heatmap, heatmapState, tin
         <div className="flex items-center gap-2">
           <Switch id="tint" checked={tint} onCheckedChange={onTint} />
           <Label htmlFor="tint">Heatmap tint</Label>
-        </div>
-        <div className="flex min-w-60 items-center gap-3">
-          <Label className="shrink-0">Exaggeration {lift}×</Label>
-          <Slider min={1} max={4} step={0.5} value={[lift]} onValueChange={([value]) => setLift(value)} />
         </div>
         {heatNote && <span className="text-muted-foreground">{heatNote}</span>}
       </div>

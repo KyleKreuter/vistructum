@@ -28,28 +28,32 @@ public final class BlockChangeListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
         if (!(event instanceof BlockMultiPlaceEvent)) {
-            record(event.getBlock(), event.getPlayer(), ChangeKind.PLACE);
+            Block placed = event.getBlockPlaced();
+            record(placed.getLocation(), event.getPlayer(), ChangeKind.PLACE, placed.getBlockData().getAsString(),
+                    event.getBlockReplacedState().getBlockData().getAsString(), clock.getAsLong());
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMultiPlace(BlockMultiPlaceEvent event) {
         long now = clock.getAsLong();
-        for (BlockState state : event.getReplacedBlockStates()) {
-            Location location = state.getLocation();
-            store.record(location.getWorld().getName(),
-                    new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ()),
-                    event.getPlayer().getUniqueId(), ChangeKind.PLACE, location.getBlock().getType().name(), now);
+        for (BlockState replaced : event.getReplacedBlockStates()) {
+            Location location = replaced.getLocation();
+            record(location, event.getPlayer(), ChangeKind.PLACE, location.getBlock().getBlockData().getAsString(),
+                    replaced.getBlockData().getAsString(), now);
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent event) {
-        record(event.getBlock(), event.getPlayer(), ChangeKind.BREAK);
+        String broken = event.getBlock().getBlockData().getAsString();
+        record(event.getBlock().getLocation(), event.getPlayer(), ChangeKind.BREAK, broken, broken, clock.getAsLong());
     }
 
-    private void record(Block block, Player player, ChangeKind kind) {
-        store.record(block.getWorld().getName(), new BlockPos(block.getX(), block.getY(), block.getZ()),
-                player.getUniqueId(), kind, block.getType().name(), clock.getAsLong());
+    private void record(Location location, Player player, ChangeKind kind, String blockData, String previousData,
+                        long changedAt) {
+        store.record(new TrackedChange(location.getWorld().getName(),
+                new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ()), player.getUniqueId(),
+                player.getName(), kind, blockData, previousData, changedAt));
     }
 }

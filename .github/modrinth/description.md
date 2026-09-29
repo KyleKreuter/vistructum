@@ -1,5 +1,3 @@
-![Vistructum](https://raw.githubusercontent.com/KyleKreuter/vistructum/main/docs/logo.png)
-
 Vistructum finds swastikas that players build from blocks on your Paper server and reports them to your staff. Two small neural networks check new builds shortly after players finish them and scan whole worlds once a day. Every detection becomes a **finding** that staff confirm or mark as a false alarm.
 
 Vistructum never kicks, bans, or rolls back on its own. Every decision stays with your staff.

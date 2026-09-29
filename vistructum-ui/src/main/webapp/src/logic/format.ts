@@ -39,7 +39,7 @@ export function formatRelative(iso: string | null | undefined, now: number = Dat
 }
 
 export function formatScore(score: number): string {
-  return score.toFixed(3);
+  return `${Math.round(score * 100)}%`;
 }
 
 export function formatPercent(value: number | null): string {

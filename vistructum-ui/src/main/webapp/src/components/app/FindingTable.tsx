@@ -65,8 +65,7 @@ export function FindingTable({
                   <VerdictBadge review={finding.review} />
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  <div>{formatScore(finding.score)}</div>
-                  <div className="text-xs text-muted-foreground">{finding.modelVersion}</div>
+                  {formatScore(finding.score)}
                 </TableCell>
                 <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
                   <div className="text-foreground">{finding.world}</div>

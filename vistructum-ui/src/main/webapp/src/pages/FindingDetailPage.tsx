@@ -341,7 +341,7 @@ export default function FindingDetailPage() {
             </TabsContent>
           </div>
 
-          <aside className={cn("flex flex-col gap-4", tab === "replay" && "lg:h-[max(20rem,min(64vh,680px))]")}>
+          <aside className={cn("flex flex-col gap-4", tab === "replay" && "lg:h-[max(20rem,min(64vh,680px))]", tab === "scene" && "lg:mt-12")}>
             <Card className="shrink-0 gap-4 py-4">
               <CardContent className="space-y-4 px-4">
                 <VerdictButtons finding={data} pending={verdict.isPending} onVerdict={judge} />

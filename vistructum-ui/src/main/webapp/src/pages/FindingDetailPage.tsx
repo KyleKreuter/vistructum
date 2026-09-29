@@ -277,7 +277,6 @@ export default function FindingDetailPage() {
                       evidence={evidence.data}
                       palette={palette.data}
                       skinUrl={urls.skin}
-                      showCoordinates
                       controlsRef={replayControls}
                       playersTarget={playerSlot}
                       stageRef={tab === "replay" ? setStage : undefined}

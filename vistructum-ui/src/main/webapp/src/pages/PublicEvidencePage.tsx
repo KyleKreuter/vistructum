@@ -86,7 +86,7 @@ export default function PublicEvidencePage() {
               </div>
             )}
             <Suspense fallback={<PageSpinner className="h-[64vh]" />}>
-              <ReplayView evidence={evidence.data.evidence} palette={palette.data} skinUrl={skinUrl} facesFromSkin showCoordinates={false} controlsRef={controls} />
+              <ReplayView evidence={evidence.data.evidence} palette={palette.data} skinUrl={skinUrl} facesFromSkin controlsRef={controls} />
             </Suspense>
           </>
         )}

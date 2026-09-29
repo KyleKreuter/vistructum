@@ -1,42 +1,22 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router";
+import { lazy, Suspense, useCallback, useState } from "react";
+import { useParams } from "react-router";
 import { ApiError, urls } from "@/api/client";
-import { useFindings, usePlayer } from "@/api/queries";
-import type { Paging } from "@/api/types";
-import { FindingTable } from "@/components/app/FindingTable";
-import { Pagination } from "@/components/app/Pagination";
+import { usePlayer } from "@/api/queries";
+import { FindingList } from "@/components/app/FindingList";
 import { PlayerFace } from "@/components/app/PlayerFace";
 import { EmptyState, ErrorState, PageSpinner } from "@/components/app/States";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { defaultFilter, isUuid, listParams, parsePaging } from "@/logic/filters";
-import { formatPercent, precision, shortUuid } from "@/logic/format";
+import { isUuid } from "@/logic/filters";
+import { shortUuid } from "@/logic/format";
 
 const SkinPreview = lazy(() => import("@/features/player/SkinPreview"));
-
-function Count({ label, value, to }: { label: string; value: number; to: string }) {
-  return (
-    <Link to={to} className="rounded-lg border p-3 hover:border-ring">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-xl font-semibold tabular-nums">{value.toLocaleString("en-GB")}</div>
-    </Link>
-  );
-}
 
 export default function PlayerPage() {
   const uuid = useParams().uuid ?? "";
   const valid = isUuid(uuid);
   const player = usePlayer(uuid);
-  const filter = useMemo(() => ({ ...defaultFilter, state: "any" as const, player: uuid }), [uuid]);
-  const [params, setParams] = useSearchParams();
-  const paging = useMemo(() => parsePaging(params), [params]);
-  const findings = useFindings(filter, paging);
-  const items = findings.data?.items ?? [];
   const [missingSkin, setMissingSkin] = useState<string | null>(null);
   const onMissing = useCallback(() => setMissingSkin(uuid), [uuid]);
-  const suffix = `?${listParams(filter, paging).toString()}`;
-  const turn = (next: Paging) => setParams(listParams(filter, next));
-  const listFor = (state: string) => `/findings?${new URLSearchParams({ state, player: uuid }).toString()}`;
 
   if (!valid) return <EmptyState title="This is not a player id" />;
   if (player.isPending) return <PageSpinner />;
@@ -50,8 +30,8 @@ export default function PlayerPage() {
   const info = player.data;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <div className="space-y-4">
+    <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="space-y-4 lg:min-h-0 lg:overflow-y-auto">
         <Card className="gap-4 py-4">
           <CardContent className="space-y-4 px-4">
             <div className="flex items-center gap-3">
@@ -72,34 +52,17 @@ export default function PlayerPage() {
             )}
           </CardContent>
         </Card>
-        <div className="grid grid-cols-2 gap-2">
-          <Count label="Findings" value={info.findings.total} to={listFor("any")} />
-          <Count label="Open" value={info.findings.open} to={listFor("open")} />
-          <Count label="Confirmed" value={info.findings.confirmed} to={listFor("confirmed")} />
-          <Count label="False alarms" value={info.findings.falseAlarms} to={listFor("false_alarm")} />
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {formatPercent(precision(info.findings.confirmed, info.findings.falseAlarms))} of the reviewed findings with this player were confirmed.
-        </p>
       </div>
-      <div className="min-w-0 space-y-3">
-        <h2 className="text-base font-semibold">Findings with {info.name ?? shortUuid(uuid)}</h2>
-        {findings.isPending ? (
-          <PageSpinner />
-        ) : findings.isError ? (
-          <ErrorState error={findings.error} onRetry={() => void findings.refetch()} />
-        ) : items.length === 0 && findings.data.total === 0 ? (
-          <EmptyState title="No findings" />
-        ) : (
-          <div className={cn("space-y-3", findings.isPlaceholderData && "opacity-60 transition-opacity")}>
-            {items.length === 0 ? (
-              <EmptyState title={`Page ${paging.page} is empty`} />
-            ) : (
-              <FindingTable items={items} linkSuffix={suffix} />
-            )}
-            <Pagination paging={paging} total={findings.data.total} onChange={turn} />
-          </div>
-        )}
+      <div className="flex min-w-0 flex-col lg:min-h-0">
+        <FindingList
+          player={uuid}
+          header={(total) => (
+            <h2 className="text-base font-semibold">
+              Findings with {info.name ?? shortUuid(uuid)}
+              {total !== undefined && <span className="ml-2 text-sm font-normal text-muted-foreground tabular-nums">{total.toLocaleString("en-GB")}</span>}
+            </h2>
+          )}
+        />
       </div>
     </div>
   );

@@ -23,9 +23,10 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const logout = useLogout();
   const client = useQueryClient();
   const navigate = useNavigate();
-  const fixed = useMatch({ path: "/findings", end: true }) !== null;
+  const findingsRoute = useMatch({ path: "/findings", end: true }) !== null;
+  const playerRoute = useMatch({ path: "/players/:uuid", end: true }) !== null;
   return (
-    <div className={cn("flex flex-col", fixed ? "min-h-screen md:h-dvh md:min-h-0 md:overflow-hidden" : "min-h-screen")}>
+    <div className={cn("flex min-h-screen flex-col", findingsRoute && "md:h-dvh md:min-h-0 md:overflow-hidden", playerRoute && "lg:h-dvh lg:min-h-0 lg:overflow-hidden")}>
       <header className="sticky top-0 z-30 shrink-0 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
         <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-4 px-4">
           <NavLink to="/findings?state=open" className="flex shrink-0 items-center rounded-sm" aria-label="Vistructum findings">
@@ -95,7 +96,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className={cn("mx-auto w-full max-w-[1600px] flex-1 px-4 py-5", fixed && "flex flex-col md:min-h-0")}>{children}</main>
+      <main className={cn("mx-auto w-full max-w-[1600px] flex-1 px-4 py-5", findingsRoute && "flex flex-col md:min-h-0", playerRoute && "flex flex-col lg:min-h-0")}>{children}</main>
     </div>
   );
 }

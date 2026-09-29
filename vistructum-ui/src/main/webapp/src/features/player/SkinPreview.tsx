@@ -1,11 +1,9 @@
 import { OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Box3 } from "three";
-import { IdleAnimation, WalkingAnimation, type PlayerAnimation } from "skinview3d/libs/animation.js";
+import { IdleAnimation, type PlayerAnimation } from "skinview3d/libs/animation.js";
 import { PlayerObject } from "skinview3d/libs/model.js";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/lib/theme";
 import { EntityLights } from "@/features/world/EntityLights";
 import { Sky } from "@/features/world/Sky";
@@ -31,9 +29,9 @@ function play(animation: PlayerAnimation, player: PlayerObject, delta: number) {
   animation.update(player, delta);
 }
 
-function Player({ url, walking, onMissing }: { url: string; walking: boolean; onMissing: () => void }) {
+function Player({ url, onMissing }: { url: string; onMissing: () => void }) {
   const player = useMemo(() => createPlayer(), []);
-  const animation = useMemo<PlayerAnimation>(() => (walking ? new WalkingAnimation() : new IdleAnimation()), [walking]);
+  const animation = useMemo<PlayerAnimation>(() => new IdleAnimation(), []);
 
   useEffect(() => {
     let active = true;
@@ -53,22 +51,15 @@ function Player({ url, walking, onMissing }: { url: string; walking: boolean; on
 }
 
 export default function SkinPreview({ url, onMissing }: { url: string; onMissing: () => void }) {
-  const [walking, setWalking] = useState(false);
   const { resolved } = useTheme();
   return (
-    <div className="space-y-2">
-      <div className="h-72 overflow-hidden rounded-lg bg-well">
-        <Canvas flat camera={{ position: [26, 6, 58], fov: 45, near: 1, far: 400 }} dpr={[1, 2]} aria-label="3D skin preview">
-          <Sky colours={skyTheme(resolved === "dark")} near={300} far={600} />
-          <EntityLights />
-          <Player url={url} walking={walking} onMissing={onMissing} />
-          <OrbitControls target={[0, 0, 0]} enablePan={false} minDistance={30} maxDistance={90} autoRotate autoRotateSpeed={1.2} makeDefault />
-        </Canvas>
-      </div>
-      <div className="flex items-center gap-2 text-sm">
-        <Switch id="walking" checked={walking} onCheckedChange={setWalking} />
-        <Label htmlFor="walking">Walking</Label>
-      </div>
+    <div className="h-72 overflow-hidden rounded-lg bg-well">
+      <Canvas flat camera={{ position: [26, 6, 58], fov: 45, near: 1, far: 400 }} dpr={[1, 2]} aria-label="3D skin preview">
+        <Sky colours={skyTheme(resolved === "dark")} near={300} far={600} />
+        <EntityLights />
+        <Player url={url} onMissing={onMissing} />
+        <OrbitControls target={[0, 0, 0]} enablePan={false} minDistance={30} maxDistance={90} autoRotate autoRotateSpeed={1.2} makeDefault />
+      </Canvas>
     </div>
   );
 }

@@ -13,6 +13,9 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     env:
       MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
       MODRINTH_PROJECT: vistructum
@@ -42,21 +45,32 @@ jobs:
       - name: gallery
         run: |
           modrinth() { curl -sS --fail-with-body -H "Authorization: $MODRINTH_TOKEN" -H "User-Agent: $AGENT" "$@"; }
-          previous=$(modrinth "$API/project/$MODRINTH_PROJECT" | jq -r '.gallery[].url')
-          jq -c 'to_entries[]' .github/modrinth/gallery.json | while read -r entry; do
-            file=$(jq -r '.value.file' <<< "$entry")
-            [[ -f ".github/modrinth/gallery/$file" ]] || { echo "::error::gallery image $file is missing"; exit 1; }
-            query=$(jq -r '{ext: "png", featured: (.value.featured // false | tostring), title: .value.title,
+          uri() { jq -rn --arg value "$1" '$value | @uri'; }
+          gallery=$(modrinth "$API/project/$MODRINTH_PROJECT" | jq -c '[.gallery[] | {url, raw_url}]')
+          kept=()
+          while read -r entry; do
+            file=".github/modrinth/gallery/$(jq -r '.value.file' <<< "$entry")"
+            [[ -f "$file" ]] || { echo "::error::gallery image $file is missing"; exit 1; }
+            query=$(jq -r '{featured: (.value.featured // false | tostring), title: .value.title,
               description: .value.description, ordering: (.key | tostring)} | to_entries | map("\(.key)=\(.value | @uri)") | join("&")' <<< "$entry")
-            modrinth -X POST "$API/project/$MODRINTH_PROJECT/gallery?$query" \
-              -H "Content-Type: image/png" --data-binary "@.github/modrinth/gallery/$file"
-            echo "uploaded $file"
-          done
+            hash=$(sha1sum "$file" | cut -d' ' -f1)
+            existing=$(jq -r --arg hash "$hash" 'map(select((.url + " " + (.raw_url // "")) | contains($hash))) | first | .url // empty' <<< "$gallery")
+            if [[ -n "$existing" ]]; then
+              modrinth -X PATCH "$API/project/$MODRINTH_PROJECT/gallery?url=$(uri "$existing")&$query"
+              kept+=("$existing")
+              echo "kept $file"
+            else
+              modrinth -X POST "$API/project/$MODRINTH_PROJECT/gallery?ext=png&$query" \
+                -H "Content-Type: image/png" --data-binary "@$file"
+              echo "uploaded $file"
+            fi
+          done < <(jq -c 'to_entries[]' .github/modrinth/gallery.json)
           while read -r url; do
             [[ -n "$url" ]] || continue
-            modrinth -X DELETE "$API/project/$MODRINTH_PROJECT/gallery?url=$(jq -rn --arg url "$url" '$url | @uri')"
+            [[ " ${kept[*]} " == *" $url "* ]] && continue
+            modrinth -X DELETE "$API/project/$MODRINTH_PROJECT/gallery?url=$(uri "$url")"
             echo "removed $url"
-          done <<< "$previous"
+          done < <(jq -r '.[].url' <<< "$gallery")
       - name: status
         run: |
           curl -sS --fail-with-body "$API/project/$MODRINTH_PROJECT" \

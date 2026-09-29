@@ -70,7 +70,7 @@ def test_score_without_tta_or_prefilter():
 
 
 def meta(**extra):
-    base = {META_VERSION: "bf-scan-2", META_KIND: "fullscan", META_LABELS: '["ok", "hakenkreuz"]',
+    base = {META_VERSION: "bf-scan-3", META_KIND: "fullscan", META_LABELS: '["ok", "hakenkreuz"]',
             META_FEATURE_SPEC: FEATURE_SPEC, META_THRESHOLD: "0.9"}
     assert tuple(LABELS) == ("ok", "hakenkreuz")
     return base | extra

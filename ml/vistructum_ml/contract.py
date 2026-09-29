@@ -23,7 +23,7 @@ class ModelKind:
 MASK = ModelKind("mask", "bf-mask-4", 1, (1.0,), (0.0,))
 FULLSCAN = ModelKind(
     "fullscan",
-    "bf-scan-2",
+    "bf-scan-3",
     4,
     (1.0 / HEIGHT_CLIP, 1.0, 1.0 / 64.0, 1.0),
     (-1.0, 0.0, -2.0, 0.0),

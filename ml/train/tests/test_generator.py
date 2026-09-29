@@ -305,3 +305,77 @@ def test_irregular_partial_hooks_cover_zero_to_three_hooks(monkeypatch):
     for _ in range(200):
         shapes.irregular_partial_hooks(rng)
     assert hook_counts == {0, 1, 2, 3}
+
+
+def _components(mask):
+    seen = np.zeros_like(mask)
+    count = 0
+    for start in map(tuple, np.argwhere(mask)):
+        if seen[start]:
+            continue
+        count += 1
+        stack = [start]
+        seen[start] = True
+        while stack:
+            r, c = stack.pop()
+            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                if 0 <= nr < mask.shape[0] and 0 <= nc < mask.shape[1] and mask[nr, nc] and not seen[nr, nc]:
+                    seen[nr, nc] = True
+                    stack.append((nr, nc))
+    return count
+
+
+def test_sloppy_removal_keeps_the_symbol_in_one_piece_and_thin_strokes_whole():
+    from generator.scenes import remove_cells_keeping_strokes
+    rng = np.random.default_rng(21)
+    for _ in range(200):
+        mask = build_irregular_symbol(rng, bool(rng.random() < 0.5))
+        kept = remove_cells_keeping_strokes(rng, mask, int(mask.sum() * 0.2))
+        assert _components(kept) == 1
+    thin_line = np.zeros((3, 12), dtype=bool)
+    thin_line[1, 1:11] = True
+    assert np.array_equal(remove_cells_keeping_strokes(rng, thin_line, 5), thin_line)
+
+
+def test_water_in_ice_positives_are_flush_water_on_ice():
+    from evaluate import subtype_groups
+    from generator import scenes
+    from generator.palette import block_id
+    rng = np.random.default_rng(31)
+    blocks = np.full((scenes.CANVAS, scenes.CANVAS), block_id("grass_block"), dtype=np.int32)
+    heights = np.full((scenes.CANVAS, scenes.CANVAS), 64, dtype=np.int32)
+    modes = {scenes._context_box(rng, blocks.copy(), heights.copy(), "in-ice", 40, 40, 9, 9)[0] for _ in range(60)}
+    assert modes == {"flush-water", "flush-diff"}
+    assert subtype_groups("pos-flush-water-in-ice") == ("pos", "flush-water")
+
+
+def test_surface_steps_stay_between_minus_one_and_two(monkeypatch):
+    from generator import scenes
+    deltas = set()
+    original = scenes._stamp
+
+    def record(blocks, heights, mask, block_arr, delta_arr, top, left):
+        if hasattr(delta_arr, "shape"):
+            deltas.update(np.unique(delta_arr[mask]).tolist())
+        return original(blocks, heights, mask, block_arr, delta_arr, top, left)
+
+    monkeypatch.setattr(scenes, "_stamp", record)
+    monkeypatch.setattr(scenes, "_stamp_decoys", lambda *args: None)
+    rng = np.random.default_rng(33)
+    for _ in range(300):
+        scenes.make_fullscan_sample(rng, 1)
+    assert deltas and min(deltas) >= -1 and max(deltas) <= 2
+
+
+def test_surface_symbols_follow_the_2b2t_sizes_and_mask_symbols_keep_theirs():
+    from generator.scenes import _build_symbol_variant
+    rng = np.random.default_rng(41)
+    surface = [_build_symbol_variant(rng, False, "fullscan") for _ in range(2000)]
+    regular = [mask for mask, irregular, diag in surface if not irregular and not diag]
+    irregular_share = np.mean([irregular for _mask, irregular, _diag in surface])
+    small_share = np.mean([max(mask.shape) <= 11 for mask in regular])
+    assert 0.12 < irregular_share < 0.18
+    assert 0.55 < small_share < 0.68
+    assert max(max(mask.shape) for mask in regular) <= 40
+    mask_kind = [_build_symbol_variant(rng, False, "mask") for _ in range(2000)]
+    assert 0.45 < np.mean([irregular for _mask, irregular, _diag in mask_kind]) < 0.55

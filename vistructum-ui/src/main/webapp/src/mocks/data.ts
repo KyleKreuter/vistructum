@@ -250,7 +250,7 @@ export function createDefaultDb(fixture: Fixture, now = Date.now()): MockDb {
     const reviewedChance = age / (total * 11 * 3600_000);
     let review: FindingSummary["review"] = null;
     if (rnd() < 0.25 + reviewedChance) {
-      const verdict: Verdict = base.verdict === "CONFIRMED" || rnd() < 0.3 ? "CONFIRMED" : "FALSE_ALARM";
+      const verdict: Verdict = base.verdict === "CONFIRMED" || rnd() < 0.9 ? "CONFIRMED" : "FALSE_ALARM";
       const reviewedAt = new Date(Math.min(now - 60_000, createdAt.getTime() + rnd() * 30 * 3600_000));
       const reviewer = reviewers[Math.floor(rnd() * reviewers.length)];
       review = { verdict, reviewer, reviewedAt: reviewedAt.toISOString() };

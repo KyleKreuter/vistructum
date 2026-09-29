@@ -1,6 +1,7 @@
 # Lokale Planung und Dokumentation bleiben aus dem Repo
 *.md
 !README.md
+!.github/modrinth/description.md
 
 # Secrets und lokale Konfiguration
 .env

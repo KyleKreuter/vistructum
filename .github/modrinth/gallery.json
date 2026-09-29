@@ -1,0 +1,33 @@
+[
+  {
+    "file": "1-findings.png",
+    "title": "Findings",
+    "description": "The finding list in the web app with filters for state, source, world, and date.",
+    "featured": true
+  },
+  {
+    "file": "2-replay.png",
+    "title": "Evidence replay",
+    "description": "A 3D replay of how a symbol was built, block by block, with the players who placed the blocks."
+  },
+  {
+    "file": "3-public-replay.png",
+    "title": "Public evidence link",
+    "description": "The public replay page of a confirmed finding. It needs no sign-in and hides the world name and coordinates."
+  },
+  {
+    "file": "4-heatmap.png",
+    "title": "Heatmap",
+    "description": "The detail view of a finding with the heatmap of the blocks the model relied on."
+  },
+  {
+    "file": "5-terrain-3d.png",
+    "title": "3D terrain",
+    "description": "The 3D view of the terrain around a finding with the heatmap overlay."
+  },
+  {
+    "file": "6-statistics.png",
+    "title": "Statistics",
+    "description": "Findings per day, precision per detection path, and reviews per staff member."
+  }
+]

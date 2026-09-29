@@ -5,10 +5,9 @@ import { errorMessage } from "@/api/client";
 import { useShare } from "@/api/queries";
 import type { FindingDetail } from "@/api/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { copyText } from "@/lib/clipboard";
-import { formatDateTime } from "@/logic/format";
 import { shareView } from "@/logic/share";
 
 export function SharePanel({ finding, canShare }: { finding: FindingDetail; canShare: boolean }) {
@@ -49,9 +48,6 @@ export function SharePanel({ finding, canShare }: { finding: FindingDetail; canS
         <CardTitle className="flex items-center gap-2 text-sm">
           <Link2 className="size-4" /> Public evidence link
         </CardTitle>
-        <CardDescription className="text-xs">
-          The public page shows only the replay, the date and the players. It shows no coordinates and no world.
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 px-4 text-sm">
         {url ? (
@@ -67,7 +63,6 @@ export function SharePanel({ finding, canShare }: { finding: FindingDetail; canS
                 </a>
               </Button>
             </div>
-            {finding.sharedSince && <p className="text-xs text-muted-foreground">Active since {formatDateTime(finding.sharedSince)}.</p>}
             {canShare && (
               <Button size="sm" variant="outline" className="text-destructive" onClick={turnOff} disabled={busy}>
                 <Link2Off /> Deactivate

@@ -278,6 +278,20 @@ class WebServerTest {
                 .getAsString());
         assertFalse(inference.has("detail"));
         assertEquals(0, status.getAsJsonArray("scans").size());
+        JsonObject textures = status.getAsJsonObject("textures");
+        assertFalse(textures.get("enabled").getAsBoolean());
+        assertFalse(textures.get("available").getAsBoolean());
+        assertTrue(textures.get("version").isJsonNull());
+    }
+
+    @Test
+    void assetsAreUnavailableWithoutTheOptIn() throws Exception {
+        HttpResponse<String> response = get("/review/api/assets", Map.of());
+        assertEquals(200, response.statusCode());
+        assertFalse(json(response).get("available").getAsBoolean());
+        assertTrue(json(response).get("version").isJsonNull());
+        assertEquals(404, get("/review/api/assets/1.21.4/models.json", Map.of()).statusCode());
+        assertEquals(404, get("/review/api/assets/1.21.4/textures/block/stone.png", Map.of()).statusCode());
     }
 
     @Test
@@ -352,7 +366,8 @@ class WebServerTest {
             }
         };
         return new WebServer.WebApp(vistructum, new WebSettings(true, "127.0.0.1", "https://review.example/"), game,
-                Map.of("minecraft:stone", 0x707070), Runnable::run, loader, Clock.fixed(NOW, ZoneOffset.UTC),
+                Map.of("minecraft:stone", 0x707070), new GameAssets(web.resolve("assets"), "1.21.4", false),
+                Runnable::run, loader, Clock.fixed(NOW, ZoneOffset.UTC),
                 Logger.getLogger("test"));
     }
 

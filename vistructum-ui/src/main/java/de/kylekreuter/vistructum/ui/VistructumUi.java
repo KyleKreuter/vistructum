@@ -9,6 +9,7 @@ import de.kylekreuter.vistructum.ui.gui.ReviewMenus;
 import de.kylekreuter.vistructum.ui.gui.Thumbnails;
 import de.kylekreuter.vistructum.ui.text.Messages;
 import de.kylekreuter.vistructum.ui.web.BukkitGameServer;
+import de.kylekreuter.vistructum.ui.web.GameAssets;
 import de.kylekreuter.vistructum.ui.web.ReviewLinks;
 import de.kylekreuter.vistructum.ui.web.WebServer;
 import de.kylekreuter.vistructum.ui.web.WebSettings;
@@ -37,8 +38,10 @@ public final class VistructumUi extends JavaPlugin {
     private static final String SHARE_PERMISSION = "vistructum.evidence.share";
     private static final String MESSAGES_FILE = "messages.yml";
     private static final String MAPS_FILE = "maps.yml";
+    private static final String ASSETS_FOLDER = "assets";
 
     private WebServer webServer;
+    private GameAssets gameAssets;
     private ScanBossBar scanBossBar;
 
     @Override
@@ -86,16 +89,22 @@ public final class VistructumUi extends JavaPlugin {
             webServer.close();
             webServer = null;
         }
+        if (gameAssets != null) {
+            gameAssets.close();
+            gameAssets = null;
+        }
     }
 
     private void startWebServer(Vistructum vistructum, ResourcePack pack, WebSettings web, Clock clock) {
         int port = getConfig().getInt("pack.bind-port");
         InetSocketAddress address = web.enabled() ? new InetSocketAddress(web.bindAddress(), port)
                 : new InetSocketAddress(port);
+        gameAssets = new GameAssets(getDataFolder().toPath().resolve(ASSETS_FOLDER), Bukkit.getMinecraftVersion(),
+                web.enabled() && getConfig().getBoolean("web.textures.download"));
         Optional<WebServer.WebApp> app = web.enabled()
                 ? Optional.of(new WebServer.WebApp(vistructum, web, new BukkitGameServer(SHARE_PERMISSION),
-                BukkitGameServer.palette(), Bukkit.getScheduler().getMainThreadExecutor(this), getClassLoader(), clock,
-                getLogger()))
+                BukkitGameServer.palette(), gameAssets, Bukkit.getScheduler().getMainThreadExecutor(this),
+                getClassLoader(), clock, getLogger()))
                 : Optional.empty();
         try {
             webServer = WebServer.start(address, pack, app);
@@ -106,6 +115,7 @@ public final class VistructumUi extends JavaPlugin {
         if (web.enabled()) {
             getLogger().info("the web app is served on " + address + " and linked as " + web.publicUrl()
                     + WebSettings.HOME);
+            gameAssets.fetch(GameAssets.MANIFEST, getLogger());
         }
     }
 

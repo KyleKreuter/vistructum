@@ -53,8 +53,8 @@ public final class WebServer implements AutoCloseable {
             }
         });
         app.ifPresent(web -> server.createContext(WebSettings.ROOT, new ReviewHandler(
-                new ReviewApi(web.vistructum(), web.settings(), web.game(), web.palette(), web.mainThread(), worker,
-                        web.clock()),
+                new ReviewApi(web.vistructum(), web.settings(), web.game(), web.palette(), web.assets(), web.mainThread(),
+                        worker, web.clock()),
                 new StaticFiles(web.files()), worker, web.logger())));
         server.start();
         return new WebServer(server, pool);
@@ -71,13 +71,14 @@ public final class WebServer implements AutoCloseable {
     }
 
     public record WebApp(Vistructum vistructum, WebSettings settings, GameServer game, Map<String, Integer> palette,
-                         Executor mainThread, ClassLoader files, Clock clock, Logger logger) {
+                         GameAssets assets, Executor mainThread, ClassLoader files, Clock clock, Logger logger) {
 
         public WebApp {
             Objects.requireNonNull(vistructum, "vistructum");
             Objects.requireNonNull(settings, "settings");
             Objects.requireNonNull(game, "game");
             palette = Map.copyOf(palette);
+            Objects.requireNonNull(assets, "assets");
             Objects.requireNonNull(mainThread, "mainThread");
             Objects.requireNonNull(files, "files");
             Objects.requireNonNull(clock, "clock");

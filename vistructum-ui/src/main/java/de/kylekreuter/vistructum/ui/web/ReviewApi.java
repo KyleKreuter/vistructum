@@ -67,10 +67,11 @@ final class ReviewApi {
     private final Executor worker;
     private final Clock clock;
     private final Reply palette;
+    private final GameAssets assets;
     private final SecureRandom random = new SecureRandom();
 
     ReviewApi(Vistructum vistructum, WebSettings settings, GameServer game, Map<String, Integer> palette,
-              Executor mainThread, Executor worker, Clock clock) {
+              GameAssets assets, Executor mainThread, Executor worker, Clock clock) {
         this.vistructum = Objects.requireNonNull(vistructum, "vistructum");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.game = Objects.requireNonNull(game, "game");
@@ -78,6 +79,7 @@ final class ReviewApi {
         this.worker = Objects.requireNonNull(worker, "worker");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.palette = Reply.json(Views.palette(palette)).with("Cache-Control", "public, max-age=86400");
+        this.assets = Objects.requireNonNull(assets, "assets");
     }
 
     CompletableFuture<Reply> login(Request request) {
@@ -97,6 +99,9 @@ final class ReviewApi {
         List<String> path = segments(request.path());
         if (path.equals(List.of("palette")) && request.get()) {
             return CompletableFuture.completedFuture(palette);
+        }
+        if (!path.isEmpty() && path.getFirst().equals("assets") && request.get()) {
+            return CompletableFuture.completedFuture(assets(path));
         }
         if (path.size() >= 2 && path.getFirst().equals("public") && request.get()) {
             return publicRoute(path);
@@ -175,6 +180,23 @@ final class ReviewApi {
         return CompletableFuture.failedFuture(ApiError.notFound());
     }
 
+    private Reply assets(List<String> path) {
+        if (path.size() == 1) {
+            return Reply.json(Views.assets(assets)).with("Cache-Control", Reply.NO_CACHE);
+        }
+        String version = path.get(1);
+        if (path.size() == 3 && path.get(2).equals("models.json")) {
+            return assets.models(version).map(file -> Reply.file(Reply.JSON, file, true))
+                    .orElseThrow(ApiError::notFound);
+        }
+        String file = String.join("/", path.subList(Math.min(3, path.size()), path.size()));
+        if (path.size() >= 4 && path.get(2).equals("textures") && file.endsWith(".png")) {
+            return assets.texture(version, file.substring(0, file.length() - ".png".length()))
+                    .map(texture -> Reply.file(Reply.PNG, texture, false)).orElseThrow(ApiError::notFound);
+        }
+        throw ApiError.notFound();
+    }
+
     private CompletableFuture<Reply> me(WebSession session) {
         return onMain(() -> game.canShare(session.player())).thenApply(canShare -> Reply.json(Views.me(session, canShare)));
     }
@@ -190,7 +212,7 @@ final class ReviewApi {
     }
 
     private CompletableFuture<Reply> status() {
-        return off(vistructum.status()).thenApply(status -> Reply.json(Views.status(status)));
+        return off(vistructum.status()).thenApply(status -> Reply.json(Views.status(status, assets)));
     }
 
     private CompletableFuture<Reply> findings(Request request) {

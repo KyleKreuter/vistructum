@@ -189,8 +189,7 @@ final class ReviewApi {
     }
 
     private CompletableFuture<Reply> status() {
-        CompletableFuture<Boolean> recording = onMain(game::recordingEnabled);
-        return off(vistructum.status()).thenCombine(recording, (status, enabled) -> Reply.json(Views.status(status, enabled)));
+        return off(vistructum.status()).thenApply(status -> Reply.json(Views.status(status)));
     }
 
     private CompletableFuture<Reply> findings(Request request) {

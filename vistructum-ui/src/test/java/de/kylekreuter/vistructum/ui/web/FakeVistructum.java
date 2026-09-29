@@ -79,7 +79,7 @@ final class FakeVistructum implements Vistructum, Findings, Scans, Players, WebA
     @Override
     public CompletableFuture<VistructumStatus> status() {
         return completedFuture(new VistructumStatus(3, 1, List.of(),
-                new InferenceStatus(InferenceMode.LOCAL, true, Map.of("mask", "bf-mask-1"), Optional.empty())));
+                new InferenceStatus(InferenceMode.LOCAL, true, Map.of("mask", "bf-mask-1"), Optional.empty()), true));
     }
 
     @Override

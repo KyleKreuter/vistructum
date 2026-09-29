@@ -249,6 +249,19 @@ class WebServerTest {
     }
 
     @Test
+    void statusCarriesTheInferenceModelsAndTheRecordingSwitch() throws Exception {
+        JsonObject status = json(get("/review/api/status", Map.of("Cookie", "vistructum_session=" + session())));
+        assertEquals(3, status.get("trackedChanges").getAsInt());
+        assertTrue(status.get("recordingEnabled").getAsBoolean());
+        JsonObject inference = status.getAsJsonObject("inference");
+        assertEquals("LOCAL", inference.get("mode").getAsString());
+        assertEquals("bf-mask-1", inference.getAsJsonArray("models").get(0).getAsJsonObject().get("version")
+                .getAsString());
+        assertFalse(inference.has("detail"));
+        assertEquals(0, status.getAsJsonArray("scans").size());
+    }
+
+    @Test
     void paletteIsPublicAndCached() throws Exception {
         HttpResponse<String> response = get("/review/api/palette", Map.of());
         assertEquals(200, response.statusCode());
@@ -317,11 +330,6 @@ class WebServerTest {
             @Override
             public Optional<String> dimension(String world) {
                 return world.equals("world") ? Optional.empty() : Optional.of("minecraft:" + world);
-            }
-
-            @Override
-            public boolean recordingEnabled() {
-                return true;
             }
         };
         return new WebServer.WebApp(vistructum, new WebSettings(true, "127.0.0.1", "https://review.example/"), game,

@@ -97,7 +97,7 @@ final class Views {
         return array;
     }
 
-    static JsonObject status(VistructumStatus status, boolean recordingEnabled) {
+    static JsonObject status(VistructumStatus status) {
         JsonObject json = new JsonObject();
         json.addProperty("trackedChanges", status.trackedChanges());
         json.addProperty("openFindings", status.openFindings());
@@ -105,7 +105,7 @@ final class Views {
         JsonArray scans = new JsonArray();
         status.activeScans().forEach(job -> scans.add(scan(job)));
         json.add("scans", scans);
-        json.addProperty("recordingEnabled", recordingEnabled);
+        json.addProperty("recordingEnabled", status.recordingEnabled());
         return json;
     }
 

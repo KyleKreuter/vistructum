@@ -10,6 +10,4 @@ public interface GameServer {
     boolean canShare(UUID player);
 
     Optional<String> dimension(String world);
-
-    boolean recordingEnabled();
 }

@@ -169,6 +169,25 @@ class FindingStoreTest {
         assertTrue(store.query(FindingQuery.all().source(Source.FULLSCAN)).get().findings().isEmpty());
     }
 
+    @Test
+    void queryOffsetSkipsNewestMatchesAfterTheCursor() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            store.insertUnlessDuplicate(detected("world", new BlockBox(i * 100, 60, 0, i * 100 + 10, 62, 10)), NOW,
+                    DEDUPE).get();
+        }
+
+        FindingQuery query = FindingQuery.all().limit(2);
+        FindingSlice second = store.query(query.offset(2)).get();
+        FindingSlice last = store.query(query.offset(4)).get();
+
+        assertEquals(List.of(3L, 2L), ids(second));
+        assertTrue(second.more());
+        assertEquals(List.of(1L), ids(last));
+        assertFalse(last.more());
+        assertTrue(store.query(query.offset(5)).get().findings().isEmpty());
+        assertEquals(List.of(2L, 1L), ids(store.query(query.before(4).offset(1)).get()));
+    }
+
     private static List<Long> ids(FindingSlice slice) {
         return slice.findings().stream().map(Finding::id).toList();
     }

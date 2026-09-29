@@ -18,13 +18,14 @@ class FindingQueryTest {
         assertEquals(ReviewState.ANY, all.state());
         assertEquals(OptionalLong.empty(), all.beforeId());
         assertEquals(FindingQuery.DEFAULT_LIMIT, all.limit());
+        assertEquals(0, all.offset());
         assertEquals(ReviewState.OPEN, FindingQuery.open().state());
     }
 
     @Test
     void withersLeaveTheOriginalUntouched() {
         FindingQuery base = FindingQuery.open();
-        FindingQuery narrowed = base.world("world").source(Source.FULLSCAN).since(Instant.EPOCH).before(9).limit(5);
+        FindingQuery narrowed = base.world("world").source(Source.FULLSCAN).since(Instant.EPOCH).before(9).limit(5).offset(40);
 
         assertEquals(FindingQuery.open(), base);
         assertEquals(Optional.of("world"), narrowed.world());
@@ -32,6 +33,7 @@ class FindingQueryTest {
         assertEquals(Optional.of(Instant.EPOCH), narrowed.since());
         assertEquals(OptionalLong.of(9), narrowed.beforeId());
         assertEquals(5, narrowed.limit());
+        assertEquals(40, narrowed.offset());
         assertEquals(ReviewState.OPEN, narrowed.state());
     }
 
@@ -39,6 +41,7 @@ class FindingQueryTest {
     void limitOutsideRangeIsRejected() {
         assertThrows(IllegalArgumentException.class, () -> FindingQuery.all().limit(0));
         assertThrows(IllegalArgumentException.class, () -> FindingQuery.all().limit(FindingQuery.MAX_LIMIT + 1));
+        assertThrows(IllegalArgumentException.class, () -> FindingQuery.all().offset(-1));
         assertThrows(NullPointerException.class, () -> FindingQuery.all().world(null));
     }
 }

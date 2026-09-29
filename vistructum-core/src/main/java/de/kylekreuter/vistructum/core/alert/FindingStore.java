@@ -155,8 +155,9 @@ public final class FindingStore {
             sql.append(" AND id < ?");
             arguments.add(id);
         });
-        sql.append(" ORDER BY id DESC LIMIT ?");
+        sql.append(" ORDER BY id DESC LIMIT ? OFFSET ?");
         arguments.add(query.limit() + 1);
+        arguments.add(query.offset());
         return database.transaction(connection -> {
             List<Finding> rows = list(connection, sql.toString(), bindAll(arguments));
             boolean more = rows.size() > query.limit();

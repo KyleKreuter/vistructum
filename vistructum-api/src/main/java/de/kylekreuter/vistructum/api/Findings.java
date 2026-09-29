@@ -27,9 +27,12 @@ public interface Findings {
     /**
      * Selects findings that match the given query, ordered by descending identifier.
      *
-     * <p>The first page contains at most {@link FindingQuery#limit()} findings. Further pages are obtained through
-     * {@link Page#next()}, which continues strictly below the smallest identifier of the current page. Findings
-     * created after the first page was loaded therefore neither shift nor duplicate entries of later pages.
+     * <p>The first page contains at most {@link FindingQuery#limit()} findings. It starts after the first
+     * {@link FindingQuery#offset()} findings that match the criteria and lie below the paging cursor
+     * {@link FindingQuery#beforeId()}. Further pages are obtained through {@link Page#next()}, which continues
+     * strictly below the smallest identifier of the current page with an offset of {@code 0}. Findings created
+     * after the first page was loaded therefore neither shift nor duplicate entries of later pages. Numbered pages
+     * are addressed by the offset alone; findings created between two such requests shift their entries.
      *
      * @param query selection criteria and page size
      * @return a future completing with the first page of matching findings; the page is empty if nothing matches
@@ -41,8 +44,8 @@ public interface Findings {
      * Counts the findings that match the given query.
      *
      * <p>World, source, review state and creation time are applied as in {@link #find(FindingQuery)}. The page
-     * size {@link FindingQuery#limit()} and the paging cursor {@link FindingQuery#beforeId()} are ignored, so the
-     * result is the total over all pages.
+     * size {@link FindingQuery#limit()}, the paging cursor {@link FindingQuery#beforeId()} and the offset
+     * {@link FindingQuery#offset()} are ignored, so the result is the total over all pages.
      *
      * @param query selection criteria
      * @return a future completing with the number of matching findings

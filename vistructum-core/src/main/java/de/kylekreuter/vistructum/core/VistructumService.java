@@ -262,7 +262,7 @@ public final class VistructumService implements Vistructum {
             if (!slice.more()) {
                 return CompletableFuture.failedFuture(new IllegalStateException("no further page"));
             }
-            return findings.find(query.before(slice.findings().getLast().id()));
+            return findings.find(query.before(slice.findings().getLast().id()).offset(0));
         }
     }
 

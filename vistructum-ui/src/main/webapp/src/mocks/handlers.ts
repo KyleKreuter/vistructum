@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from "msw";
-import type { ActivityItem, FindingState, FindingSummary, ScanJob, Stats, Status, Verdict } from "@/api/types";
+import type { ActivityItem, AssetStatus, FindingState, FindingSummary, ScanJob, Stats, Status, Verdict } from "@/api/types";
 import { matchesState } from "@/logic/filters";
 import { paintLayer, sceneColours } from "@/logic/sceneLayers";
 import { publicUrl, type MockDb, type MockFinding } from "./data";
@@ -120,6 +120,7 @@ export function handlers(db: MockDb) {
         },
         scans,
         recordingEnabled: true,
+        textures: { enabled: true, available: !!import.meta.env.VITE_ASSETS_TARGET, version: null },
       };
       return HttpResponse.json(status);
     }),
@@ -351,6 +352,16 @@ export function handlers(db: MockDb) {
         evidence: relativeEvidence(finding.evidence),
       });
     }),
+
+    ...(import.meta.env.VITE_ASSETS_TARGET
+      ? []
+      : [
+          http.get(`${api}/assets`, async () => {
+            await delay(60);
+            const assets: AssetStatus = { available: false, version: null, downloading: false };
+            return HttpResponse.json(assets);
+          }),
+        ]),
 
     http.get(`${api}/public/:token/skins/:file`, async ({ params }) => {
       const finding = sharedFinding(db, String(params.token));

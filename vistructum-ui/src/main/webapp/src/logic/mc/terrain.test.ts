@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Scene } from "@/api/types";
 import { fixtureSource } from "./fixtures";
 import { rawBlock } from "./library";
-import { columnBlock, terrainGrid, terrainOverlay } from "./terrain";
+import { columnBlock, terrainGrid, heatSurface } from "./terrain";
 
 const scene: Scene = {
   source: "mask",
@@ -28,12 +28,13 @@ describe("terrain grid", () => {
     expect(terrain.states[0]).toBe("minecraft:air");
   });
 
-  it("builds a heat overlay per column", () => {
-    const overlay = terrainOverlay(terrain, { width: 2, height: 2, values: [0, 200, 0, 0] });
-    expect(overlay?.alpha[1]).toBeGreaterThan(0);
-    expect(overlay?.alpha[1 + 4 * 3]).toBe(overlay?.alpha[1]);
-    expect(overlay?.alpha[0]).toBe(0);
-    expect(terrainOverlay(terrain, null)).toBeUndefined();
+  it("lays a heat quad on top of every hot column", () => {
+    const surface = heatSurface(terrain, { width: 2, height: 2, values: [0, 200, 0, 0] });
+    expect(surface?.indices).toHaveLength(6);
+    expect(surface?.positions[1]).toBeCloseTo(4, 1);
+    expect(surface?.positions[0]).toBe(1);
+    expect(surface?.colours[3]).toBeGreaterThan(0);
+    expect(heatSurface(terrain, null)).toBeNull();
   });
 
   it("turns partial blocks into full columns with their textures", () => {
@@ -43,5 +44,12 @@ describe("terrain grid", () => {
     expect(slab.quads.every((quad) => quad.texture === "block/oak_planks")).toBe(true);
     const log = columnBlock(rawBlock("minecraft:oak_log[axis=y]", fixtureSource), null);
     expect(log.quads.find((quad) => quad.normal === 1)?.texture).toBe("block/oak_log_top");
+  });
+
+  it("shows the ground block below crops and plants", () => {
+    const ground = rawBlock("minecraft:stone", fixtureSource);
+    const wheat = columnBlock(rawBlock("minecraft:wheat[age=7]", fixtureSource), ground);
+    expect(wheat.state.name).toBe("stone");
+    expect(wheat.quads).toBe(ground.quads);
   });
 });

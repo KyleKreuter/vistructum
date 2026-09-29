@@ -1,9 +1,10 @@
 import type { Heatmap, Scene } from "@/api/types";
 import { heatAlpha, heatPeak } from "@/logic/sceneLayers";
 import { bakeModel, type RawQuad } from "./bake";
+import { srgbToLinear } from "./colour";
 import { DOWN, UP } from "./direction";
 import { isFullFace, type RawBlock } from "./library";
-import type { Grid, Overlay } from "./mesher";
+import type { Grid } from "./mesher";
 import { parseElement } from "./models";
 import { materialClass } from "./procedural";
 
@@ -40,18 +41,39 @@ export function terrainGrid(scene: Scene): TerrainGrid {
   return { grid: { sizeX, sizeY, sizeZ, cells }, floor, states: [airState, ...scene.palette] };
 }
 
-export function terrainOverlay(terrain: TerrainGrid, heatmap: Heatmap | null, strength = 0.85): Overlay | undefined {
+export interface HeatSurface {
+  positions: Float32Array;
+  colours: Float32Array;
+  indices: Uint32Array;
+}
+
+export const heatColour: [number, number, number] = [1, 0.27, 0.12];
+
+export function heatSurface(terrain: TerrainGrid, heatmap: Heatmap | null, strength = 0.85): HeatSurface | null {
   const { grid } = terrain;
-  if (!heatmap || heatmap.width !== grid.sizeX || heatmap.height !== grid.sizeZ) return undefined;
+  if (!heatmap || heatmap.width !== grid.sizeX || heatmap.height !== grid.sizeZ) return null;
   const peak = heatPeak(heatmap.values);
-  const alpha = new Float32Array(grid.cells.length);
+  const columns: { x: number; z: number; top: number; alpha: number }[] = [];
   const layer = grid.sizeX * grid.sizeZ;
   for (let i = 0; i < layer; i++) {
-    const value = heatAlpha(heatmap.values[i] ?? 0, peak) * strength;
-    if (value <= 0) continue;
-    for (let y = 0; y < grid.sizeY; y++) alpha[y * layer + i] = value;
+    const alpha = heatAlpha(heatmap.values[i] ?? 0, peak) * strength;
+    if (alpha <= 0) continue;
+    let top = grid.sizeY - 1;
+    while (top >= 0 && grid.cells[top * layer + i] === 0) top--;
+    if (top < 0) continue;
+    const x = i % grid.sizeX;
+    columns.push({ x, z: (i - x) / grid.sizeX, top: top + 1 + 1 / 64, alpha });
   }
-  return { alpha, colour: [1, 0.27, 0.12] };
+  const positions = new Float32Array(columns.length * 12);
+  const colours = new Float32Array(columns.length * 16);
+  const indices = new Uint32Array(columns.length * 6);
+  const linear = heatColour.map(srgbToLinear);
+  columns.forEach(({ x, z, top, alpha }, n) => {
+    positions.set([x, top, z, x, top, z + 1, x + 1, top, z + 1, x + 1, top, z], n * 12);
+    for (let v = 0; v < 4; v++) colours.set([...linear, alpha], n * 16 + v * 4);
+    indices.set([n * 4, n * 4 + 1, n * 4 + 2, n * 4, n * 4 + 2, n * 4 + 3], n * 6);
+  });
+  return { positions, colours, indices };
 }
 
 function pick(quads: RawQuad[], test: (quad: RawQuad) => boolean): RawQuad | undefined {
@@ -80,8 +102,9 @@ export function columnBlock(raw: RawBlock, ground: RawBlock | null): RawBlock {
   const full = raw.quads.filter(isFullFace);
   if (new Set(full.map((quad) => quad.flush)).size === 6) return { ...raw, quads: full, ambientOcclusion: true };
   const aligned = raw.quads.filter((quad) => quad.axisAligned);
+  const standsOnGround = materialClass(raw.state.name) === "plant" || materialClass(raw.state.name) === "torch" || !aligned.some((quad) => quad.normal === UP);
+  if (ground && standsOnGround) return { ...ground, liquid: raw.liquid, liquidTexture: raw.liquidTexture };
   if (!aligned.length) {
-    if (ground && (materialClass(raw.state.name) === "plant" || materialClass(raw.state.name) === "torch")) return { ...ground, state: raw.state, liquid: raw.liquid, liquidTexture: raw.liquidTexture };
     const first = raw.quads[0];
     return first ? { ...raw, quads: cube(first, first, first), ambientOcclusion: true } : raw;
   }

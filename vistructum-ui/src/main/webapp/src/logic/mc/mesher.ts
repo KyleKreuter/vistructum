@@ -8,11 +8,6 @@ export interface Grid extends GridSize {
   cells: Int32Array;
 }
 
-export interface Overlay {
-  alpha: Float32Array;
-  colour: [number, number, number];
-}
-
 export interface LayerGeometry {
   positions: Float32Array;
   uvs: Float32Array;
@@ -98,8 +93,6 @@ function emit(
   z: number,
   grid: Grid,
   occluders: Uint8Array,
-  overlayAlpha: number,
-  overlayColour: [number, number, number] | null,
 ) {
   builder.reserve();
   const q = builder.quads;
@@ -137,9 +130,7 @@ function emit(
     uvs[q * 8 + i * 2 + 1] = quad.uvs[i * 2 + 1];
     const light = vertexAo[i];
     for (let k = 0; k < 3; k++) {
-      let value = quad.colour[k] * light;
-      if (overlayColour && overlayAlpha > 0) value = value * (1 - overlayAlpha) + overlayColour[k] * overlayAlpha;
-      vertexColour[k] = srgbToLinear(value);
+      vertexColour[k] = srgbToLinear(quad.colour[k] * light);
     }
     colours[q * 12 + i * 3] = vertexColour[0];
     colours[q * 12 + i * 3 + 1] = vertexColour[1];
@@ -176,7 +167,7 @@ function builderFor(builders: LayerBuilder[], layer: AlphaClass): LayerBuilder {
   return builders[layer === translucentAlpha ? 2 : layer === cutoutAlpha ? 1 : 0];
 }
 
-export function meshSection(grid: Grid, blocks: MeshBlock[], occluders: Uint8Array, sx: number, sy: number, sz: number, overlay?: Overlay): SectionGeometry {
+export function meshSection(grid: Grid, blocks: MeshBlock[], occluders: Uint8Array, sx: number, sy: number, sz: number): SectionGeometry {
   const builders = [new LayerBuilder(), new LayerBuilder(), new LayerBuilder()];
   const { sizeX, sizeY, sizeZ, cells } = grid;
   const x0 = sx * sectionSize;
@@ -192,8 +183,6 @@ export function meshSection(grid: Grid, blocks: MeshBlock[], occluders: Uint8Arr
         const index = (y * sizeZ + z) * sizeX + x;
         const block = blocks[cells[index]];
         if (!block || block.empty) continue;
-        const overlayAlpha = overlay ? overlay.alpha[index] : 0;
-        const overlayColour = overlay ? overlay.colour : null;
         if (block.quads.length) {
           const builder = builderFor(builders, block.layer);
           for (const quad of block.quads) {
@@ -208,7 +197,7 @@ export function meshSection(grid: Grid, blocks: MeshBlock[], occluders: Uint8Arr
                 if (neighbour && (neighbour.occluder || (block.cullGroup !== 0 && neighbour.cullGroup === block.cullGroup))) continue;
               }
             }
-            emit(builder, quad, x, y, z, grid, occluders, overlayAlpha, overlayColour);
+            emit(builder, quad, x, y, z, grid, occluders);
           }
         }
         if (block.liquid) {
@@ -227,7 +216,7 @@ export function meshSection(grid: Grid, blocks: MeshBlock[], occluders: Uint8Arr
                 if (neighbour && (neighbour.occluder || neighbour.liquid === block.liquid)) continue;
               }
             }
-            emit(builder, quad, x, y, z, grid, occluders, overlayAlpha, overlayColour);
+            emit(builder, quad, x, y, z, grid, occluders);
           }
         }
       }

@@ -36,6 +36,28 @@ export interface Status {
   inference: { mode: "LOCAL" | "REMOTE"; available: boolean; models: InferenceModel[]; detail: string | null };
   scans: ScanJob[];
   recordingEnabled: boolean;
+  textures: TextureStatus;
+}
+
+export interface TextureStatus {
+  enabled: boolean;
+  available: boolean;
+  version: string | null;
+}
+
+export interface AssetStatus {
+  available: boolean;
+  version: string | null;
+  downloading: boolean;
+}
+
+export interface AssetsDocument {
+  version: string;
+  blockstates: Record<string, unknown>;
+  models: Record<string, unknown>;
+  items: Record<string, unknown>;
+  textures: string[];
+  animated: Record<string, unknown>;
 }
 
 export interface Box {

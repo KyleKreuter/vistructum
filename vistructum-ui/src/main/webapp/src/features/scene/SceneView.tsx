@@ -3,9 +3,9 @@ import type { Heatmap, Scene } from "@/api/types";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { displayMaterial } from "@/logic/blocks";
 import { layers, paintLayer, pointToCell, readCell, windowBaseHeight, type CellReadout, type LayerKey } from "@/logic/sceneLayers";
-import { cn } from "@/lib/utils";
 
 interface SceneViewProps {
   scene: Scene;
@@ -114,60 +114,51 @@ export function SceneView({ scene, colours, heatmap, heatmapState, layer, onLaye
     heatmapState === "loading" ? "Computing heatmap…" : heatmapState === "unavailable" ? "Heatmap not available for this finding" : null;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px]">
-      <div className="space-y-3">
-        <div className="rounded-lg bg-well p-3">
-          <LayerCanvas
-            scene={scene}
-            colours={colours}
-            layer={active.key}
-            heatmap={heatmap}
-            overlay={overlay}
-            span={span}
-            showWindow={showWindow}
-            onHover={setHover}
-            maxHeight="68vh"
-          />
-        </div>
-        <div className="min-h-5 text-xs text-muted-foreground tabular-nums">
-          <Readout readout={readout} base={base} />
-        </div>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
-          <div className="flex items-center gap-2">
-            <Switch id="overlay" checked={overlay} onCheckedChange={onOverlay} />
-            <Label htmlFor="overlay">Heatmap overlay</Label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch id="window" checked={showWindow} onCheckedChange={setShowWindow} />
-            <Label htmlFor="window">Model window</Label>
-          </div>
-          {active.key === "height" && (
-            <div className="flex min-w-56 items-center gap-3">
-              <Label className="shrink-0">Height span ±{span}</Label>
-              <Slider min={1} max={24} step={1} value={[span]} onValueChange={([value]) => setSpan(value)} />
-            </div>
-          )}
-          {heatNote && <span className="text-muted-foreground">{heatNote}</span>}
-        </div>
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <Tabs value={String(layer)} onValueChange={(value) => onLayer(Number(value))}>
+          <TabsList aria-label="Layer">
+            {layers.map((info, index) => (
+              <TabsTrigger key={info.key} value={String(index)} title={info.hint}>
+                {info.title}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <span className="text-xs text-muted-foreground">{active.hint}</span>
       </div>
-      <div className="grid grid-cols-5 gap-2 xl:grid-cols-1">
-        {layers.map((info, index) => (
-          <button
-            key={info.key}
-            type="button"
-            onClick={() => onLayer(index)}
-            className={cn(
-              "group flex flex-col gap-1.5 rounded-lg border bg-card p-1.5 text-left transition-colors hover:border-ring",
-              index === layer && "border-primary ring-1 ring-primary",
-            )}
-          >
-            <div className="rounded bg-well p-1">
-              <LayerCanvas scene={scene} colours={colours} layer={info.key} heatmap={heatmap} overlay={false} span={span} showWindow={false} />
-            </div>
-            <span className="truncate px-0.5 text-xs font-medium">{info.title}</span>
-            <span className="hidden px-0.5 text-[11px] leading-tight text-muted-foreground xl:block">{info.hint}</span>
-          </button>
-        ))}
+      <div className="rounded-lg bg-well p-3">
+        <LayerCanvas
+          scene={scene}
+          colours={colours}
+          layer={active.key}
+          heatmap={heatmap}
+          overlay={overlay}
+          span={span}
+          showWindow={showWindow}
+          onHover={setHover}
+          maxHeight="68vh"
+        />
+      </div>
+      <div className="min-h-5 text-xs text-muted-foreground tabular-nums">
+        <Readout readout={readout} base={base} />
+      </div>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+        <div className="flex items-center gap-2">
+          <Switch id="overlay" checked={overlay} onCheckedChange={onOverlay} />
+          <Label htmlFor="overlay">Heatmap overlay</Label>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch id="window" checked={showWindow} onCheckedChange={setShowWindow} />
+          <Label htmlFor="window">Model window</Label>
+        </div>
+        {active.key === "height" && (
+          <div className="flex min-w-56 items-center gap-3">
+            <Label className="shrink-0">Height span ±{span}</Label>
+            <Slider min={1} max={24} step={1} value={[span]} onValueChange={([value]) => setSpan(value)} />
+          </div>
+        )}
+        {heatNote && <span className="text-muted-foreground">{heatNote}</span>}
       </div>
     </div>
   );

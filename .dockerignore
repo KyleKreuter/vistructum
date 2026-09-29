@@ -1,6 +1,6 @@
 .git
 .gitignore
-target/
+**/target/
 .venv/
 venv/
 __pycache__/

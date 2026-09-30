@@ -1,4 +1,4 @@
-import { Plug, Undo2, UserSearch } from "lucide-react";
+import { Info, Plug, Undo2, UserSearch } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
@@ -6,6 +6,7 @@ import { useAttribution, useRollback } from "@/api/queries";
 import type { FindingDetail } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { canAttribute, canRollBack, rollbackMessage } from "@/logic/blockLog";
 import { formatDateTime } from "@/logic/format";
 
@@ -30,6 +31,7 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
   const attribution = useAttribution(finding.id);
   const rollback = useRollback(finding.id);
   const [confirming, setConfirming] = useState(false);
+  const [unavailableInfo, setUnavailableInfo] = useState(false);
   const busy = attribution.isPending || rollback.isPending;
   const rollbackable = canRollBack(finding);
   const attributable = canAttribute(finding);
@@ -60,15 +62,29 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
     <section className="space-y-2">
       <h3 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <img src={coreProtectLogo} alt="" className="size-4 rounded-sm" referrerPolicy="no-referrer" loading="lazy" /> CoreProtect
+        {!blockLog && (
+          <Tooltip open={unavailableInfo} onOpenChange={setUnavailableInfo}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="CoreProtect status"
+                className="rounded-sm text-muted-foreground hover:text-foreground"
+                onPointerDown={(event) => event.preventDefault()}
+                onClick={() => setUnavailableInfo((open) => !open)}
+              >
+                <Info className="size-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>CoreProtect is not available right now.</TooltipContent>
+          </Tooltip>
+        )}
       </h3>
       {finding.rolledBackAt && (
         <p className="text-xs">
           Rolled back by {finding.rolledBackBy}, {formatDateTime(finding.rolledBackAt)}
         </p>
       )}
-      {!blockLog ? (
-        <p className="text-xs text-muted-foreground">CoreProtect is not available right now.</p>
-      ) : confirming ? (
+      {!blockLog ? null : confirming ? (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
             Every block in this box that the listed builders placed or broke returns to its state before their first logged change. Blocks outside the box and blocks changed by others since stay. The finding and its evidence stay.

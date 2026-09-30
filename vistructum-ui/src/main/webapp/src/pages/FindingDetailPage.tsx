@@ -100,7 +100,6 @@ export default function FindingDetailPage() {
   const [layer, setLayer] = useState(0);
   const [overlay, setOverlay] = useState(false);
   const [visitedTabs, setVisitedTabs] = useState<{ id: number; tabs: ReadonlySet<Tab> }>(() => ({ id, tabs: new Set() }));
-  const [playerSlot, setPlayerSlot] = useState<HTMLDivElement | null>(null);
   const [stage, setStage] = useState<HTMLDivElement | null>(null);
   const [aside, setAside] = useState<HTMLElement | null>(null);
   const stageHeight = useHeightToBottom(stage, aside);
@@ -312,7 +311,6 @@ export default function FindingDetailPage() {
                       skinUrl={urls.skin}
                       reconstruct
                       controlsRef={replayControls}
-                      playersTarget={playerSlot}
                       stageRef={tab === "replay" ? setStage : undefined}
                       active={tab === "replay"}
                     />
@@ -440,9 +438,7 @@ export default function FindingDetailPage() {
               </div>
             )}
             <div className="min-h-24 flex-1 overflow-y-auto pr-1">
-              {tab === "replay" ? (
-                <div ref={setPlayerSlot} />
-              ) : data.players.length ? (
+              {data.players.length ? (
                 <div className="flex flex-col gap-2">
                   {data.players.map((player) => (
                     <PlayerCard key={player.uuid} player={player} className="w-full" />

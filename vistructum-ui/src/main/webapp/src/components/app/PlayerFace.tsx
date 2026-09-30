@@ -1,4 +1,4 @@
-import { ArrowUpRight, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { urls } from "@/api/client";
@@ -106,26 +106,16 @@ export function PlayerCard({
       </span>
     </>
   );
-  const style = "flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left text-sm transition-colors hover:border-ring";
+  const style = cn("flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-left text-sm transition-colors hover:border-ring", className);
   if (onSelect) {
     return (
-      <div className={cn("relative", className)}>
-        <button type="button" onClick={onSelect} className={cn(style, "w-full pr-8")}>
-          {body}
-        </button>
-        <Link
-          to={`/players/${player.uuid}`}
-          aria-label={`Open ${label}`}
-          title={`Open ${label}`}
-          className="absolute top-1.5 right-1.5 rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
-        >
-          <ArrowUpRight className="size-3.5" />
-        </Link>
-      </div>
+      <button type="button" onClick={onSelect} className={style}>
+        {body}
+      </button>
     );
   }
   return (
-    <Link to={`/players/${player.uuid}`} className={cn(style, className)}>
+    <Link to={`/players/${player.uuid}`} className={style}>
       {body}
     </Link>
   );

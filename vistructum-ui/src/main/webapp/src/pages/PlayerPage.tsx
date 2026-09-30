@@ -55,9 +55,9 @@ export default function PlayerPage() {
             )}
           </CardContent>
         </Card>
-        <PlayerIntegrationsPanel uuid={uuid} />
       </div>
-      <div className="flex min-w-0 flex-col lg:min-h-0">
+      <div className="flex min-w-0 flex-col gap-4 lg:min-h-0">
+        <PlayerIntegrationsPanel uuid={uuid} />
         <FindingList
           player={uuid}
           header={(total) => (

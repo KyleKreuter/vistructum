@@ -49,7 +49,7 @@ export function PlayerIntegrationsPanel({ uuid }: { uuid: string }) {
   const source = useMe().data?.punishments;
   if (!source) return null;
   return (
-    <Card className="gap-3 py-4">
+    <Card className="shrink-0 gap-3 py-4">
       <CardHeader className="px-4">
         <CardTitle className="flex items-center gap-2 text-sm">
           <Plug className="size-4" /> Integrations

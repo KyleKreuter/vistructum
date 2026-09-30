@@ -41,7 +41,7 @@ export function PunishmentHistory({ uuid, source }: { uuid: string; source: stri
       ) : !history.data.items.length ? (
         <p className="text-muted-foreground">No punishments.</p>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
           {history.data.items.map((punishment, index) => (
             <PunishmentEntry key={index} punishment={punishment} />
           ))}

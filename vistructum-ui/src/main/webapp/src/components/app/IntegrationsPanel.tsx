@@ -12,7 +12,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { Integration } from "@/logic/integrations";
 import { attributionMessage, canAttribute, canRollBack, rollbackMessage } from "@/logic/blockLog";
 import { formatDateTime } from "@/logic/format";
-import { useStoredChoice } from "@/lib/useStoredChoice";
 import { cn } from "@/lib/utils";
 
 const coreProtectLogo = "https://cdn.modrinth.com/data/Lu3KuzdV/b2c4b7b0033ab09cc166f2848003ef3a02c70a83.png";
@@ -33,7 +32,8 @@ export function FindingIntegrations({
   blockLog: boolean;
   canRollback: boolean;
 }) {
-  const [selected, select] = useStoredChoice("vistructum-finding-integration", integrations, integrations[0]);
+  const [chosen, select] = useState<string>(integrations[0]);
+  const selected = integrations.find((integration) => integration === chosen) ?? integrations[0];
   const punishments = usePlayersPunishments(
     finding.players.map((player) => player.uuid),
     integrations.includes("libertybans"),

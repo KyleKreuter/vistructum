@@ -20,7 +20,6 @@ import { SceneView } from "@/features/scene/SceneView";
 import type { ReplayControls } from "@/features/replay/ReplayView";
 import { copyText } from "@/lib/clipboard";
 import { useHeightToBottom } from "@/lib/useHeightToBottom";
-import { useStoredChoice } from "@/lib/useStoredChoice";
 import { cn } from "@/lib/utils";
 import { boxSize } from "@/logic/coords";
 import { listParams, parseFilter, parsePaging } from "@/logic/filters";
@@ -42,8 +41,6 @@ const TerrainView = lazy(() => import("@/features/terrain/TerrainView"));
 type Tab = "replay" | "scene" | "3d";
 
 const noTabs: ReadonlySet<Tab> = new Set();
-
-const sideTabs = ["verdict", "integrations", "builders"] as const;
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -108,7 +105,6 @@ export default function FindingDetailPage() {
   const [aside, setAside] = useState<HTMLElement | null>(null);
   const stageHeight = useHeightToBottom(stage, aside);
   const replayControls = useRef<ReplayControls | null>(null);
-  const [storedSideTab, chooseSideTab] = useStoredChoice("vistructum-finding-sidebar", sideTabs, "verdict");
 
   const defaultTab: Tab = data?.hasEvidence ? "replay" : "scene";
   const available = (next: Tab) => (next === "replay" ? !!data?.hasEvidence : next === "3d" ? !!data?.hasTerrain : true);
@@ -251,7 +247,6 @@ export default function FindingDetailPage() {
   const size = boxSize(data.box);
   const canShare = !!me.data?.canShare;
   const integrations = findingIntegrations(data, !!me.data?.blockLog, me.data?.punishments ?? null);
-  const sideTab = storedSideTab === "integrations" && !integrations.length ? "verdict" : storedSideTab;
   const heatmapState = !heatmapWanted ? "idle" : heatmap.isPending ? "loading" : heatmap.isError ? "unavailable" : "ready";
 
   return (
@@ -375,7 +370,7 @@ export default function FindingDetailPage() {
             className={cn("flex flex-col gap-4", tab === "scene" && "lg:mt-12", stageHeight !== null && "lg:h-(--stage-height)")}
             style={stageHeight !== null ? ({ "--stage-height": `${stageHeight}px` } as CSSProperties) : undefined}
           >
-            <Tabs value={sideTab} onValueChange={chooseSideTab} className="min-h-0 flex-1">
+            <Tabs key={data.id} defaultValue="verdict" className="min-h-0 flex-1">
               <TabsList className="w-full shrink-0">
                 <TabsTrigger value="verdict">Verdict</TabsTrigger>
                 {integrations.length > 0 && <TabsTrigger value="integrations">Integrations</TabsTrigger>}

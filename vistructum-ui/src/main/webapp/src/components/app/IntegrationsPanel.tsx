@@ -2,7 +2,7 @@ import { ChevronDown, Undo2, UserSearch } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
-import { useAttribution, useMe, useRollback } from "@/api/queries";
+import { useAttribution, useMe, usePlayersPunishments, useRollback } from "@/api/queries";
 import type { FindingDetail } from "@/api/types";
 import { FindingPunishments, libertyBansLogo, PunishmentHistory } from "@/components/app/Punishments";
 import { Button } from "@/components/ui/button";
@@ -34,14 +34,27 @@ export function FindingIntegrations({
   canRollback: boolean;
 }) {
   const [selected, select] = useStoredChoice("vistructum-finding-integration", integrations, integrations[0]);
+  const punishments = usePlayersPunishments(
+    finding.players.map((player) => player.uuid),
+    integrations.includes("libertybans"),
+  );
+  const punished = punishments.some((history) => !!history.data?.items.length);
   return (
     <Card className="min-h-0 py-4">
       <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-4 text-sm">
         <ToggleGroup type="single" variant="outline" size="sm" value={selected} onValueChange={(value) => value && select(value)} className="shrink-0">
           {integrations.map((integration) => (
-            <ToggleGroupItem key={integration} value={integration} className="gap-2">
+            <ToggleGroupItem key={integration} value={integration} className="relative gap-2">
               <img src={integrationLabels[integration].logo} alt="" className="size-4 rounded-sm" referrerPolicy="no-referrer" loading="lazy" />
               {integrationLabels[integration].name}
+              {integration === "libertybans" && (
+                <span
+                  role="img"
+                  aria-label={punished ? "Punishments found" : "No punishments"}
+                  title={punished ? "Punishments found" : "No punishments"}
+                  className={cn("absolute top-1 right-1 size-1.5 rounded-full", punished ? "bg-emerald-500" : "bg-muted-foreground/40")}
+                />
+              )}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>

@@ -16,8 +16,7 @@ list:
   map-previews: false
 
 punishments:
-  # Shows the bans, mutes, warnings and kicks of players in the web app. The UI plugin reads them from LiteBans,
-  # LibertyBans, or AdvancedBan, else from the Minecraft ban list and EssentialsX mutes.
+  # Shows the bans, mutes, warnings and kicks of players from LibertyBans in the web app.
   enabled: true
 
 discord:

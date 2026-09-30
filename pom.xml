@@ -30,10 +30,8 @@
         <lz4.version>1.8.0</lz4.version>
         <bstats.version>3.2.1</bstats.version>
         <coreprotect.version>23.2</coreprotect.version>
-        <litebans-api.version>0.6.1</litebans-api.version>
         <libertybans-api.version>1.1.4</libertybans-api.version>
         <omnibus.version>1.1.0-RC2</omnibus.version>
-        <essentialsx.version>2.21.2</essentialsx.version>
         <javalin.version>7.2.3</javalin.version>
         <slf4j.version>2.0.18</slf4j.version>
     </properties>
@@ -55,14 +53,6 @@
             <id>arim-lesser-gpl3</id>
             <url>https://mvn-repo.arim.space/lesser-gpl3/</url>
         </repository>
-        <repository>
-            <id>essentialsx</id>
-            <url>https://repo.essentialsx.net/releases/</url>
-        </repository>
-        <repository>
-            <id>jitpack</id>
-            <url>https://jitpack.io</url>
-        </repository>
     </repositories>
 
     <dependencyManagement>
@@ -71,12 +61,6 @@
                 <groupId>net.coreprotect</groupId>
                 <artifactId>coreprotect</artifactId>
                 <version>${coreprotect.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.gitlab.ruany</groupId>
-                <artifactId>LiteBansAPI</artifactId>
-                <version>${litebans-api.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
@@ -90,18 +74,6 @@
                 <artifactId>omnibus</artifactId>
                 <version>${omnibus.version}</version>
                 <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>net.essentialsx</groupId>
-                <artifactId>EssentialsX</artifactId>
-                <version>${essentialsx.version}</version>
-                <scope>provided</scope>
-                <exclusions>
-                    <exclusion>
-                        <groupId>*</groupId>
-                        <artifactId>*</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>io.papermc.paper</groupId>

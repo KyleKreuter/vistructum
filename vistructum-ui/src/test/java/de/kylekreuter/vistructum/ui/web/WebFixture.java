@@ -177,7 +177,7 @@ public final class WebFixture implements AutoCloseable {
         return new PunishmentLog() {
             @Override
             public String source() {
-                return "LiteBans";
+                return "LibertyBans";
             }
 
             @Override

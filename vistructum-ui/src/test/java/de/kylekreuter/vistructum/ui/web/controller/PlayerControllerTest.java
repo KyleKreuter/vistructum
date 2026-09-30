@@ -79,7 +79,7 @@ class PlayerControllerTest {
                         Optional.of(issued), Optional.of(issued.plusSeconds(2592000)), true)));
         JsonObject punishments = json(web.get("/review/api/players/" + STRANGER + "/punishments",
                 cookie(web.session())));
-        assertEquals("LiteBans", punishments.get("source").getAsString());
+        assertEquals("LibertyBans", punishments.get("source").getAsString());
         JsonArray items = punishments.getAsJsonArray("items");
         assertEquals(2, items.size());
         JsonObject ban = items.get(0).getAsJsonObject();
@@ -101,7 +101,7 @@ class PlayerControllerTest {
         JsonObject punishments = json(web.get("/review/api/players/" + BUILDER + "/punishments", cookie(session)));
         assertEquals(0, punishments.getAsJsonArray("items").size());
         assertEquals(401, web.get("/review/api/players/" + BUILDER + "/punishments", Map.of()).statusCode());
-        assertEquals("LiteBans", json(web.get("/review/api/me", cookie(session))).get("punishments").getAsString());
+        assertEquals("LibertyBans", json(web.get("/review/api/me", cookie(session))).get("punishments").getAsString());
     }
 
     @Test

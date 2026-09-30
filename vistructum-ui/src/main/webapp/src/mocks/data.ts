@@ -348,7 +348,7 @@ export function createDefaultDb(fixture: Fixture, now = Date.now()): MockDb {
   findings.sort((a, b) => b.id - a.id);
   activity.sort((a, b) => b.at.localeCompare(a.at));
   return {
-    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true, blockLog: true, canRollback: true, punishments: "LiteBans" },
+    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true, blockLog: true, canRollback: true, punishments: "LibertyBans" },
     findings,
     players: [...players, staff],
     palette,

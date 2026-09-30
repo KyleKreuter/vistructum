@@ -56,9 +56,10 @@ public interface Findings {
     /**
      * Records a verdict for a finding.
      *
-     * <p>An existing verdict is replaced. The review time is taken from the server clock. After the verdict has
-     * been stored, a {@link FindingReviewedEvent} is fired on the main thread before the returned future
-     * completes.
+     * <p>A different existing verdict is replaced. The review time is taken from the server clock. After the
+     * verdict has been stored, a {@link FindingReviewedEvent} is fired on the main thread before the returned
+     * future completes. Recording the verdict the finding already has changes nothing: the stored reviewer and
+     * review time are kept, and no event is fired.
      *
      * @param id identifier of the finding
      * @param verdict verdict to record

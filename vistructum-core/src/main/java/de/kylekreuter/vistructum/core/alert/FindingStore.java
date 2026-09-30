@@ -60,6 +60,8 @@ public final class FindingStore {
                 window_right, channels)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
+    private static final String REVIEW =
+            "UPDATE findings SET verdict = ?, reviewer = ?, reviewed_at = ? WHERE id = ? AND verdict IS NOT ?";
     private static final String REVIEWED_SCENES = """
             SELECT f.id, f.source, f.verdict, f.model_version, s.kind, s.width, s.height, s.window_top, s.window_left,
                 s.window_bottom, s.window_right, s.channels
@@ -224,17 +226,18 @@ public final class FindingStore {
         };
     }
 
-    public CompletableFuture<Optional<Finding>> review(long id, Verdict verdict, String reviewer, Instant now) {
+    public CompletableFuture<Optional<Reviewed>> review(long id, Verdict verdict, String reviewer, Instant now) {
         return database.transaction(connection -> {
-            try (PreparedStatement update = connection.prepareStatement(
-                    "UPDATE findings SET verdict = ?, reviewer = ?, reviewed_at = ? WHERE id = ?")) {
+            boolean changed;
+            try (PreparedStatement update = connection.prepareStatement(REVIEW)) {
                 update.setString(1, verdict.name());
                 update.setString(2, reviewer);
                 update.setLong(3, now.toEpochMilli());
                 update.setLong(4, id);
-                update.executeUpdate();
+                update.setString(5, verdict.name());
+                changed = update.executeUpdate() > 0;
             }
-            return select(connection, id);
+            return select(connection, id).map(finding -> new Reviewed(finding, changed));
         });
     }
 

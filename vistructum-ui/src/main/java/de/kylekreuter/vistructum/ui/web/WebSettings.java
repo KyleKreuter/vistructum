@@ -36,8 +36,12 @@ public record WebSettings(boolean enabled, String bindAddress, String publicUrl)
         return publicUrl + ROOT + "/e/" + encode(shareToken);
     }
 
+    public static String findingPath(long findingId) {
+        return ROOT + "/findings/" + findingId;
+    }
+
     public static String evidencePath(long findingId) {
-        return ROOT + "/findings/" + findingId + "/evidence";
+        return findingPath(findingId) + "/evidence";
     }
 
     private static String encode(String value) {

@@ -153,29 +153,34 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={attribute}
-            disabled={busy || !attributable}
-            title={attributable ? undefined : "The builders and the evidence of this finding are already known."}
-          >
-            <UserSearch /> Find builders
-          </Button>
-          {canRollback && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-destructive"
-              onClick={() => setConfirming(true)}
-              disabled={busy || !rollbackable}
-              title={rollbackable ? undefined : finding.rolledBackAt ? "This finding was rolled back already." : "Only confirmed findings with builders can be rolled back."}
-            >
-              <Undo2 /> Roll back
+          <DisabledReason reason={attributable ? null : "All builders of this finding were found already."}>
+            <Button size="sm" variant="outline" onClick={attribute} disabled={busy || !attributable}>
+              <UserSearch /> Find builders
             </Button>
+          </DisabledReason>
+          {canRollback && (
+            <DisabledReason reason={rollbackable ? null : finding.rolledBackAt ? "This finding was rolled back already." : "Only confirmed findings with builders can be rolled back."}>
+              <Button size="sm" variant="outline" className="text-destructive" onClick={() => setConfirming(true)} disabled={busy || !rollbackable}>
+                <Undo2 /> Roll back
+              </Button>
+            </DisabledReason>
           )}
         </div>
       )}
     </section>
+  );
+}
+
+function DisabledReason({ reason, children }: { reason: string | null; children: ReactNode }) {
+  if (!reason) return children;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} className="inline-flex rounded-md">
+          {children}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{reason}</TooltipContent>
+    </Tooltip>
   );
 }

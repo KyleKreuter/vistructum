@@ -3,7 +3,7 @@ import type { ActivityItem, AssetStatus, FindingState, FindingSummary, ScanJob, 
 import { matchesState } from "@/logic/filters";
 import { paintLayer, sceneColours } from "@/logic/sceneLayers";
 import { publicUrl, type MockDb, type MockFinding } from "./data";
-import { relativeEvidence } from "./evidence";
+import { relativeEvidence, syntheticEvidence } from "./evidence";
 import { mockPunishments } from "./punishments";
 import { sceneTerrain } from "./terrain";
 import { activeSettings, type EndpointKey } from "./settings";
@@ -271,6 +271,8 @@ export function handlers(db: MockDb) {
         finding.players = [builder];
         db.activity.unshift({ at: new Date().toISOString(), actor: db.me.name, kind: "ATTRIBUTED", findingId: finding.id });
       }
+      finding.evidence ??= syntheticEvidence(finding.id);
+      finding.hasEvidence = true;
       return HttpResponse.json(summary(finding));
     }),
 

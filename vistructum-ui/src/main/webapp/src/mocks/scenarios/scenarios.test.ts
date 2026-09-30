@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { Fixture } from "../data";
 import { createEmptyDb } from "./empty";
 import { createSparseDb } from "./sparse";
-import { createStressDb, stressFindingCount, stressPlayerCount, stressPlayers } from "./stress";
+import { createStressDb, stressCrowdedId, stressCrowdSize, stressFindingCount, stressPlayerCount, stressPlayers } from "./stress";
 import { stressVolume } from "./stressEvidence";
 
 const size = 4;
@@ -61,6 +61,7 @@ describe("mock scenarios", () => {
     expect(db.findings).toHaveLength(stressFindingCount);
     expect(stressPlayers()).toEqual(stressPlayers());
     expect(db.players).toHaveLength(stressPlayerCount + 1);
+    expect(db.findings.find((finding) => finding.id === stressCrowdedId)?.players).toHaveLength(stressCrowdSize);
     expect(createStressDb(fixture, now).findings.slice(0, 50)).toEqual(db.findings.slice(0, 50));
     expect(db.findings[0].id).toBeGreaterThan(db.findings[1].id);
     expect(db.findings.some((finding) => finding.players.length >= 20)).toBe(true);

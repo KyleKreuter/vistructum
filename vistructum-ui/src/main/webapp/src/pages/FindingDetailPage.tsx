@@ -10,7 +10,6 @@ import type { FindingDetail, FindingSummary, Verdict } from "@/api/types";
 import { IndicatorIcons, RolledBackBadge, SourceBadge, VerdictBadge } from "@/components/app/Badges";
 import { IntegrationsPanel } from "@/components/app/IntegrationsPanel";
 import { PlayerCard } from "@/components/app/PlayerFace";
-import { PunishmentBadges } from "@/components/app/Punishments";
 import { SharePanel } from "@/components/app/SharePanel";
 import { EmptyState, ErrorState, PageSpinner } from "@/components/app/States";
 import { Button } from "@/components/ui/button";
@@ -78,10 +77,6 @@ function VerdictButtons({ finding, pending, onVerdict }: { finding: FindingDetai
       </Button>
     </div>
   );
-}
-
-function punishmentStatus(uuid: string) {
-  return <PunishmentBadges uuid={uuid} className="mt-1" />;
 }
 
 export default function FindingDetailPage() {
@@ -318,7 +313,6 @@ export default function FindingDetailPage() {
                       reconstruct
                       controlsRef={replayControls}
                       playersTarget={playerSlot}
-                      playerStatus={punishmentStatus}
                       stageRef={tab === "replay" ? setStage : undefined}
                       active={tab === "replay"}
                     />
@@ -451,7 +445,7 @@ export default function FindingDetailPage() {
               ) : data.players.length ? (
                 <div className="flex flex-col gap-2">
                   {data.players.map((player) => (
-                    <PlayerCard key={player.uuid} player={player} status={punishmentStatus(player.uuid)} className="w-full" />
+                    <PlayerCard key={player.uuid} player={player} className="w-full" />
                   ))}
                 </div>
               ) : (

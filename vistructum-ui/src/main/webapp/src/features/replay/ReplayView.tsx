@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { ChevronLeft, ChevronRight, Orbit, Pause, Play, Route, Video } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode, type Ref, type RefObject } from "react";
+import { memo, useCallback, useEffect, useMemo, useState, useSyncExternalStore, type Ref, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { Evidence, Palette, PlayerRef } from "@/api/types";
 import { PlayerCard } from "@/components/app/PlayerFace";
@@ -34,7 +34,6 @@ export interface ReplayViewProps {
   controlsRef?: RefObject<ReplayControls | null>;
   active?: boolean;
   playersTarget?: HTMLElement | null;
-  playerStatus?: (uuid: string) => ReactNode;
   stageRef?: Ref<HTMLDivElement>;
 }
 
@@ -61,7 +60,7 @@ const TimelineMarks = memo(function TimelineMarks({ timeline, applied, colourFor
   );
 });
 
-export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin = false, reconstruct = false, controlsRef, active = true, playersTarget, playerStatus, stageRef }: ReplayViewProps) {
+export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin = false, reconstruct = false, controlsRef, active = true, playersTarget, stageRef }: ReplayViewProps) {
   const timeline = useMemo(() => buildTimeline(evidence), [evidence]);
   const indexed = useMemo(() => indexVolume(evidence.before, timeline.changes), [evidence.before, timeline.changes]);
   const reconstructed = useMemo(
@@ -139,7 +138,6 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
             player={player}
             skin={facesFromSkin ? skinUrl(player.uuid) : undefined}
             colour={colourFor(player.uuid)}
-            status={playerStatus?.(player.uuid)}
             detail={`${now?.placed ?? 0}/${total?.placed ?? 0} placed · ${now?.broken ?? 0}/${total?.broken ?? 0} broken`}
             onSelect={() => tracks.some((track) => track.player === player.uuid) && setCamera({ kind: "follow", player: player.uuid })}
             className={stacked ? "w-full" : "w-60"}

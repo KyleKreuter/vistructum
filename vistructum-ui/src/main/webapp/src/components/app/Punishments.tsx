@@ -3,7 +3,6 @@ import { errorMessage } from "@/api/client";
 import { useMe, usePunishments } from "@/api/queries";
 import type { Punishment } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/logic/format";
 import { activeStatuses, expires, expiryLabel, inForce, punishmentTypeLabel } from "@/logic/punishments";
 import { cn } from "@/lib/utils";
@@ -26,34 +25,29 @@ export function PunishmentBadges({ uuid, className }: { uuid: string; className?
   );
 }
 
-export function PunishmentHistoryCard({ uuid }: { uuid: string }) {
-  const me = useMe();
-  const history = usePunishments(uuid, !!me.data?.punishments);
-  if (!me.data?.punishments) return null;
+export function PunishmentHistory({ uuid, source }: { uuid: string; source: string }) {
+  const history = usePunishments(uuid, true);
   return (
-    <Card className="gap-3 py-4">
-      <CardHeader className="px-4">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Gavel className="size-4" /> Punishments
-          <span className="ml-auto text-xs font-normal text-muted-foreground">{history.data?.source ?? me.data.punishments}</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="px-4 text-sm">
-        {history.isPending ? (
-          <p className="text-muted-foreground">Loading…</p>
-        ) : history.isError ? (
-          <p className="text-destructive">{errorMessage(history.error)}</p>
-        ) : !history.data.items.length ? (
-          <p className="text-muted-foreground">No punishments.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {history.data.items.map((punishment, index) => (
-              <PunishmentEntry key={index} punishment={punishment} />
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+    <section className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <Gavel className="size-4 shrink-0 text-muted-foreground" />
+        <span className="font-medium">Punishments</span>
+        <span className="ml-auto text-xs text-muted-foreground">from {history.data?.source ?? source}</span>
+      </div>
+      {history.isPending ? (
+        <p className="text-muted-foreground">Loading…</p>
+      ) : history.isError ? (
+        <p className="text-destructive">{errorMessage(history.error)}</p>
+      ) : !history.data.items.length ? (
+        <p className="text-muted-foreground">No punishments.</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {history.data.items.map((punishment, index) => (
+            <PunishmentEntry key={index} punishment={punishment} />
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

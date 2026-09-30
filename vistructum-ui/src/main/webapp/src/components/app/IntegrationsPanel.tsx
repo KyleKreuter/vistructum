@@ -2,8 +2,9 @@ import { Gavel, Info, Plug, Undo2, UserSearch } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
-import { useAttribution, useRollback } from "@/api/queries";
+import { useAttribution, useMe, useRollback } from "@/api/queries";
 import type { FindingDetail } from "@/api/types";
+import { PunishmentHistory } from "@/components/app/Punishments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -39,6 +40,23 @@ export function IntegrationsPanel({
             <span className="ml-auto text-xs text-muted-foreground">from {punishments}</span>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function PlayerIntegrationsPanel({ uuid }: { uuid: string }) {
+  const source = useMe().data?.punishments;
+  if (!source) return null;
+  return (
+    <Card className="gap-3 py-4">
+      <CardHeader className="px-4">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Plug className="size-4" /> Integrations
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3 px-4 text-sm">
+        <PunishmentHistory uuid={uuid} source={source} />
       </CardContent>
     </Card>
   );

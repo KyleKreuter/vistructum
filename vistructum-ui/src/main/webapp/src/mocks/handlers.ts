@@ -59,6 +59,8 @@ function summary(finding: MockFinding): FindingSummary {
     hasTerrain: finding.hasTerrain,
     sharedSince: finding.sharedSince,
     shareUrl: finding.shareActive && finding.shareToken ? publicUrl(finding.shareToken) : null,
+    rolledBackAt: finding.rolledBackAt,
+    rolledBackBy: finding.rolledBackBy,
   };
 }
 
@@ -253,6 +255,37 @@ export function handlers(db: MockDb) {
       finding.sharedSince = null;
       db.activity.unshift({ at: new Date().toISOString(), actor: db.me.name, kind: "UNSHARED", findingId: finding.id });
       return new HttpResponse(null, { status: 204 });
+    }),
+
+    http.post(`${api}/findings/:id/attribute`, async ({ params, request }) => {
+      const blocked = await gate("blockLog", 400);
+      if (blocked) return blocked;
+      if (!csrfOk(request)) return error(403, "csrf");
+      if (!db.me.blockLog) return error(503, "unavailable");
+      const finding = byId(params.id);
+      if (!finding) return error(404, "not_found");
+      if (finding.players.length && finding.hasEvidence) return error(409, "not_attributable");
+      const builder = db.players[0];
+      if (!finding.players.length && builder) {
+        finding.players = [builder];
+        db.activity.unshift({ at: new Date().toISOString(), actor: db.me.name, kind: "ATTRIBUTED", findingId: finding.id });
+      }
+      return HttpResponse.json(summary(finding));
+    }),
+
+    http.post(`${api}/findings/:id/rollback`, async ({ params, request }) => {
+      const blocked = await gate("blockLog", 600);
+      if (blocked) return blocked;
+      if (!csrfOk(request)) return error(403, "csrf");
+      if (!db.me.blockLog) return error(503, "unavailable");
+      if (!db.me.canRollback) return error(403, "forbidden");
+      const finding = byId(params.id);
+      if (!finding) return error(404, "not_found");
+      if (finding.review?.verdict !== "CONFIRMED" || !finding.players.length || finding.rolledBackAt) return error(409, "not_rollbackable");
+      finding.rolledBackAt = new Date().toISOString();
+      finding.rolledBackBy = db.me.name;
+      db.activity.unshift({ at: finding.rolledBackAt, actor: db.me.name, kind: "ROLLED_BACK", findingId: finding.id });
+      return HttpResponse.json({ restored: 48, skipped: 3 });
     }),
 
     http.get(`${api}/stats`, async ({ request }) => {

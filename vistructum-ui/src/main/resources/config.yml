@@ -14,3 +14,16 @@ web:
 
 list:
   map-previews: false
+
+discord:
+  enabled: false
+  # The webhook URL from Server Settings > Integrations > Webhooks. Treat it as a secret.
+  webhook-url: ""
+  events:
+    created: true
+    reviewed: true
+    scan-finished: false
+  # Findings below this probability (0 to 1) are not announced.
+  min-probability: 0.0
+  # Role ID pinged on new findings, empty for no ping.
+  mention-role: ""

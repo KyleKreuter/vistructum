@@ -7,6 +7,8 @@ import de.kylekreuter.vistructum.ui.gui.PackDelivery;
 import de.kylekreuter.vistructum.ui.gui.ResourcePack;
 import de.kylekreuter.vistructum.ui.gui.ReviewMenus;
 import de.kylekreuter.vistructum.ui.gui.Thumbnails;
+import de.kylekreuter.vistructum.ui.integration.discord.DiscordNotifier;
+import de.kylekreuter.vistructum.ui.integration.discord.DiscordSettings;
 import de.kylekreuter.vistructum.ui.text.Messages;
 import de.kylekreuter.vistructum.ui.web.BukkitGameServer;
 import de.kylekreuter.vistructum.ui.web.ReviewLinks;
@@ -36,6 +38,7 @@ public final class VistructumUi extends JavaPlugin {
     private static final String STAFF_PERMISSION = "vistructum.staff";
     private static final String ADMIN_PERMISSION = "vistructum.admin";
     private static final String SHARE_PERMISSION = "vistructum.evidence.share";
+    private static final String ROLLBACK_PERMISSION = "vistructum.coreprotect.rollback";
     private static final String MESSAGES_FILE = "messages.yml";
     private static final String MAPS_FILE = "maps.yml";
     private static final String ASSETS_FOLDER = "assets";
@@ -43,6 +46,7 @@ public final class VistructumUi extends JavaPlugin {
     private WebApplication webApplication;
     private GameAssets gameAssets;
     private ScanBossBar scanBossBar;
+    private DiscordNotifier discord;
 
     @Override
     public void onEnable() {
@@ -74,6 +78,7 @@ public final class VistructumUi extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new MenuListener(), this);
         getServer().getPluginManager().registerEvents(thumbnails, this);
         getServer().getScheduler().runTask(this, thumbnails::fillMissing);
+        startDiscord(vistructum, thumbnails, messages, web);
         getServer().getPluginManager().registerEvents(new PackDelivery(pack,
                 URI.create(Objects.requireNonNull(getConfig().getString("pack.public-url"), "pack.public-url")),
                 STAFF_PERMISSION, messages), this);
@@ -84,6 +89,10 @@ public final class VistructumUi extends JavaPlugin {
         if (scanBossBar != null) {
             scanBossBar.close();
             scanBossBar = null;
+        }
+        if (discord != null) {
+            discord.close();
+            discord = null;
         }
         if (webApplication != null) {
             webApplication.close();
@@ -102,7 +111,7 @@ public final class VistructumUi extends JavaPlugin {
         gameAssets = new GameAssets(getDataFolder().toPath().resolve(ASSETS_FOLDER), Bukkit.getMinecraftVersion(),
                 web.enabled() && getConfig().getBoolean("web.textures.download"));
         Optional<WebApplication.WebApp> app = web.enabled()
-                ? Optional.of(new WebApplication.WebApp(vistructum, web, new BukkitGameServer(SHARE_PERMISSION),
+                ? Optional.of(new WebApplication.WebApp(vistructum, web, new BukkitGameServer(SHARE_PERMISSION, ROLLBACK_PERMISSION),
                 BukkitGameServer.palette(), gameAssets, Bukkit.getScheduler().getMainThreadExecutor(this),
                 getClassLoader(), clock))
                 : Optional.empty();
@@ -117,6 +126,21 @@ public final class VistructumUi extends JavaPlugin {
                     + WebSettings.HOME);
             gameAssets.fetch(GameAssets.MANIFEST, getLogger());
         }
+    }
+
+    private void startDiscord(Vistructum vistructum, Thumbnails thumbnails, Messages messages, WebSettings web) {
+        Optional<DiscordSettings> settings;
+        try {
+            settings = DiscordSettings.from(getConfig());
+        } catch (IllegalArgumentException e) {
+            getLogger().severe(e.getMessage() + ", the Discord integration is off");
+            return;
+        }
+        settings.ifPresent(discordSettings -> {
+            discord = new DiscordNotifier(vistructum, thumbnails, discordSettings, messages, web, getLogger());
+            getServer().getPluginManager().registerEvents(discord, this);
+            getLogger().info("findings are announced on Discord");
+        });
     }
 
     private Optional<MapCards> loadMapCards() {

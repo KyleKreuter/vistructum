@@ -86,7 +86,22 @@ public enum Message {
     MENU_CARD_AGE("menu.card-age"),
     MENU_CARD_CONFIRMED("menu.card-confirmed"),
     MENU_CARD_FALSE_ALARM("menu.card-false-alarm"),
-    MENU_CARD_HINT("menu.card-hint");
+    MENU_CARD_HINT("menu.card-hint"),
+    DISCORD_FINDING("discord.finding"),
+    DISCORD_FIELD_WORLD("discord.field-world"),
+    DISCORD_FIELD_LOCATION("discord.field-location"),
+    DISCORD_FIELD_PROBABILITY("discord.field-probability"),
+    DISCORD_FIELD_SOURCE("discord.field-source"),
+    DISCORD_FIELD_BUILDERS("discord.field-builders"),
+    DISCORD_FIELD_VERDICT("discord.field-verdict"),
+    DISCORD_BUILDERS_UNKNOWN("discord.builders-unknown"),
+    DISCORD_OPEN("discord.open"),
+    DISCORD_CONFIRMED("discord.confirmed"),
+    DISCORD_FALSE_ALARM("discord.false-alarm"),
+    DISCORD_OPEN_WEB("discord.open-web"),
+    DISCORD_SCAN_DONE("discord.scan-done"),
+    DISCORD_SCAN_STOPPED("discord.scan-stopped"),
+    DISCORD_SCAN_FAILED("discord.scan-failed");
 
     private final String path;
 

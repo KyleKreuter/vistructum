@@ -51,6 +51,7 @@ public final class WebFixture implements AutoCloseable {
 
     public final FakeVistructum vistructum = new FakeVistructum(NOW);
     public final Set<UUID> sharers = ConcurrentHashMap.newKeySet();
+    public final Set<UUID> rollbackers = ConcurrentHashMap.newKeySet();
 
     private final HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build();
     private final Path root;
@@ -178,6 +179,11 @@ public final class WebFixture implements AutoCloseable {
             @Override
             public boolean canShare(UUID player) {
                 return sharers.contains(player);
+            }
+
+            @Override
+            public boolean canRollback(UUID player) {
+                return rollbackers.contains(player);
             }
 
             @Override

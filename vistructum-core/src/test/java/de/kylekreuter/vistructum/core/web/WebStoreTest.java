@@ -144,7 +144,7 @@ class WebStoreTest {
 
         assertEquals(first, second);
         assertEquals(Optional.of(new EvidenceShare(first, NOW)), store.shared(finding.id()).get());
-        assertEquals(1, count("SELECT count(*) FROM share_events"));
+        assertEquals(1, count("SELECT count(*) FROM finding_events"));
     }
 
     @Test
@@ -160,7 +160,7 @@ class WebStoreTest {
         assertEquals(Optional.of(token), store.share(finding.id(), "Admin", NOW.plusSeconds(20)).get());
         assertEquals(Optional.of(finding.id()), store.sharedFinding(token).get());
         assertEquals(Optional.of(new EvidenceShare(token, NOW.plusSeconds(20))), store.shared(finding.id()).get());
-        assertEquals(3, count("SELECT count(*) FROM share_events"));
+        assertEquals(3, count("SELECT count(*) FROM finding_events"));
     }
 
     @Test
@@ -194,7 +194,7 @@ class WebStoreTest {
         findings.deleteReviewedBefore(Verdict.CONFIRMED, NOW.plusSeconds(1)).get();
 
         assertEquals(0, count("SELECT count(*) FROM evidence_shares"));
-        assertEquals(0, count("SELECT count(*) FROM share_events"));
+        assertEquals(0, count("SELECT count(*) FROM finding_events"));
     }
 
     @Test

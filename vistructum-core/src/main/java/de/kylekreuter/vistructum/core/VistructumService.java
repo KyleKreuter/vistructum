@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.core;
 
 import de.kylekreuter.vistructum.api.Activity;
+import de.kylekreuter.vistructum.api.BlockLog;
 import de.kylekreuter.vistructum.api.Evidence;
 import de.kylekreuter.vistructum.api.EvidenceShare;
 import de.kylekreuter.vistructum.api.Finding;
@@ -72,6 +73,7 @@ public final class VistructumService implements Vistructum {
     private final EvidenceStore evidenceStore;
     private final TerrainStore terrainStore;
     private final WebStore webStore;
+    private final BlockLog blockLog;
     private final boolean recordingEnabled;
     private final Clock clock;
     private final Findings findings = new StoredFindings();
@@ -82,7 +84,7 @@ public final class VistructumService implements Vistructum {
     public VistructumService(MainThread mainThread, BlockChangeStore changes, FindingStore findingStore,
                              FindingExporter exporter, ScanStore scanStore, WorldScanner scanner, Inference inference,
                              SkinCache skins, FindingHeatmaps heatmaps, EvidenceStore evidenceStore,
-                             TerrainStore terrainStore, WebStore webStore,
+                             TerrainStore terrainStore, WebStore webStore, BlockLog blockLog,
                              boolean recordingEnabled, Clock clock) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.changes = Objects.requireNonNull(changes, "changes");
@@ -96,6 +98,7 @@ public final class VistructumService implements Vistructum {
         this.evidenceStore = Objects.requireNonNull(evidenceStore, "evidenceStore");
         this.terrainStore = Objects.requireNonNull(terrainStore, "terrainStore");
         this.webStore = Objects.requireNonNull(webStore, "webStore");
+        this.blockLog = Objects.requireNonNull(blockLog, "blockLog");
         this.recordingEnabled = recordingEnabled;
         this.clock = Objects.requireNonNull(clock, "clock");
     }
@@ -118,6 +121,11 @@ public final class VistructumService implements Vistructum {
     @Override
     public WebAccess web() {
         return web;
+    }
+
+    @Override
+    public BlockLog blockLog() {
+        return blockLog;
     }
 
     @Override
@@ -182,6 +190,19 @@ public final class VistructumService implements Vistructum {
         public CompletableFuture<Boolean> storeThumbnail(long id, Thumbnail thumbnail) {
             Objects.requireNonNull(thumbnail, "thumbnail");
             return mainThread.handOff(findingStore.storeThumbnail(id, thumbnail));
+        }
+
+        @Override
+        public CompletableFuture<Optional<String>> reference(long id, String system) {
+            Objects.requireNonNull(system, "system");
+            return mainThread.handOff(findingStore.reference(id, system));
+        }
+
+        @Override
+        public CompletableFuture<Boolean> storeReference(long id, String system, String reference) {
+            Objects.requireNonNull(system, "system");
+            Objects.requireNonNull(reference, "reference");
+            return mainThread.handOff(findingStore.storeReference(id, system, reference));
         }
 
         @Override

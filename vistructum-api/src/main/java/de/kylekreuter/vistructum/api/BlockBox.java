@@ -46,6 +46,18 @@ public record BlockBox(int minX, int minY, int minZ, int maxX, int maxY, int max
     }
 
     /**
+     * Tests whether a block position lies inside the box.
+     *
+     * @param x block x coordinate
+     * @param y block y coordinate
+     * @param z block z coordinate
+     * @return {@code true} if the position lies within the bounds on all three axes, including the boundary blocks
+     */
+    public boolean contains(int x, int y, int z) {
+        return x >= minX && x <= maxX && y >= minY && y <= maxY && z >= minZ && z <= maxZ;
+    }
+
+    /**
      * Tests whether this box and another box share at least one block position.
      *
      * @param other box to test against

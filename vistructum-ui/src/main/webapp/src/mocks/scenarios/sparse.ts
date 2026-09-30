@@ -33,6 +33,8 @@ export function createSparseDb(fixture: Fixture, now = Date.now()): MockDb {
     votes: 1,
     sharedSince: null,
     shareUrl: null,
+    rolledBackAt: null,
+    rolledBackBy: null,
     shareToken: null,
     shareActive: false,
     teleport: teleport("world", 14, 90, -6),
@@ -90,7 +92,7 @@ export function createSparseDb(fixture: Fixture, now = Date.now()): MockDb {
     thumbnail: true,
   };
   return {
-    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true },
+    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true, blockLog: true, canRollback: true },
     findings: [open, confirmed, dismissed],
     players: [sparsePlayer, staff],
     palette: mockPalette(fixture),

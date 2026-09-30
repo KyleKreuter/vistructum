@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS evidence_shares (
     shared_since INTEGER NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS share_events (
+CREATE TABLE IF NOT EXISTS finding_events (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     finding_id INTEGER NOT NULL REFERENCES findings (id) ON DELETE CASCADE,
     at         INTEGER NOT NULL,
@@ -208,7 +208,22 @@ CREATE TABLE IF NOT EXISTS share_events (
     kind       TEXT    NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS share_events_by_time ON share_events (at);
+CREATE INDEX IF NOT EXISTS finding_events_by_time ON finding_events (at);
+
+CREATE TABLE IF NOT EXISTS share_events (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    finding_id INTEGER NOT NULL,
+    at         INTEGER NOT NULL,
+    actor      TEXT    NOT NULL,
+    kind       TEXT    NOT NULL
+);
+
+INSERT INTO finding_events (finding_id, at, actor, kind)
+SELECT e.finding_id, e.at, e.actor, e.kind FROM share_events e
+WHERE EXISTS (SELECT 1 FROM findings f WHERE f.id = e.finding_id)
+ORDER BY e.id;
+
+DROP TABLE share_events;
 
 CREATE INDEX IF NOT EXISTS findings_by_review_time ON findings (reviewed_at);
 
@@ -225,3 +240,10 @@ CREATE TABLE IF NOT EXISTS finding_terrain (
     scene_x    INTEGER,
     scene_z    INTEGER
 );
+
+CREATE TABLE IF NOT EXISTS finding_references (
+    finding_id INTEGER NOT NULL REFERENCES findings (id) ON DELETE CASCADE,
+    system     TEXT    NOT NULL,
+    reference  TEXT    NOT NULL,
+    PRIMARY KEY (finding_id, system)
+) WITHOUT ROWID;

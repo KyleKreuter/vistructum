@@ -33,6 +33,14 @@ public final class ApiError extends RuntimeException {
         return new ApiError(409, "not_shareable");
     }
 
+    public static ApiError notAttributable() {
+        return new ApiError(409, "not_attributable");
+    }
+
+    public static ApiError notRollbackable() {
+        return new ApiError(409, "not_rollbackable");
+    }
+
     public static ApiError unavailable() {
         return new ApiError(503, "unavailable");
     }

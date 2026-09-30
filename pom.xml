@@ -29,6 +29,7 @@
         <gson.version>2.11.0</gson.version>
         <lz4.version>1.8.0</lz4.version>
         <bstats.version>3.2.1</bstats.version>
+        <coreprotect.version>23.2</coreprotect.version>
         <javalin.version>7.2.3</javalin.version>
         <slf4j.version>2.0.18</slf4j.version>
     </properties>
@@ -38,10 +39,20 @@
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
+        <repository>
+            <id>playpro</id>
+            <url>https://maven.playpro.com</url>
+        </repository>
     </repositories>
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>net.coreprotect</groupId>
+                <artifactId>coreprotect</artifactId>
+                <version>${coreprotect.version}</version>
+                <scope>provided</scope>
+            </dependency>
             <dependency>
                 <groupId>io.papermc.paper</groupId>
                 <artifactId>paper-api</artifactId>

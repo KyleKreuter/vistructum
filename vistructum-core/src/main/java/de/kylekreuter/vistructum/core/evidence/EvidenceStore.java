@@ -7,17 +7,22 @@ import de.kylekreuter.vistructum.api.BlockVolume;
 import de.kylekreuter.vistructum.api.Evidence;
 import de.kylekreuter.vistructum.api.MotionFrame;
 import de.kylekreuter.vistructum.api.Recording;
+import de.kylekreuter.vistructum.core.history.HistoryEntry;
 import de.kylekreuter.vistructum.core.recording.MotionCodec;
+import de.kylekreuter.vistructum.core.scene.BlockPos;
 import de.kylekreuter.vistructum.core.store.Database;
 import de.kylekreuter.vistructum.core.store.Packed;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -56,6 +61,7 @@ public final class EvidenceStore {
             WHERE world = ? AND player = ? AND end_ms >= ? AND start_ms <= ?
             """;
     private static final String PALETTE_SEPARATOR = "\n";
+    private static final String AIR = "minecraft:air";
 
     private final Database database;
 
@@ -85,6 +91,20 @@ public final class EvidenceStore {
                     copy.executeUpdate();
                 }
             }
+            return true;
+        });
+    }
+
+    public CompletableFuture<Boolean> secureHistory(long findingId, VolumeSnapshot current, List<HistoryEntry> history,
+                                                    Duration lead, Instant createdAt) {
+        return database.transaction(connection -> {
+            long to = createdAt.toEpochMilli();
+            List<LoggedChange> changes = replayed(history, current.region(), to);
+            long firstChange = changes.isEmpty() ? to : changes.getFirst().changedAt();
+            if (!insertEvidence(connection, findingId, before(current, changes), firstChange - lead.toMillis(), to)) {
+                return false;
+            }
+            insertChanges(connection, findingId, changes);
             return true;
         });
     }
@@ -138,6 +158,28 @@ public final class EvidenceStore {
             before.set(i, firstPrevious.getOrDefault(i, current.palette().get(cells[i])));
         }
         return before.build();
+    }
+
+    static List<LoggedChange> replayed(List<HistoryEntry> history, BlockBox region, long to) {
+        Map<BlockPos, String> state = new HashMap<>();
+        List<LoggedChange> changes = new ArrayList<>();
+        history.stream()
+                .filter(entry -> region.contains(entry.x(), entry.y(), entry.z()) && entry.changedAt() <= to)
+                .sorted(Comparator.comparingLong(HistoryEntry::changedAt))
+                .forEach(entry -> {
+                    BlockPos pos = new BlockPos(entry.x(), entry.y(), entry.z());
+                    boolean placed = entry.action() == BlockAction.PLACE;
+                    String previous = placed ? state.getOrDefault(pos, AIR) : entry.blockData();
+                    state.put(pos, placed ? entry.blockData() : AIR);
+                    changes.add(new LoggedChange(entry.x(), entry.y(), entry.z(),
+                            entry.player().orElseGet(() -> offlinePlayer(entry.playerName())), entry.playerName(),
+                            entry.action(), entry.blockData(), previous, entry.changedAt()));
+                });
+        return changes;
+    }
+
+    private static UUID offlinePlayer(String name) {
+        return UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(StandardCharsets.UTF_8));
     }
 
     private static List<LoggedChange> loggedChanges(Connection connection, String world, BlockBox region, long to)

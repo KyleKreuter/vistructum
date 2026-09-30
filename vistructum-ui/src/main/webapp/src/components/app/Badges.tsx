@@ -27,6 +27,22 @@ export function VerdictBadge({ review, className }: { review: FindingSummary["re
   );
 }
 
+export function RolledBackBadge({ finding, className }: { finding: Pick<FindingSummary, "rolledBackAt" | "rolledBackBy">; className?: string }) {
+  if (!finding.rolledBackAt) return null;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge variant="slate" className={className}>
+          Rolled back
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>
+        CoreProtect rollback by {finding.rolledBackBy}, {formatDateTime(finding.rolledBackAt)}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function SourceBadge({ source }: { source: Source }) {
   return (
     <Badge variant={source === "mask" ? "blue" : "violet"} className="text-[11px]">

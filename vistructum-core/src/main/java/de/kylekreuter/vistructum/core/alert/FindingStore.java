@@ -86,6 +86,11 @@ public final class FindingStore {
             ORDER BY id LIMIT ?
             """;
     private static final int THUMBNAIL_PIXEL_BYTES = 3;
+    private static final String STORE_REFERENCE = """
+            INSERT INTO finding_references (finding_id, system, reference)
+            SELECT id, ?, ? FROM findings WHERE id = ?
+            ON CONFLICT (finding_id, system) DO UPDATE SET reference = excluded.reference
+            """;
     private static final String STORED_SCENE = """
             SELECT f.source, s.kind, s.width, s.height, s.window_top, s.window_left, s.window_bottom, s.window_right,
                 s.channels
@@ -108,7 +113,7 @@ public final class FindingStore {
     private static final String DELETE_REVIEWED = """
             DELETE FROM findings WHERE verdict = ? AND reviewed_at < ?
                 AND NOT EXISTS (SELECT 1 FROM evidence_shares s WHERE s.finding_id = findings.id AND s.active = 1)
-                AND NOT EXISTS (SELECT 1 FROM share_events e
+                AND NOT EXISTS (SELECT 1 FROM finding_events e
                     WHERE e.finding_id = findings.id AND e.kind = 'UNSHARED' AND e.at >= ?)
             """;
     private static final String ACTIVITY = """
@@ -116,7 +121,7 @@ public final class FindingStore {
                 SELECT reviewed_at AS at, reviewer AS actor, verdict AS kind, id AS finding_id, 0 AS rank
                 FROM findings WHERE verdict IS NOT NULL AND reviewed_at < ?
                 UNION ALL
-                SELECT at, actor, kind, finding_id, id FROM share_events WHERE at < ?)
+                SELECT at, actor, kind, finding_id, id FROM finding_events WHERE at < ?)
             ORDER BY at DESC, rank DESC, finding_id DESC
             LIMIT ?
             """;
@@ -143,6 +148,59 @@ public final class FindingStore {
             }
             return select(connection, id);
         });
+    }
+
+    public CompletableFuture<Optional<Finding>> attribute(long id, Set<UUID> players, String actor, Instant at) {
+        return database.transaction(connection -> {
+            try (PreparedStatement update = connection.prepareStatement("UPDATE findings SET players = ? WHERE id = ?")) {
+                update.setString(1, encodePlayers(players));
+                update.setLong(2, id);
+                if (update.executeUpdate() == 0) {
+                    return Optional.empty();
+                }
+            }
+            recordEvent(connection, id, ActivityKind.ATTRIBUTED, actor, at);
+            return select(connection, id);
+        });
+    }
+
+    public CompletableFuture<Void> record(long id, ActivityKind kind, String actor, Instant at) {
+        return database.transaction(connection -> {
+            recordEvent(connection, id, kind, actor, at);
+            return null;
+        });
+    }
+
+    public CompletableFuture<Optional<Activity>> lastEvent(long id, ActivityKind kind) {
+        return database.transaction(connection -> {
+            try (PreparedStatement select = connection.prepareStatement("""
+                    SELECT at, actor FROM finding_events WHERE finding_id = ? AND kind = ? ORDER BY at DESC, id DESC LIMIT 1
+                    """)) {
+                select.setLong(1, id);
+                select.setString(2, kind.name());
+                try (ResultSet rows = select.executeQuery()) {
+                    return rows.next()
+                            ? Optional.of(new Activity(Instant.ofEpochMilli(rows.getLong(1)), rows.getString(2), kind, id))
+                            : Optional.empty();
+                }
+            }
+        });
+    }
+
+    private static void recordEvent(Connection connection, long id, ActivityKind kind, String actor, Instant at)
+            throws SQLException {
+        try (PreparedStatement insert = connection.prepareStatement(
+                "INSERT INTO finding_events (finding_id, at, actor, kind) VALUES (?, ?, ?, ?)")) {
+            insert.setLong(1, id);
+            insert.setLong(2, at.toEpochMilli());
+            insert.setString(3, actor);
+            insert.setString(4, kind.name());
+            insert.executeUpdate();
+        }
+    }
+
+    private static String encodePlayers(Set<UUID> players) {
+        return players.stream().map(UUID::toString).sorted().collect(Collectors.joining(","));
     }
 
     public CompletableFuture<Optional<Finding>> find(long id) {
@@ -277,6 +335,30 @@ public final class FindingStore {
                 insert.setInt(2, thumbnail.height());
                 insert.setBytes(3, pixels);
                 insert.setLong(4, id);
+                return insert.executeUpdate() > 0;
+            }
+        });
+    }
+
+    public CompletableFuture<Optional<String>> reference(long id, String system) {
+        return database.transaction(connection -> {
+            try (PreparedStatement select = connection.prepareStatement(
+                    "SELECT reference FROM finding_references WHERE finding_id = ? AND system = ?")) {
+                select.setLong(1, id);
+                select.setString(2, system);
+                try (ResultSet rows = select.executeQuery()) {
+                    return rows.next() ? Optional.of(rows.getString(1)) : Optional.empty();
+                }
+            }
+        });
+    }
+
+    public CompletableFuture<Boolean> storeReference(long id, String system, String reference) {
+        return database.transaction(connection -> {
+            try (PreparedStatement insert = connection.prepareStatement(STORE_REFERENCE)) {
+                insert.setString(1, system);
+                insert.setString(2, reference);
+                insert.setLong(3, id);
                 return insert.executeUpdate() > 0;
             }
         });
@@ -529,7 +611,7 @@ public final class FindingStore {
             insert.setInt(8, box.maxZ());
             insert.setDouble(9, candidate.score());
             insert.setInt(10, candidate.votes());
-            insert.setString(11, candidate.players().stream().map(UUID::toString).sorted().collect(Collectors.joining(",")));
+            insert.setString(11, encodePlayers(candidate.players()));
             insert.setString(12, candidate.detail());
             insert.setString(13, candidate.modelVersion());
             insert.setInt(14, candidate.preview().width());

@@ -6,6 +6,8 @@ import de.kylekreuter.vistructum.api.FindingCandidate;
 import de.kylekreuter.vistructum.api.FindingCreateEvent;
 import de.kylekreuter.vistructum.api.FindingCreatedEvent;
 import de.kylekreuter.vistructum.core.MainThread;
+import de.kylekreuter.vistructum.core.history.BlockHistory;
+import de.kylekreuter.vistructum.core.history.Builders;
 import org.bukkit.Bukkit;
 
 import java.time.Clock;
@@ -16,7 +18,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 public final class FindingReporter {
@@ -25,31 +31,38 @@ public final class FindingReporter {
     private final FindingStore store;
     private final Logger logger;
     private final Duration dedupe;
+    private final Optional<BlockHistory> history;
+    private final Duration historyTimeout;
+    private final Consumer<Finding> created;
     private final Clock clock;
 
     public FindingReporter(MainThread mainThread, FindingStore store, Logger logger, Duration dedupe,
+                           Optional<BlockHistory> history, Duration historyTimeout, Consumer<Finding> created,
                            Clock clock) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.store = Objects.requireNonNull(store, "store");
         this.logger = Objects.requireNonNull(logger, "logger");
         this.dedupe = Objects.requireNonNull(dedupe, "dedupe");
+        this.history = Objects.requireNonNull(history, "history");
+        this.historyTimeout = Objects.requireNonNull(historyTimeout, "historyTimeout");
+        this.created = Objects.requireNonNull(created, "created");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
     public CompletableFuture<Optional<Finding>> report(DetectedCandidate detected) {
-        FindingCandidate candidate = detected.candidate();
         Instant now = clock.instant();
-        return store.isDuplicate(candidate, now, dedupe)
+        return store.isDuplicate(detected.candidate(), now, dedupe)
                 .thenCompose(duplicate -> duplicate
-                        ? CompletableFuture.completedFuture(false)
-                        : mainThread.supply(() -> admitted(candidate)))
+                        ? CompletableFuture.completedFuture(Optional.<DetectedCandidate>empty())
+                        : attributed(detected, now).thenCompose(this::admitted))
                 .thenCompose(admitted -> admitted
-                        ? store.insertUnlessDuplicate(detected, now, dedupe)
-                        : CompletableFuture.completedFuture(Optional.<Finding>empty()))
+                        .map(candidate -> store.insertUnlessDuplicate(candidate, now, dedupe))
+                        .orElseGet(() -> CompletableFuture.completedFuture(Optional.empty())))
                 .thenCompose(stored -> stored.isEmpty()
                         ? CompletableFuture.completedFuture(stored)
                         : mainThread.supply(() -> {
                             announce(stored.get());
+                            created.accept(stored.get());
                             return stored;
                         }));
     }
@@ -67,6 +80,34 @@ public final class FindingReporter {
             }));
         }
         return reported;
+    }
+
+    private CompletableFuture<DetectedCandidate> attributed(DetectedCandidate detected, Instant now) {
+        FindingCandidate candidate = detected.candidate();
+        if (!candidate.players().isEmpty() || history.isEmpty()) {
+            return CompletableFuture.completedFuture(detected);
+        }
+        return history.get().lookup(candidate.world(), candidate.box(), now)
+                .orTimeout(historyTimeout.toMillis(), TimeUnit.MILLISECONDS)
+                .thenApply(entries -> withPlayers(detected, Builders.of(entries, candidate.box())))
+                .exceptionally(error -> {
+                    logger.warning("block history lookup for a " + candidate.source().modelKind() + " candidate in "
+                            + candidate.world() + " at " + describe(candidate.box()) + " failed: " + error);
+                    return detected;
+                });
+    }
+
+    private static DetectedCandidate withPlayers(DetectedCandidate detected, Set<UUID> players) {
+        if (players.isEmpty()) {
+            return detected;
+        }
+        FindingCandidate c = detected.candidate();
+        return new DetectedCandidate(new FindingCandidate(c.source(), c.world(), c.box(), c.score(), c.votes(), players,
+                c.detail(), c.modelVersion(), c.preview()), detected.input(), detected.terrain());
+    }
+
+    private CompletableFuture<Optional<DetectedCandidate>> admitted(DetectedCandidate detected) {
+        return mainThread.supply(() -> admitted(detected.candidate()) ? Optional.of(detected) : Optional.empty());
     }
 
     private boolean admitted(FindingCandidate candidate) {

@@ -2,6 +2,7 @@ package de.kylekreuter.vistructum.ui.web.controller;
 
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
+import de.kylekreuter.vistructum.api.Activity;
 import de.kylekreuter.vistructum.api.EvidenceShare;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingQuery;
@@ -153,10 +154,12 @@ public final class FindingController {
         CompletableFuture<Boolean> evidence = handoff.off(vistructum.findings().hasEvidence(finding.id()));
         CompletableFuture<Boolean> terrain = handoff.off(vistructum.findings().hasTerrain(finding.id()));
         CompletableFuture<Optional<EvidenceShare>> shared = handoff.off(vistructum.web().shared(finding.id()));
+        CompletableFuture<Optional<Activity>> rollback = handoff.off(vistructum.blockLog().lastRollback(finding.id()));
         CompletableFuture<Map<UUID, Optional<String>>> players = names.of(finding.players());
-        return CompletableFuture.allOf(evidence, terrain, shared, players).thenApply(ignored ->
+        return CompletableFuture.allOf(evidence, terrain, shared, rollback, players).thenApply(ignored ->
                 FindingView.of(finding, players.join(), evidence.join(), terrain.join(), shared.join()
-                        .map(link -> ShareView.of(settings.shareLink(link.token()), link.sharedSince()))));
+                        .map(link -> ShareView.of(settings.shareLink(link.token()), link.sharedSince())),
+                        rollback.join()));
     }
 
     private CompletableFuture<Finding> existing(long id) {

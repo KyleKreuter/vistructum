@@ -1,4 +1,4 @@
-import { Check, Link2, Link2Off, X } from "lucide-react";
+import { Check, History, Link2, Link2Off, Undo2, X } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "react-router";
 import { useActivity } from "@/api/queries";
@@ -14,6 +14,8 @@ const kinds: Record<ActivityKind, { label: string; icon: typeof Check; tone: str
   FALSE_ALARM: { label: "marked as false alarm", icon: X, tone: "text-false-alarm" },
   SHARED: { label: "activated the public link of", icon: Link2, tone: "text-primary" },
   UNSHARED: { label: "deactivated the public link of", icon: Link2Off, tone: "text-muted-foreground" },
+  ATTRIBUTED: { label: "found the builders through CoreProtect for", icon: History, tone: "text-primary" },
+  ROLLED_BACK: { label: "rolled back through CoreProtect", icon: Undo2, tone: "text-destructive" },
 };
 
 export default function ActivityPage() {

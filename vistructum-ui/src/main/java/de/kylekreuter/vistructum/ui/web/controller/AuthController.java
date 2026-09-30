@@ -1,5 +1,6 @@
 package de.kylekreuter.vistructum.ui.web.controller;
 
+import de.kylekreuter.vistructum.api.BlockLog;
 import de.kylekreuter.vistructum.api.WebAccess;
 import de.kylekreuter.vistructum.api.WebSession;
 import de.kylekreuter.vistructum.ui.web.GameServer;
@@ -26,13 +27,15 @@ public final class AuthController {
     private static final int COOKIE_SECONDS = WebAccess.SESSION_HOURS * 3600;
 
     private final WebAccess web;
+    private final BlockLog blockLog;
     private final WebSettings settings;
     private final GameServer game;
     private final Handoff handoff;
     private final SecureRandom random = new SecureRandom();
 
-    public AuthController(WebAccess web, WebSettings settings, GameServer game, Handoff handoff) {
+    public AuthController(WebAccess web, BlockLog blockLog, WebSettings settings, GameServer game, Handoff handoff) {
         this.web = Objects.requireNonNull(web, "web");
+        this.blockLog = Objects.requireNonNull(blockLog, "blockLog");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.game = Objects.requireNonNull(game, "game");
         this.handoff = Objects.requireNonNull(handoff, "handoff");
@@ -76,8 +79,9 @@ public final class AuthController {
 
     private void me(Context ctx) {
         WebSession session = SessionFilter.session(ctx);
-        ctx.future(() -> handoff.onMain(() -> game.canShare(session.player()))
-                .thenAccept(canShare -> Responses.json(ctx, MeView.of(session, canShare))));
+        ctx.future(() -> handoff.onMain(() -> MeView.of(session, game.canShare(session.player()),
+                        blockLog.available(), game.canRollback(session.player())))
+                .thenAccept(view -> Responses.json(ctx, view)));
     }
 
     private String cookie(String name, String value, int maxAge, boolean httpOnly) {

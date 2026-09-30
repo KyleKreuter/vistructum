@@ -7,6 +7,8 @@ export interface Me {
   name: string;
   expiresAt: string;
   canShare: boolean;
+  blockLog: boolean;
+  canRollback: boolean;
 }
 
 export interface InferenceModel {
@@ -96,6 +98,8 @@ export interface FindingSummary {
   hasTerrain: boolean;
   sharedSince: string | null;
   shareUrl: string | null;
+  rolledBackAt: string | null;
+  rolledBackBy: string | null;
 }
 
 export interface FindingDetail extends FindingSummary {
@@ -179,6 +183,11 @@ export interface Evidence {
   recordings: Recording[];
 }
 
+export interface RollbackResult {
+  restored: number;
+  skipped: number;
+}
+
 export interface ShareResult {
   url: string;
   sharedSince: string;
@@ -200,7 +209,7 @@ export interface Stats {
   precision: { source: Source; confirmed: number; falseAlarms: number }[];
 }
 
-export type ActivityKind = "CONFIRMED" | "FALSE_ALARM" | "SHARED" | "UNSHARED";
+export type ActivityKind = "CONFIRMED" | "FALSE_ALARM" | "SHARED" | "UNSHARED" | "ATTRIBUTED" | "ROLLED_BACK";
 
 export interface ActivityItem {
   at: string;

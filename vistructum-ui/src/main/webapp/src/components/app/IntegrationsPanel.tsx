@@ -1,10 +1,10 @@
-import { ChevronDown, Gavel, Info, Plug, Undo2, UserSearch } from "lucide-react";
+import { ChevronDown, Info, Plug, Undo2, UserSearch } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
 import { useAttribution, useMe, useRollback } from "@/api/queries";
 import type { FindingDetail } from "@/api/types";
-import { PunishmentHistory } from "@/components/app/Punishments";
+import { LibertyBansHeading, PunishmentHistory } from "@/components/app/Punishments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -28,23 +28,16 @@ export function IntegrationsPanel({
   return (
     <IntegrationsCard storageKey="vistructum-integrations-finding">
       {(blockLog || finding.rolledBackAt) && <CoreProtectSection finding={finding} blockLog={blockLog} canRollback={canRollback} />}
-      {punishments && (
-        <div className="flex items-center gap-2">
-          <Gavel className="size-4 shrink-0 text-muted-foreground" />
-          <span className="font-medium">Punishments</span>
-          <span className="ml-auto text-xs text-muted-foreground">from {punishments}</span>
-        </div>
-      )}
+      {punishments && <LibertyBansHeading />}
     </IntegrationsCard>
   );
 }
 
 export function PlayerIntegrationsPanel({ uuid }: { uuid: string }) {
-  const source = useMe().data?.punishments;
-  if (!source) return null;
+  if (!useMe().data?.punishments) return null;
   return (
     <IntegrationsCard storageKey="vistructum-integrations-player" className="shrink-0">
-      <PunishmentHistory uuid={uuid} source={source} />
+      <PunishmentHistory uuid={uuid} />
     </IntegrationsCard>
   );
 }

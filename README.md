@@ -217,7 +217,7 @@ The browser loads the CoreProtect logo of the panel from `cdn.modrinth.com`.
 
 ### LibertyBans integration
 
-The web app shows which players are punished. Each player card on the finding page shows an active ban or mute as a label, for example **Banned until 06 Oct 2026, 14:50** or **Muted**. The **Integrations** panel on the player page lists the full history with type, reason, staff member, date, and expiry, newest first, at most 100 entries. The **Integrations** panels name the source.
+The web app shows which players are punished. Each player card on the finding page shows an active ban or mute as a label, for example **Banned until 06 Oct 2026, 14:50** or **Muted**. The **Integrations** panel on the player page lists the full history with type, reason, staff member, date, and expiry, newest first, at most 100 entries. Both panels show LibertyBans with its logo, which the browser loads from `cdn.modrinth.com`.
 
 The UI plugin reads the history from [LibertyBans](https://modrinth.com/plugin/libertybans) 1.1 or newer. Other punishment plugins are not supported. Without LibertyBans, the web app shows no punishments.
 

@@ -1,4 +1,3 @@
-import { Gavel } from "lucide-react";
 import { errorMessage } from "@/api/client";
 import { useMe, usePunishments } from "@/api/queries";
 import type { Punishment } from "@/api/types";
@@ -26,15 +25,21 @@ export function PunishmentBadges({ uuid, className }: { uuid: string; className?
   );
 }
 
-export function PunishmentHistory({ uuid, source }: { uuid: string; source: string }) {
+const libertyBansLogo = "https://cdn.modrinth.com/data/PgXAUxLZ/icon.png";
+
+export function LibertyBansHeading() {
+  return (
+    <h3 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+      <img src={libertyBansLogo} alt="" className="size-4 rounded-sm" referrerPolicy="no-referrer" loading="lazy" /> LibertyBans
+    </h3>
+  );
+}
+
+export function PunishmentHistory({ uuid }: { uuid: string }) {
   const history = usePunishments(uuid, true);
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <Gavel className="size-4 shrink-0 text-muted-foreground" />
-        <span className="font-medium">Punishments</span>
-        <span className="ml-auto text-xs text-muted-foreground">from {history.data?.source ?? source}</span>
-      </div>
+    <section className="space-y-2">
+      <LibertyBansHeading />
       {history.isPending ? (
         <p className="text-muted-foreground">Loading…</p>
       ) : history.isError ? (

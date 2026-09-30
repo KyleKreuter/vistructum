@@ -2,32 +2,16 @@ import { errorMessage } from "@/api/client";
 import { Info } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
-import { useMe, usePlayersPunishments, usePunishments } from "@/api/queries";
+import { usePlayersPunishments, usePunishments } from "@/api/queries";
 import type { PlayerRef, Punishment } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDateTime, playerLabel } from "@/logic/format";
-import { activeStatuses, expires, expiryLabel, inForce, punishmentTypeLabel } from "@/logic/punishments";
+import { expires, expiryLabel, inForce, punishmentTypeLabel } from "@/logic/punishments";
 import { cn } from "@/lib/utils";
 
 const typeVariants = { BAN: "rose", MUTE: "amber", WARN: "violet", KICK: "slate" } as const;
-
-export function PunishmentBadges({ uuid, className }: { uuid: string; className?: string }) {
-  const me = useMe();
-  const history = usePunishments(uuid, !!me.data?.punishments);
-  const statuses = history.data ? activeStatuses(history.data.items) : [];
-  if (!statuses.length) return null;
-  return (
-    <span className={cn("flex flex-wrap gap-1", className)}>
-      {statuses.map((status) => (
-        <Badge key={status.type} variant={typeVariants[status.type]}>
-          {status.label}
-        </Badge>
-      ))}
-    </span>
-  );
-}
 
 export const libertyBansLogo = "https://cdn.modrinth.com/data/PgXAUxLZ/icon.png";
 

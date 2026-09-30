@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Punishment } from "@/api/types";
-import { activeStatuses, expires, expiryLabel, inForce, punishmentTypeLabel } from "./punishments";
+import { expires, expiryLabel, inForce, punishmentTypeLabel } from "./punishments";
 
 const now = Date.parse("2026-09-30T12:00:00Z");
 
@@ -21,31 +21,6 @@ describe("inForce", () => {
   it("never counts warnings and kicks", () => {
     expect(inForce(punishment({ type: "WARN" }), now)).toBe(false);
     expect(inForce(punishment({ type: "KICK" }), now)).toBe(false);
-  });
-});
-
-describe("activeStatuses", () => {
-  it("is empty without punishments in force", () => {
-    expect(activeStatuses([punishment({ active: false }), punishment({ type: "WARN" })], now)).toEqual([]);
-  });
-
-  it("lists the ban before the mute", () => {
-    const statuses = activeStatuses([punishment({ type: "MUTE" }), punishment({})], now);
-    expect(statuses.map((status) => status.type)).toEqual(["BAN", "MUTE"]);
-    expect(statuses.map((status) => status.label)).toEqual(["Banned", "Muted"]);
-  });
-
-  it("shows the latest expiry of a temporary ban", () => {
-    const [status] = activeStatuses(
-      [punishment({ expiresAt: "2026-10-01T12:00:00Z" }), punishment({ expiresAt: "2026-10-05T12:00:00Z" })],
-      now,
-    );
-    expect(status.label).toMatch(/^Banned until 05 Oct 2026/);
-  });
-
-  it("prefers a permanent ban over a temporary one", () => {
-    const [status] = activeStatuses([punishment({ expiresAt: "2026-10-01T12:00:00Z" }), punishment({})], now);
-    expect(status.label).toBe("Banned");
   });
 });
 

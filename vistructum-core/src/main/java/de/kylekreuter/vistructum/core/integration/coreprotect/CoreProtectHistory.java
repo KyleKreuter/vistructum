@@ -14,6 +14,7 @@ import org.bukkit.plugin.Plugin;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,8 +80,9 @@ public final class CoreProtectHistory implements BlockHistory {
         }
         Location center = new Location(world, region.centerX() + 0.5, Math.floorDiv(region.minY() + region.maxY(), 2),
                 region.centerZ() + 0.5);
-        List<String[]> rows = api.performLookup(Math.toIntExact(window.toSeconds()), null, null, null, null,
-                BLOCK_ACTIONS, radius(region), center);
+        List<String[]> rows = api.performLookup(Math.toIntExact(window.toSeconds()), new ArrayList<>(),
+                new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(BLOCK_ACTIONS), radius(region),
+                center);
         if (rows == null) {
             return List.of();
         }

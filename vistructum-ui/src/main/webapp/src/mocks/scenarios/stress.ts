@@ -7,6 +7,8 @@ export const stressSeed = 0x5eed2026;
 export const stressFindingCount = 50_000;
 export const stressPlayerCount = 2_000;
 export const stressFirstId = 9_950_001;
+export const stressCrowdedId = stressFirstId + stressFindingCount - 1;
+export const stressCrowdSize = 120;
 export const stressPublicToken = "stress-public-evidence";
 
 const worldBorder = 29_999_000;
@@ -165,7 +167,8 @@ export function createStressDb(fixture: Fixture, now = Date.now()): MockDb {
     }
     const sceneSet = scenes[id % scenes.length];
     const centre = { x: Math.floor((box.minX + box.maxX) / 2), y: box.maxY + 20, z: Math.floor((box.minZ + box.maxZ) / 2) };
-    const involved = involvedPlayers(rnd, players, hasEvidence);
+    const sampled = involvedPlayers(rnd, players, hasEvidence);
+    const involved = id === stressCrowdedId ? players.slice(0, stressCrowdSize) : sampled;
     findings[stressFindingCount - 1 - n] = {
       id,
       source,
@@ -202,7 +205,7 @@ export function createStressDb(fixture: Fixture, now = Date.now()): MockDb {
   if (newestShared) shares.set(stressPublicToken, newestShared.id);
   activity.sort((a, b) => b.at.localeCompare(a.at));
   return {
-    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true, blockLog: true, canRollback: true },
+    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true, blockLog: true, canRollback: true, punishments: "LibertyBans" },
     findings,
     players: [...players, staff],
     palette: mockPalette(fixture),

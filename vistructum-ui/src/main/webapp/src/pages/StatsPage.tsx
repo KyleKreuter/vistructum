@@ -2,12 +2,15 @@ import { useMemo, useState } from "react";
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts";
 import { Link } from "react-router";
 import { useStats } from "@/api/queries";
+import type { Paging } from "@/api/types";
+import { Pagination } from "@/components/app/Pagination";
 import { EmptyState, ErrorState, PageHeader, PageSpinner } from "@/components/app/States";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatDateTime, formatPercent, formatRelative, precision } from "@/logic/format";
+import { pageCount } from "@/logic/pagination";
 import { axisWidth, compactCount, dayRows, rangeBounds, ranges, reviewerRows, totals, weekRows, type RangeKey } from "@/logic/stats";
 
 const chartConfig = {
@@ -31,6 +34,8 @@ function Kpi({ label, value, hint }: { label: string; value: React.ReactNode; hi
   );
 }
 
+const reviewerPageSizes = [10, 25, 50] as const;
+
 export default function StatsPage() {
   const [range, setRange] = useState<RangeKey>("30d");
   const [now] = useState(() => new Date());
@@ -39,6 +44,8 @@ export default function StatsPage() {
   const rows = useMemo(() => (stats.data ? dayRows(stats.data, bounds.from, bounds.to) : []), [stats.data, bounds]);
   const sum = useMemo(() => totals(rows), [rows]);
   const reviewers = useMemo(() => (stats.data ? reviewerRows(stats.data) : []), [stats.data]);
+  const [reviewerPaging, setReviewerPaging] = useState<Paging>({ page: 1, pageSize: reviewerPageSizes[0] });
+  const reviewerPage = Math.min(reviewerPaging.page, pageCount(reviewers.length, reviewerPaging.pageSize));
   const weekly = rows.length > 90;
   const chartRows = useMemo(() => (weekly ? weekRows(rows) : rows), [rows, weekly]);
   const tickEvery = Math.max(1, Math.ceil(chartRows.length / 12));
@@ -166,7 +173,7 @@ export default function StatsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {reviewers.map((row) => (
+                      {reviewers.slice((reviewerPage - 1) * reviewerPaging.pageSize, reviewerPage * reviewerPaging.pageSize).map((row) => (
                         <TableRow key={row.reviewer}>
                           <TableCell className="max-w-40 truncate font-medium" title={row.reviewer}>
                             {row.reviewer}
@@ -178,6 +185,16 @@ export default function StatsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                )}
+                {reviewers.length > reviewerPageSizes[0] && (
+                  <Pagination
+                    paging={{ page: reviewerPage, pageSize: reviewerPaging.pageSize }}
+                    total={reviewers.length}
+                    onChange={setReviewerPaging}
+                    unit="Reviewers"
+                    sizes={reviewerPageSizes}
+                    className="mt-3"
+                  />
                 )}
               </CardContent>
             </Card>

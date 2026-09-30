@@ -9,6 +9,8 @@ import de.kylekreuter.vistructum.ui.gui.ReviewMenus;
 import de.kylekreuter.vistructum.ui.gui.Thumbnails;
 import de.kylekreuter.vistructum.ui.integration.discord.DiscordNotifier;
 import de.kylekreuter.vistructum.ui.integration.discord.DiscordSettings;
+import de.kylekreuter.vistructum.ui.integration.punishment.PunishmentLog;
+import de.kylekreuter.vistructum.ui.integration.punishment.PunishmentLogs;
 import de.kylekreuter.vistructum.ui.text.Messages;
 import de.kylekreuter.vistructum.ui.web.BukkitGameServer;
 import de.kylekreuter.vistructum.ui.web.ReviewLinks;
@@ -112,8 +114,8 @@ public final class VistructumUi extends JavaPlugin {
                 web.enabled() && getConfig().getBoolean("web.textures.download"));
         Optional<WebApplication.WebApp> app = web.enabled()
                 ? Optional.of(new WebApplication.WebApp(vistructum, web, new BukkitGameServer(SHARE_PERMISSION, ROLLBACK_PERMISSION),
-                BukkitGameServer.palette(), gameAssets, Bukkit.getScheduler().getMainThreadExecutor(this),
-                getClassLoader(), clock))
+                BukkitGameServer.palette(), gameAssets, connectPunishments(),
+                Bukkit.getScheduler().getMainThreadExecutor(this), getClassLoader(), clock))
                 : Optional.empty();
         try {
             webApplication = WebApplication.start(address, pack, app, getLogger());
@@ -126,6 +128,15 @@ public final class VistructumUi extends JavaPlugin {
                     + WebSettings.HOME);
             gameAssets.fetch(GameAssets.MANIFEST, getLogger());
         }
+    }
+
+    private Optional<PunishmentLog> connectPunishments() {
+        if (!getConfig().getBoolean("punishments.enabled")) {
+            return Optional.empty();
+        }
+        Optional<PunishmentLog> log = PunishmentLogs.connect(getServer().getPluginManager(), getLogger());
+        log.ifPresent(connected -> getLogger().info("the web app shows punishments from " + connected.source()));
+        return log;
     }
 
     private void startDiscord(Vistructum vistructum, Thumbnails thumbnails, Messages messages, WebSettings web) {

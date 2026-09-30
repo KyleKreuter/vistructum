@@ -2,7 +2,7 @@ import { expiresIn, mockPalette, staff, storedEvidence, type Fixture, type MockD
 
 export function createEmptyDb(fixture: Fixture, now = Date.now()): MockDb {
   return {
-    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true, blockLog: true, canRollback: true },
+    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true, blockLog: true, canRollback: true, punishments: "LibertyBans" },
     findings: [],
     players: [],
     palette: mockPalette(fixture),

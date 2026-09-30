@@ -119,11 +119,15 @@ public final class FindingStore {
     private static final String ACTIVITY = """
             SELECT at, actor, kind, finding_id FROM (
                 SELECT reviewed_at AS at, reviewer AS actor, verdict AS kind, id AS finding_id, 0 AS rank
-                FROM findings WHERE verdict IS NOT NULL AND reviewed_at < ?
+                FROM findings WHERE verdict IS NOT NULL
                 UNION ALL
-                SELECT at, actor, kind, finding_id, id FROM finding_events WHERE at < ?)
+                SELECT at, actor, kind, finding_id, id FROM finding_events)
             ORDER BY at DESC, rank DESC, finding_id DESC
-            LIMIT ?
+            LIMIT ? OFFSET ?
+            """;
+
+    private static final String ACTIVITY_COUNT = """
+            SELECT (SELECT COUNT(*) FROM findings WHERE verdict IS NOT NULL) + (SELECT COUNT(*) FROM finding_events)
             """;
 
     private final Database database;
@@ -503,14 +507,12 @@ public final class FindingStore {
                 reviewers(connection, from, to), countOpen(connection), oldestOpen(connection)));
     }
 
-    public CompletableFuture<List<Activity>> activity(Instant before, int limit) {
+    public CompletableFuture<List<Activity>> activity(int offset, int limit) {
         return database.transaction(connection -> {
             List<Activity> entries = new ArrayList<>();
             try (PreparedStatement select = connection.prepareStatement(ACTIVITY)) {
-                long cursor = before.toEpochMilli();
-                select.setLong(1, cursor);
-                select.setLong(2, cursor);
-                select.setInt(3, limit);
+                select.setInt(1, limit);
+                select.setInt(2, offset);
                 try (ResultSet rows = select.executeQuery()) {
                     while (rows.next()) {
                         entries.add(new Activity(Instant.ofEpochMilli(rows.getLong(1)), rows.getString(2),
@@ -519,6 +521,16 @@ public final class FindingStore {
                 }
             }
             return List.copyOf(entries);
+        });
+    }
+
+    public CompletableFuture<Long> activityCount() {
+        return database.transaction(connection -> {
+            try (PreparedStatement select = connection.prepareStatement(ACTIVITY_COUNT);
+                 ResultSet rows = select.executeQuery()) {
+                rows.next();
+                return rows.getLong(1);
+            }
         });
     }
 

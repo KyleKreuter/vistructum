@@ -248,13 +248,21 @@ public interface Findings {
     CompletableFuture<FindingStats> stats(Instant from, Instant to);
 
     /**
-     * Loads the activity log of reviews, evidence links and block log actions, newest first.
+     * Loads one page of the activity log of reviews, evidence links and block log actions, newest first.
      *
-     * @param before exclusive upper bound for the time of the returned entries, used as the paging cursor
+     * @param offset number of newer entries to skip, at least {@code 0}
      * @param limit maximum number of entries, between {@code 1} and {@link FindingQuery#MAX_LIMIT} inclusive
      * @return a future completing with at most {@code limit} entries; the list is unmodifiable
-     * @throws NullPointerException if {@code before} is {@code null}
-     * @throws IllegalArgumentException if {@code limit} lies outside the permitted range
+     * @throws IllegalArgumentException if {@code offset} is negative or {@code limit} lies outside the permitted
+     *         range
+     * @see #activityCount()
      */
-    CompletableFuture<List<Activity>> activity(Instant before, int limit);
+    CompletableFuture<List<Activity>> activity(int offset, int limit);
+
+    /**
+     * Counts the entries of the activity log.
+     *
+     * @return a future completing with the number of entries that {@link #activity(int, int)} pages through
+     */
+    CompletableFuture<Long> activityCount();
 }

@@ -265,12 +265,19 @@ public final class VistructumService implements Vistructum {
         }
 
         @Override
-        public CompletableFuture<List<Activity>> activity(Instant before, int limit) {
-            Objects.requireNonNull(before, "before");
+        public CompletableFuture<List<Activity>> activity(int offset, int limit) {
+            if (offset < 0) {
+                throw new IllegalArgumentException("offset must not be negative, got " + offset);
+            }
             if (limit < 1 || limit > FindingQuery.MAX_LIMIT) {
                 throw new IllegalArgumentException("limit must be in 1.." + FindingQuery.MAX_LIMIT + ", got " + limit);
             }
-            return mainThread.handOff(findingStore.activity(before, limit));
+            return mainThread.handOff(findingStore.activity(offset, limit));
+        }
+
+        @Override
+        public CompletableFuture<Long> activityCount() {
+            return mainThread.handOff(findingStore.activityCount());
         }
     }
 

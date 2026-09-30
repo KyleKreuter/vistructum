@@ -17,10 +17,11 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 public final class StatusController {
 
-    static final int DEFAULT_ACTIVITY_LIMIT = 50;
+    static final int DEFAULT_ACTIVITY_PAGE_SIZE = 25;
     static final Duration DEFAULT_STATS_RANGE = Duration.ofDays(30);
 
     private final Vistructum vistructum;
@@ -59,9 +60,11 @@ public final class StatusController {
     }
 
     private void activity(Context ctx) {
-        Instant before = Requests.param(ctx, "before").map(Params::instant).orElseGet(clock::instant);
-        int limit = Requests.param(ctx, "limit").map(Params::limit).orElse(DEFAULT_ACTIVITY_LIMIT);
-        ctx.future(() -> handoff.off(vistructum.findings().activity(before, limit))
-                .thenAccept(items -> Responses.json(ctx, ActivityView.of(items))));
+        int pageSize = Requests.param(ctx, "pageSize").map(Params::limit).orElse(DEFAULT_ACTIVITY_PAGE_SIZE);
+        int page = Requests.param(ctx, "page").map(value -> Params.page(value, pageSize)).orElse(1);
+        CompletableFuture<Long> total = handoff.off(vistructum.findings().activityCount());
+        ctx.future(() -> handoff.off(vistructum.findings().activity((page - 1) * pageSize, pageSize))
+                .thenCombine(total, (items, count) -> ActivityView.of(items, count, page, pageSize))
+                .thenAccept(view -> Responses.json(ctx, view)));
     }
 }

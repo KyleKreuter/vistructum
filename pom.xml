@@ -30,6 +30,8 @@
         <lz4.version>1.8.0</lz4.version>
         <bstats.version>3.2.1</bstats.version>
         <coreprotect.version>23.2</coreprotect.version>
+        <libertybans-api.version>1.1.4</libertybans-api.version>
+        <omnibus.version>1.1.0-RC2</omnibus.version>
         <javalin.version>7.2.3</javalin.version>
         <slf4j.version>2.0.18</slf4j.version>
     </properties>
@@ -43,6 +45,14 @@
             <id>playpro</id>
             <url>https://maven.playpro.com</url>
         </repository>
+        <repository>
+            <id>arim-affero-gpl3</id>
+            <url>https://mvn-repo.arim.space/affero-gpl3/</url>
+        </repository>
+        <repository>
+            <id>arim-lesser-gpl3</id>
+            <url>https://mvn-repo.arim.space/lesser-gpl3/</url>
+        </repository>
     </repositories>
 
     <dependencyManagement>
@@ -51,6 +61,18 @@
                 <groupId>net.coreprotect</groupId>
                 <artifactId>coreprotect</artifactId>
                 <version>${coreprotect.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>space.arim.libertybans</groupId>
+                <artifactId>bans-api</artifactId>
+                <version>${libertybans-api.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>space.arim.omnibus</groupId>
+                <artifactId>omnibus</artifactId>
+                <version>${omnibus.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>

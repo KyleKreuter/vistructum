@@ -3,7 +3,8 @@ import type { ActivityItem, AssetStatus, FindingState, FindingSummary, ScanJob, 
 import { matchesState } from "@/logic/filters";
 import { paintLayer, sceneColours } from "@/logic/sceneLayers";
 import { publicUrl, type MockDb, type MockFinding } from "./data";
-import { relativeEvidence } from "./evidence";
+import { relativeEvidence, syntheticEvidence } from "./evidence";
+import { mockPunishments } from "./punishments";
 import { sceneTerrain } from "./terrain";
 import { activeSettings, type EndpointKey } from "./settings";
 import { facePng, imagePng, lookFor, skinPng } from "./skins";
@@ -270,6 +271,8 @@ export function handlers(db: MockDb) {
         finding.players = [builder];
         db.activity.unshift({ at: new Date().toISOString(), actor: db.me.name, kind: "ATTRIBUTED", findingId: finding.id });
       }
+      finding.evidence ??= syntheticEvidence(finding.id);
+      finding.hasEvidence = true;
       return HttpResponse.json(summary(finding));
     }),
 
@@ -334,10 +337,10 @@ export function handlers(db: MockDb) {
       const blocked = await gate("activity", 150);
       if (blocked) return blocked;
       const url = new URL(request.url);
-      const before = url.searchParams.get("before");
-      const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? 50)));
-      const items: ActivityItem[] = db.activity.filter((item) => !before || item.at < before).slice(0, limit);
-      return HttpResponse.json({ items });
+      const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get("pageSize") ?? 25)));
+      const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
+      const items: ActivityItem[] = db.activity.slice((page - 1) * pageSize, page * pageSize);
+      return HttpResponse.json({ items, total: db.activity.length, page, pageSize });
     }),
 
     http.get(`${api}/players/:uuid`, async ({ params }) => {
@@ -357,6 +360,13 @@ export function handlers(db: MockDb) {
           falseAlarms: mine.filter((finding) => finding.review?.verdict === "FALSE_ALARM").length,
         },
       });
+    }),
+
+    http.get(`${api}/players/:uuid/punishments`, async ({ params }) => {
+      const blocked = await gate("punishments", 300);
+      if (blocked) return blocked;
+      if (!db.me.punishments) return error(503, "unavailable");
+      return HttpResponse.json({ source: db.me.punishments, items: mockPunishments(String(params.uuid), Date.now()) });
     }),
 
     http.get(`${api}/players/:uuid/skin.png`, async ({ params }) => {

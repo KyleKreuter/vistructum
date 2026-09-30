@@ -30,6 +30,14 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>space.arim.libertybans</groupId>
+            <artifactId>bans-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>space.arim.omnibus</groupId>
+            <artifactId>omnibus</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.javalin</groupId>
             <artifactId>javalin</artifactId>
             <exclusions>

@@ -5,6 +5,8 @@ import de.kylekreuter.vistructum.api.Findings;
 import de.kylekreuter.vistructum.api.Players;
 import de.kylekreuter.vistructum.api.ReviewState;
 import de.kylekreuter.vistructum.api.Vistructum;
+import de.kylekreuter.vistructum.ui.integration.punishment.Punishment;
+import de.kylekreuter.vistructum.ui.integration.punishment.PunishmentLog;
 import de.kylekreuter.vistructum.ui.web.Handoff;
 import de.kylekreuter.vistructum.ui.web.PlayerNames;
 import de.kylekreuter.vistructum.ui.web.Responses;
@@ -13,35 +15,46 @@ import de.kylekreuter.vistructum.ui.web.assets.Pngs;
 import de.kylekreuter.vistructum.ui.web.error.ApiError;
 import de.kylekreuter.vistructum.ui.web.view.PlayerSummaryView;
 import de.kylekreuter.vistructum.ui.web.view.PlayerView;
+import de.kylekreuter.vistructum.ui.web.view.PunishmentsView;
 import io.javalin.config.JavalinConfig;
 import io.javalin.http.Context;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public final class PlayerController {
 
     private static final String PLAYER = WebSettings.API + "players/{uuid}";
     private static final int FACE_SCALE = 8;
+    private static final long PUNISHMENT_TIMEOUT_SECONDS = 10;
 
     private final Vistructum vistructum;
     private final PlayerNames names;
     private final Handoff handoff;
+    private final Optional<PunishmentLog> punishments;
 
-    public PlayerController(Vistructum vistructum, PlayerNames names, Handoff handoff) {
+    public PlayerController(Vistructum vistructum, PlayerNames names, Handoff handoff,
+                            Optional<PunishmentLog> punishments) {
         this.vistructum = Objects.requireNonNull(vistructum, "vistructum");
         this.names = Objects.requireNonNull(names, "names");
         this.handoff = Objects.requireNonNull(handoff, "handoff");
+        this.punishments = Objects.requireNonNull(punishments, "punishments");
     }
 
     public void register(JavalinConfig config) {
         Routes.read(config, PLAYER, this::summary);
         Routes.read(config, PLAYER + "/skin.png", this::skin);
         Routes.read(config, PLAYER + "/face.png", this::face);
+        Routes.read(config, PLAYER + "/punishments", this::punishments);
         Routes.read(config, PLAYER + "/{part}", ctx -> {
             player(ctx);
             throw ApiError.notFound();
@@ -77,6 +90,30 @@ public final class PlayerController {
             int[] rgb = face.pixels().stream().mapToInt(Integer::intValue).toArray();
             Responses.png(ctx, Pngs.scaled(8, 8, rgb, FACE_SCALE));
         }));
+    }
+
+    private void punishments(Context ctx) {
+        UUID player = player(ctx);
+        PunishmentLog log = punishments.orElseThrow(ApiError::unavailable);
+        ctx.future(() -> handoff.off(log.history(player).orTimeout(PUNISHMENT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                        .exceptionally(PlayerController::unavailableOnTimeout))
+                .thenCompose(history -> {
+                    List<Punishment> newest = history.stream().sorted(Punishment.NEWEST_FIRST)
+                            .limit(PunishmentLog.LIMIT).toList();
+                    Set<UUID> operators = newest.stream().filter(punishment -> punishment.operatorName().isEmpty())
+                            .flatMap(punishment -> punishment.operatorId().stream()).collect(Collectors.toSet());
+                    return names.of(operators).thenAccept(known ->
+                            Responses.json(ctx, PunishmentsView.of(log.source(), newest, known)));
+                }));
+    }
+
+    private static List<Punishment> unavailableOnTimeout(Throwable failure) {
+        Throwable cause = failure instanceof CompletionException wrapped && wrapped.getCause() != null
+                ? wrapped.getCause() : failure;
+        if (cause instanceof TimeoutException) {
+            throw ApiError.unavailable();
+        }
+        throw failure instanceof CompletionException completion ? completion : new CompletionException(failure);
     }
 
     static CompletableFuture<Void> skin(Context ctx, Players players, Handoff handoff, UUID player) {

@@ -1,4 +1,4 @@
-import { keepPreviousData, queryOptions, useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions, useMutation, useQueries, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { findingsQuery } from "@/logic/filters";
 import { ApiError, request } from "./client";
 import type {
@@ -13,6 +13,7 @@ import type {
   Me,
   Palette,
   PlayerInfo,
+  PunishmentHistory,
   PublicEvidence,
   RollbackResult,
   Scene,
@@ -36,6 +37,7 @@ export const keys = {
   stats: (from: string, to: string) => ["stats", from, to] as const,
   activity: ["activity"] as const,
   player: (uuid: string) => ["player", uuid] as const,
+  punishments: (uuid: string) => ["punishments", uuid] as const,
   publicEvidence: (token: string) => ["public", token] as const,
 };
 
@@ -133,16 +135,11 @@ export function useStats(from: string, to: string) {
   });
 }
 
-export function useActivity() {
-  return useInfiniteQuery({
-    queryKey: keys.activity,
-    queryFn: ({ pageParam }) => {
-      const params = new URLSearchParams({ limit: "50" });
-      if (pageParam) params.set("before", pageParam);
-      return request<ActivityPage>(`/activity?${params.toString()}`);
-    },
-    initialPageParam: null as string | null,
-    getNextPageParam: (last) => (last.items.length >= 50 ? last.items[last.items.length - 1].at : null),
+export function useActivity(paging: Paging) {
+  return useQuery({
+    queryKey: [...keys.activity, paging.page, paging.pageSize],
+    queryFn: () => request<ActivityPage>(`/activity?${new URLSearchParams({ page: String(paging.page), pageSize: String(paging.pageSize) }).toString()}`),
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -152,6 +149,23 @@ export function usePlayer(uuid: string, enabled: boolean) {
     queryFn: () => request<PlayerInfo>(`/players/${encodeURIComponent(uuid)}`),
     enabled,
   });
+}
+
+function punishmentsOptions(uuid: string, enabled: boolean) {
+  return queryOptions({
+    queryKey: keys.punishments(uuid),
+    queryFn: () => request<PunishmentHistory>(`/players/${encodeURIComponent(uuid)}/punishments`),
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
+export function usePunishments(uuid: string, enabled: boolean) {
+  return useQuery(punishmentsOptions(uuid, enabled));
+}
+
+export function usePlayersPunishments(uuids: string[], enabled: boolean) {
+  return useQueries({ queries: uuids.map((uuid) => punishmentsOptions(uuid, enabled)) });
 }
 
 export function usePublicEvidence(token: string) {

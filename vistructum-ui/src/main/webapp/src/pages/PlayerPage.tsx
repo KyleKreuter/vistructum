@@ -4,6 +4,7 @@ import { ApiError, urls } from "@/api/client";
 import { usePlayer } from "@/api/queries";
 import { FindingList } from "@/components/app/FindingList";
 import { PlayerFace } from "@/components/app/PlayerFace";
+import { PlayerIntegrationsPanel } from "@/components/app/IntegrationsPanel";
 import { EmptyState, ErrorState, PageSpinner } from "@/components/app/States";
 import { Card, CardContent } from "@/components/ui/card";
 import { isUuid } from "@/logic/filters";
@@ -53,7 +54,8 @@ export default function PlayerPage() {
           </CardContent>
         </Card>
       </div>
-      <div className="flex min-w-0 flex-col lg:min-h-0">
+      <div className="flex min-w-0 flex-col gap-4 lg:min-h-0">
+        <PlayerIntegrationsPanel uuid={uuid} />
         <FindingList
           player={uuid}
           header={(total) => (

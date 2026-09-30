@@ -5,6 +5,7 @@ api-version: '1.21'
 author: Kyle Kreuter
 description: Review menu and chat output for Vistructum findings, built on the Vistructum API.
 depend: [vistructum]
+softdepend: [LibertyBans]
 commands:
   vis:
     description: Findings, reviews and scans

@@ -15,6 +15,8 @@ import de.kylekreuter.vistructum.api.Review;
 import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.ui.gui.ResourcePack;
+import de.kylekreuter.vistructum.ui.integration.punishment.Punishment;
+import de.kylekreuter.vistructum.ui.integration.punishment.PunishmentLog;
 import de.kylekreuter.vistructum.ui.web.assets.GameAssets;
 
 import java.io.IOException;
@@ -36,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
@@ -52,6 +55,7 @@ public final class WebFixture implements AutoCloseable {
     public final FakeVistructum vistructum = new FakeVistructum(NOW);
     public final Set<UUID> sharers = ConcurrentHashMap.newKeySet();
     public final Set<UUID> rollbackers = ConcurrentHashMap.newKeySet();
+    public final Map<UUID, List<Punishment>> punishments = new ConcurrentHashMap<>();
 
     private final HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build();
     private final Path root;
@@ -98,7 +102,7 @@ public final class WebFixture implements AutoCloseable {
         files = loader;
         Optional<WebApplication.WebApp> app = enabled ? Optional.of(new WebApplication.WebApp(vistructum,
                 new WebSettings(true, "127.0.0.1", "https://review.example/"), game(),
-                Map.of("minecraft:stone", 0x707070), assets, Runnable::run, loader, Clock.fixed(NOW, ZoneOffset.UTC)))
+                Map.of("minecraft:stone", 0x707070), assets, Optional.of(punishmentLog()), Runnable::run, loader, Clock.fixed(NOW, ZoneOffset.UTC)))
                 : Optional.empty();
         application = WebApplication.start(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0),
                 ResourcePack.build(), app, Logger.getLogger("test"));
@@ -167,6 +171,20 @@ public final class WebFixture implements AutoCloseable {
         MotionFrame frame = new MotionFrame(NOW.toEpochMilli(), 100.5, 59.0, 204.25, 90f, 10f, MotionFrame.ON_GROUND,
                 "minecraft:stone");
         return new Evidence(7, before, List.of(change), List.of(new Recording(BUILDER, "Builder", List.of(frame))));
+    }
+
+    private PunishmentLog punishmentLog() {
+        return new PunishmentLog() {
+            @Override
+            public String source() {
+                return "LibertyBans";
+            }
+
+            @Override
+            public CompletableFuture<List<Punishment>> history(UUID player) {
+                return CompletableFuture.completedFuture(punishments.getOrDefault(player, List.of()));
+            }
+        };
     }
 
     private GameServer game() {

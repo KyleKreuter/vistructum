@@ -2,6 +2,7 @@ package de.kylekreuter.vistructum.ui.web;
 
 import de.kylekreuter.vistructum.api.Vistructum;
 import de.kylekreuter.vistructum.ui.gui.ResourcePack;
+import de.kylekreuter.vistructum.ui.integration.punishment.PunishmentLog;
 import de.kylekreuter.vistructum.ui.web.assets.GameAssets;
 import de.kylekreuter.vistructum.ui.web.controller.ApiFallback;
 import de.kylekreuter.vistructum.ui.web.controller.AssetController;
@@ -107,13 +108,14 @@ public final class WebApplication implements AutoCloseable {
         new HeaderFilter().register(config, WebSettings.ROOT, WebSettings.HOME + "*");
         new SessionFilter(vistructum.web(), handoff).register(config, WebSettings.API + "*");
         new CsrfFilter().register(config, WebSettings.API + "*");
-        new AuthController(vistructum.web(), vistructum.blockLog(), web.settings(), web.game(), handoff).register(config);
+        new AuthController(vistructum.web(), vistructum.blockLog(), web.punishments(), web.settings(),
+                web.game(), handoff).register(config);
         new StatusController(vistructum, web.assets(), handoff, web.clock()).register(config);
         new ShareController(vistructum, web.settings(), web.game(), handoff).register(config);
         FindingController findings = new FindingController(vistructum, web.settings(), web.game(), names, handoff);
         new BlockLogController(vistructum, web.game(), handoff, findings).register(config);
         findings.register(config);
-        new PlayerController(vistructum, names, handoff).register(config);
+        new PlayerController(vistructum, names, handoff, web.punishments()).register(config);
         new PublicEvidenceController(vistructum, names, handoff).register(config);
         new AssetController(web.assets(), web.palette()).register(config);
         new ApiFallback().register(config);
@@ -128,7 +130,8 @@ public final class WebApplication implements AutoCloseable {
     }
 
     public record WebApp(Vistructum vistructum, WebSettings settings, GameServer game, Map<String, Integer> palette,
-                         GameAssets assets, Executor mainThread, ClassLoader files, Clock clock) {
+                         GameAssets assets, Optional<PunishmentLog> punishments, Executor mainThread,
+                         ClassLoader files, Clock clock) {
 
         public WebApp {
             Objects.requireNonNull(vistructum, "vistructum");
@@ -136,6 +139,7 @@ public final class WebApplication implements AutoCloseable {
             Objects.requireNonNull(game, "game");
             palette = Map.copyOf(palette);
             Objects.requireNonNull(assets, "assets");
+            Objects.requireNonNull(punishments, "punishments");
             Objects.requireNonNull(mainThread, "mainThread");
             Objects.requireNonNull(files, "files");
             Objects.requireNonNull(clock, "clock");

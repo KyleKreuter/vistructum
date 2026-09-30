@@ -1,7 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { ChevronLeft, ChevronRight, Orbit, Pause, Play, Route, Video } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState, useSyncExternalStore, type Ref, type RefObject } from "react";
-import { createPortal } from "react-dom";
 import type { Evidence, Palette, PlayerRef } from "@/api/types";
 import { PlayerCard } from "@/components/app/PlayerFace";
 import { Button } from "@/components/ui/button";
@@ -30,10 +29,10 @@ export interface ReplayViewProps {
   palette: Palette;
   skinUrl: (uuid: string) => string;
   facesFromSkin?: boolean;
+  showPlayers?: boolean;
   reconstruct?: boolean;
   controlsRef?: RefObject<ReplayControls | null>;
   active?: boolean;
-  playersTarget?: HTMLElement | null;
   stageRef?: Ref<HTMLDivElement>;
 }
 
@@ -60,7 +59,7 @@ const TimelineMarks = memo(function TimelineMarks({ timeline, applied, colourFor
   );
 });
 
-export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin = false, reconstruct = false, controlsRef, active = true, playersTarget, stageRef }: ReplayViewProps) {
+export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin = false, showPlayers = false, reconstruct = false, controlsRef, active = true, stageRef }: ReplayViewProps) {
   const timeline = useMemo(() => buildTimeline(evidence), [evidence]);
   const indexed = useMemo(() => indexVolume(evidence.before, timeline.changes), [evidence.before, timeline.changes]);
   const reconstructed = useMemo(
@@ -126,9 +125,8 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
     },
     [clock],
   );
-  const stacked = playersTarget !== undefined;
   const playerList = (
-    <div className={cn("flex gap-2", stacked ? "flex-col" : "flex-wrap")}>
+    <div className="flex flex-wrap gap-2">
       {players.map((player) => {
         const now = counts.get(player.uuid);
         const total = totalCounts.get(player.uuid);
@@ -140,7 +138,7 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
             colour={colourFor(player.uuid)}
             detail={`${now?.placed ?? 0}/${total?.placed ?? 0} placed · ${now?.broken ?? 0}/${total?.broken ?? 0} broken`}
             onSelect={() => tracks.some((track) => track.player === player.uuid) && setCamera({ kind: "follow", player: player.uuid })}
-            className={stacked ? "w-full" : "w-60"}
+            className="w-60"
           />
         );
       })}
@@ -252,7 +250,7 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
         </div>
       </div>
 
-      {!stacked ? playerList : playersTarget && createPortal(playerList, playersTarget)}
+      {showPlayers && playerList}
     </div>
   );
 }

@@ -28,6 +28,7 @@ Vistructum never kicks, bans, or rolls back on its own. Every decision stays wit
 - **Review web app (optional):** Staff sign in with a one-time link from `/vis web` and review findings in the browser: filtered list, scene with model heatmap, 3D view of full scan findings, 3D replay of recorded builds, statistics, status, and an activity log. Off by default.
 - **Evidence recording (optional):** Records player movement for a few minutes and secures the build, the blocks before it, and the nearby players as a replay when the live check creates a finding. Off by default.
 - **CoreProtect integration (optional):** Reads CoreProtect's block log for findings without tracked block changes. Full scan findings get their builders and a replay of the logged changes. On when CoreProtect is installed.
+- **LibertyBans integration (optional):** Shows the bans, mutes, warnings, and kicks of players from LibertyBans in the web app. On when LibertyBans is installed.
 - **Discord notifications (optional):** Posts new findings with a picture to a Discord channel through a webhook, and updates the message when staff record a verdict. Off by default.
 - **Public evidence links (optional):** Share the replay of a confirmed finding through a link without coordinates or world name, and deactivate it at any time.
 - **Local or remote inference:** Runs the models inside the server process, or on a separate sidecar with a local fallback.
@@ -134,7 +135,7 @@ docker compose up -d sidecar
 | File | Content |
 |---|---|
 | `plugins/vistructum/config.yml` | Inference mode, update checks, sidecar address, live check timing, evidence recording, daily fullscan worlds and scan threads, CoreProtect integration, retention |
-| `plugins/vistructum-ui/config.yml` | Resource pack and web app port, public URLs, web app switch, texture download, map previews in the list, Discord notifications |
+| `plugins/vistructum-ui/config.yml` | Resource pack and web app port, public URLs, web app switch, texture download, map previews in the list, LibertyBans integration, Discord notifications |
 | `plugins/vistructum-ui/messages.yml` | All chat, menu, and Discord texts in MiniMessage format |
 
 The [Configuration](https://github.com/KyleKreuter/vistructum/wiki/Configuration) wiki page describes every key.
@@ -207,12 +208,22 @@ integrations:
 
 Set `enabled: false` to turn the integration off. The CoreProtect API must be enabled in the CoreProtect config, which is its default.
 
-While the integration runs, the **Integrations** panel on the finding page of the web app has a CoreProtect section:
+While the integration runs, the **Integrations** tab on the finding page of the web app has a CoreProtect section. A disabled button names the reason in a tooltip:
 
 - **Find builders** searches the log again for the finding's box at the time of detection. If the log names builders, they replace the finding's players, and the activity log records the search. A finding without evidence gets a replay of the logged changes. The button stays off once the finding has builders and evidence.
 - **Roll back** reverts the blocks of a **confirmed** finding with builders, after a confirmation step. Only blocks inside the finding's box that these builders placed or broke change. Each returns to its state before their first logged change. Blocks that someone else changed since are skipped, and the panel reports how many. CoreProtect logs every restored block as `#vistructum`, so a CoreProtect rollback can undo it. The finding, its verdict, and its evidence stay. The finding gets a **Rolled back** label in the list and on its page, and the activity log records the rollback. A finding is rolled back once. The button needs `vistructum.coreprotect.rollback`.
 
 The browser loads the CoreProtect logo of the panel from `cdn.modrinth.com`.
+
+### LibertyBans integration
+
+The web app shows the punishment history of players. The **Integrations** tab on the finding page has a LibertyBans section with the history of every player of the finding. A green dot on the section marks that at least one of them has punishments. The **Integrations** panel on the player page lists the history of that player. Each history shows type, reason, staff member, date, and expiry, newest first, at most 100 entries. Both show LibertyBans with its logo, which the browser loads from `cdn.modrinth.com`.
+
+The UI plugin reads the history from [LibertyBans](https://modrinth.com/plugin/libertybans) 1.1 or newer. Other punishment plugins are not supported. Without LibertyBans, the web app shows no punishments.
+
+LibertyBans must run on the Paper server. If it runs only on the proxy, Vistructum can't see it. The web app only reads punishments and can't issue them.
+
+The integration is on when LibertyBans is installed. To turn it off, set `punishments.enabled: false` in `plugins/vistructum-ui/config.yml` and restart.
 
 ### Discord notifications
 

@@ -13,3 +13,7 @@ export function rollbackMessage(restored: number, skipped: number): string {
   const main = restored === 0 ? "No block needed a rollback." : `Rolled back ${blocks(restored)}.`;
   return skipped === 0 ? main : `${main} Skipped ${blocks(skipped)} that others changed since.`;
 }
+
+export function attributionMessage(names: string[]): string {
+  return names.length > 2 ? `Found ${names.length} builders.` : `Builders: ${names.join(", ")}`;
+}

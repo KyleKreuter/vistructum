@@ -15,6 +15,10 @@ web:
 list:
   map-previews: false
 
+punishments:
+  # Shows the bans, mutes, warnings and kicks of players from LibertyBans in the web app.
+  enabled: true
+
 discord:
   enabled: false
   # The webhook URL from Server Settings > Integrations > Webhooks. Treat it as a secret.

@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -54,6 +55,7 @@ public final class MaskMonitor {
     private final Consumer<Finding> created;
     private final Logger logger;
     private final AtomicLong lastWarning = new AtomicLong();
+    private final AtomicBoolean polling = new AtomicBoolean();
     private BukkitTask task;
 
     public MaskMonitor(MainThread mainThread, BlockChangeStore changes, ClusterSettings settings, MaskProjector projector,
@@ -80,8 +82,12 @@ public final class MaskMonitor {
     }
 
     private void poll() {
+        if (!polling.compareAndSet(false, true)) {
+            return;
+        }
         changes.takeReady(settings, clock.millis())
-                .thenAccept(clusters -> clusters.stream().filter(cluster -> !cluster.oversized()).forEach(this::check))
+                .whenComplete((clusters, error) -> polling.set(false))
+                .thenAccept(clusters -> clusters.forEach(this::check))
                 .exceptionally(this::warn);
     }
 

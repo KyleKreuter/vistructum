@@ -1,11 +1,14 @@
 import { errorMessage } from "@/api/client";
+import { Info } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router";
 import { useMe, usePlayersPunishments, usePunishments } from "@/api/queries";
 import type { PlayerRef, Punishment } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDateTime, playerLabel } from "@/logic/format";
-import { activeStatuses, expiryLabel, inForce, punishmentTypeLabel } from "@/logic/punishments";
+import { activeStatuses, expires, expiryLabel, inForce, punishmentTypeLabel } from "@/logic/punishments";
 import { cn } from "@/lib/utils";
 
 const typeVariants = { BAN: "rose", MUTE: "amber", WARN: "violet", KICK: "slate" } as const;
@@ -104,23 +107,48 @@ export function FindingPunishments({ players }: { players: PlayerRef[] }) {
 
 function FindingPunishmentEntry({ player, punishment }: { player: PlayerRef; punishment: Punishment }) {
   const current = inForce(punishment);
+  const [details, setDetails] = useState(false);
   return (
-    <li className={cn("space-y-1 px-3 py-2", !current && "text-muted-foreground")}>
-      <div className="flex items-center gap-2">
-        <Badge variant={current ? typeVariants[punishment.type] : "slate"}>{punishmentTypeLabel(punishment.type)}</Badge>
-        <Link to={`/players/${player.uuid}`} className="min-w-0 truncate font-medium hover:underline" title={playerLabel(player)}>
-          {playerLabel(player)}
-        </Link>
-      </div>
-      <div className="flex items-baseline gap-2 text-xs">
-        <span className={cn("min-w-0 truncate", !punishment.reason && "italic")} title={punishment.reason ?? undefined}>
-          {punishment.reason ?? "No reason"}
-        </span>
-        <span className="ml-auto shrink-0 tabular-nums">{formatDateTime(punishment.issuedAt)}</span>
-      </div>
-      {current && (
-        <p className="text-xs">{punishment.expiresAt ? `Until ${formatDateTime(punishment.expiresAt)}` : "Permanent"}</p>
-      )}
+    <li className={cn("flex items-center gap-2 px-3 py-2", !current && "text-muted-foreground")}>
+      <Badge variant={current ? typeVariants[punishment.type] : "slate"}>{punishmentTypeLabel(punishment.type)}</Badge>
+      <Link to={`/players/${player.uuid}`} className="min-w-0 truncate font-medium hover:underline" title={playerLabel(player)}>
+        {playerLabel(player)}
+      </Link>
+      <Tooltip open={details} onOpenChange={setDetails}>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label="Punishment details"
+            className="ml-auto shrink-0 rounded-sm text-muted-foreground hover:text-foreground"
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => setDetails((open) => !open)}
+          >
+            <Info className="size-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="left" className="max-w-64">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+            <dt className="opacity-70">Reason</dt>
+            <dd className={cn("break-words", !punishment.reason && "italic")}>{punishment.reason ?? "No reason"}</dd>
+            <dt className="opacity-70">Staff</dt>
+            <dd>{punishment.operator ?? "Unknown"}</dd>
+            <dt className="opacity-70">Issued</dt>
+            <dd className="tabular-nums">{formatDateTime(punishment.issuedAt)}</dd>
+            {expires(punishment) && (
+              <>
+                <dt className="opacity-70">Expires</dt>
+                <dd className="tabular-nums">{expiryLabel(punishment)}</dd>
+              </>
+            )}
+            {(punishment.type === "BAN" || punishment.type === "MUTE") && (
+              <>
+                <dt className="opacity-70">Status</dt>
+                <dd>{current ? "Active" : "Ended"}</dd>
+              </>
+            )}
+          </dl>
+        </TooltipContent>
+      </Tooltip>
     </li>
   );
 }

@@ -17,7 +17,16 @@ CREATE TABLE IF NOT EXISTS block_events (
 
 CREATE INDEX IF NOT EXISTS block_events_by_time ON block_events (changed_at);
 
-CREATE INDEX IF NOT EXISTS block_events_by_position ON block_events (world, x, z, y);
+DROP INDEX IF EXISTS block_events_by_position;
+
+CREATE INDEX IF NOT EXISTS block_events_by_position_time ON block_events (world, x, z, y, changed_at);
+
+CREATE INDEX IF NOT EXISTS block_events_by_cell ON block_events (world, x >> 4, z >> 4, x, y, z, changed_at, reported_at);
+
+CREATE TABLE IF NOT EXISTS tracking_state (
+    id            INTEGER PRIMARY KEY CHECK (id = 1),
+    checked_until INTEGER NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS findings (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -128,6 +137,8 @@ CREATE TABLE IF NOT EXISTS motion_chunks (
 );
 
 CREATE INDEX IF NOT EXISTS motion_chunks_by_world_time ON motion_chunks (world, end_ms);
+
+CREATE INDEX IF NOT EXISTS motion_chunks_by_end ON motion_chunks (end_ms);
 
 CREATE TABLE IF NOT EXISTS finding_evidence (
     finding_id INTEGER PRIMARY KEY REFERENCES findings (id) ON DELETE CASCADE,

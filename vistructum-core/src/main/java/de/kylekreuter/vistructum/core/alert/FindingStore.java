@@ -86,6 +86,11 @@ public final class FindingStore {
             ORDER BY id LIMIT ?
             """;
     private static final int THUMBNAIL_PIXEL_BYTES = 3;
+    private static final String STORE_REFERENCE = """
+            INSERT INTO finding_references (finding_id, system, reference)
+            SELECT id, ?, ? FROM findings WHERE id = ?
+            ON CONFLICT (finding_id, system) DO UPDATE SET reference = excluded.reference
+            """;
     private static final String STORED_SCENE = """
             SELECT f.source, s.kind, s.width, s.height, s.window_top, s.window_left, s.window_bottom, s.window_right,
                 s.channels
@@ -277,6 +282,30 @@ public final class FindingStore {
                 insert.setInt(2, thumbnail.height());
                 insert.setBytes(3, pixels);
                 insert.setLong(4, id);
+                return insert.executeUpdate() > 0;
+            }
+        });
+    }
+
+    public CompletableFuture<Optional<String>> reference(long id, String system) {
+        return database.transaction(connection -> {
+            try (PreparedStatement select = connection.prepareStatement(
+                    "SELECT reference FROM finding_references WHERE finding_id = ? AND system = ?")) {
+                select.setLong(1, id);
+                select.setString(2, system);
+                try (ResultSet rows = select.executeQuery()) {
+                    return rows.next() ? Optional.of(rows.getString(1)) : Optional.empty();
+                }
+            }
+        });
+    }
+
+    public CompletableFuture<Boolean> storeReference(long id, String system, String reference) {
+        return database.transaction(connection -> {
+            try (PreparedStatement insert = connection.prepareStatement(STORE_REFERENCE)) {
+                insert.setString(1, system);
+                insert.setString(2, reference);
+                insert.setLong(3, id);
                 return insert.executeUpdate() > 0;
             }
         });

@@ -329,6 +329,26 @@ class FindingStoreTest {
     }
 
     @Test
+    void referencesAreStoredPerSystemAndReplaced() throws Exception {
+        Finding finding = store.insertUnlessDuplicate(detected("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE)
+                .get().orElseThrow();
+        assertTrue(store.reference(finding.id(), "discord").get().isEmpty());
+
+        assertTrue(store.storeReference(finding.id(), "discord", "1").get());
+        assertTrue(store.storeReference(finding.id(), "discord", "2").get());
+        assertTrue(store.storeReference(finding.id(), "other", "3").get());
+
+        assertEquals(Optional.of("2"), store.reference(finding.id(), "discord").get());
+        assertEquals(Optional.of("3"), store.reference(finding.id(), "other").get());
+    }
+
+    @Test
+    void referenceOfAMissingFindingIsNotStored() throws Exception {
+        assertFalse(store.storeReference(42, "discord", "1").get());
+        assertTrue(store.reference(42, "discord").get().isEmpty());
+    }
+
+    @Test
     void thumbnailOfAMissingFindingIsNotStored() throws Exception {
         assertFalse(store.storeThumbnail(42, new Thumbnail(1, 1, new int[]{0})).get());
         assertTrue(store.thumbnail(42).get().isEmpty());

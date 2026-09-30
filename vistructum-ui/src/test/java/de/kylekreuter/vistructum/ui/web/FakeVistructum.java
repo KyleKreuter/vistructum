@@ -163,6 +163,16 @@ public final class FakeVistructum implements Vistructum, Findings, Scans, Player
     }
 
     @Override
+    public CompletableFuture<Optional<String>> reference(long id, String system) {
+        return completedFuture(Optional.empty());
+    }
+
+    @Override
+    public CompletableFuture<Boolean> storeReference(long id, String system, String reference) {
+        return completedFuture(false);
+    }
+
+    @Override
     public CompletableFuture<List<Finding>> withoutThumbnail(long afterId, int limit) {
         return completedFuture(List.of());
     }

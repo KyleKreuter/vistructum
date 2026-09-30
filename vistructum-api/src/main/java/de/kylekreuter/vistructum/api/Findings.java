@@ -129,6 +129,35 @@ public interface Findings {
     CompletableFuture<List<Finding>> withoutThumbnail(long afterId, int limit);
 
     /**
+     * Loads the reference an external system stored for a finding.
+     *
+     * <p>A reference identifies the representation of the finding in another system, such as a chat message that
+     * announced it. Each system stores at most one reference per finding.
+     *
+     * @param id identifier of the finding
+     * @param system name of the external system as passed to {@link #storeReference(long, String, String)}
+     * @return a future completing with the reference, or with an empty {@link Optional} if no finding has this
+     *         identifier or the system has not stored a reference for it
+     * @throws NullPointerException if {@code system} is {@code null}
+     */
+    CompletableFuture<Optional<String>> reference(long id, String system);
+
+    /**
+     * Stores the reference of an external system for a finding, replacing a reference the same system stored
+     * earlier.
+     *
+     * <p>The reference is deleted together with its finding.
+     *
+     * @param id identifier of the finding
+     * @param system name of the external system, chosen by the caller and matched exactly
+     * @param reference reference to store
+     * @return a future completing with {@code true} once the reference is stored, or with {@code false} if no
+     *         finding has this identifier
+     * @throws NullPointerException if {@code system} or {@code reference} is {@code null}
+     */
+    CompletableFuture<Boolean> storeReference(long id, String system, String reference);
+
+    /**
      * Counts the verdicts of all reviewed findings per detection path.
      *
      * @return a future completing with one entry per {@link Source}, in declaration order of the enum; paths without

@@ -185,6 +185,19 @@ public final class VistructumService implements Vistructum {
         }
 
         @Override
+        public CompletableFuture<Optional<String>> reference(long id, String system) {
+            Objects.requireNonNull(system, "system");
+            return mainThread.handOff(findingStore.reference(id, system));
+        }
+
+        @Override
+        public CompletableFuture<Boolean> storeReference(long id, String system, String reference) {
+            Objects.requireNonNull(system, "system");
+            Objects.requireNonNull(reference, "reference");
+            return mainThread.handOff(findingStore.storeReference(id, system, reference));
+        }
+
+        @Override
         public CompletableFuture<List<Finding>> withoutThumbnail(long afterId, int limit) {
             if (limit < 1) {
                 throw new IllegalArgumentException("limit " + limit);

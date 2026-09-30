@@ -225,3 +225,10 @@ CREATE TABLE IF NOT EXISTS finding_terrain (
     scene_x    INTEGER,
     scene_z    INTEGER
 );
+
+CREATE TABLE IF NOT EXISTS finding_references (
+    finding_id INTEGER NOT NULL REFERENCES findings (id) ON DELETE CASCADE,
+    system     TEXT    NOT NULL,
+    reference  TEXT    NOT NULL,
+    PRIMARY KEY (finding_id, system)
+) WITHOUT ROWID;

@@ -28,6 +28,7 @@ Vistructum never kicks, bans, or rolls back on its own. Every decision stays wit
 - **Review web app (optional):** Staff sign in with a one-time link from `/vis web` and review findings in the browser: filtered list, scene with model heatmap, 3D view of full scan findings, 3D replay of recorded builds, statistics, status, and an activity log. Off by default.
 - **Evidence recording (optional):** Records player movement for a few minutes and secures the build, the blocks before it, and the nearby players as a replay when the live check creates a finding. Off by default.
 - **CoreProtect integration (optional):** Reads CoreProtect's block log for findings without tracked block changes. Full scan findings get their builders and a replay of the logged changes. On when CoreProtect is installed.
+- **Discord notifications (optional):** Posts new findings with a picture to a Discord channel through a webhook, and updates the message when staff record a verdict. Off by default.
 - **Public evidence links (optional):** Share the replay of a confirmed finding through a link without coordinates or world name, and deactivate it at any time.
 - **Local or remote inference:** Runs the models inside the server process, or on a separate sidecar with a local fallback.
 - **Update notices:** Checks GitHub Releases daily and logs when a new plugin version or model is available. New models install automatically only after you set `updates.auto-update-models: true` (`MODELS_AUTO_UPDATE=true` for the sidecar).
@@ -132,8 +133,8 @@ docker compose up -d sidecar
 | File | Content |
 |---|---|
 | `plugins/vistructum/config.yml` | Inference mode, update checks, sidecar address, live check timing, evidence recording, daily fullscan worlds and scan threads, CoreProtect integration, retention |
-| `plugins/vistructum-ui/config.yml` | Resource pack and web app port, public URLs, web app switch, texture download, map previews in the list |
-| `plugins/vistructum-ui/messages.yml` | All chat and menu texts in MiniMessage format |
+| `plugins/vistructum-ui/config.yml` | Resource pack and web app port, public URLs, web app switch, texture download, map previews in the list, Discord notifications |
+| `plugins/vistructum-ui/messages.yml` | All chat, menu, and Discord texts in MiniMessage format |
 
 The [Configuration](https://github.com/KyleKreuter/vistructum/wiki/Configuration) wiki page describes every key.
 
@@ -204,6 +205,35 @@ integrations:
 `lookup-days` limits how far back the core searches the log. If a lookup takes longer than `timeout-seconds`, the finding is stored without builders. CoreProtect names players, not IDs. The core maps a name to a player only if that player has joined the server before. Changes that CoreProtect rolled back before the lookup are ignored. A rollback after the lookup does not change the finding.
 
 Set `enabled: false` to turn the integration off. The CoreProtect API must be enabled in the CoreProtect config, which is its default.
+
+### Discord notifications
+
+The UI plugin posts findings to a Discord channel through a webhook. It needs no bot.
+
+1. In Discord, open the channel settings, then **Integrations > Webhooks**, and create a webhook. Copy its URL.
+2. Set the keys in `plugins/vistructum-ui/config.yml` and restart:
+
+```yaml
+discord:
+  enabled: true
+  webhook-url: "https://discord.com/api/webhooks/..."
+  events:
+    created: true
+    reviewed: true
+    scan-finished: false
+  min-probability: 0.0
+  mention-role: ""
+```
+
+- **created:** Posts each new finding with world, location, probability, source, builders, and the finding picture.
+- **reviewed:** Edits the message of the finding when staff record a verdict, and sets its color and verdict field. A finding without a message gets a new one.
+- **scan-finished:** Posts a line when a full scan ends.
+- **min-probability:** Findings below this probability, from `0` to `1`, get no message.
+- **mention-role:** A role ID that new findings ping. Leave it empty for no ping.
+
+With the web app on, every finding message has an **Open web** button that links to the finding in the web app.
+
+The webhook URL lets anyone post to the channel. Keep it out of shared configs and screenshots. When Discord is unreachable or rate limits the webhook, the plugin tries a message up to three times and waits as long as Discord asks. After that, or when Discord rejects the message, the plugin drops it and logs a warning. Messages still waiting at shutdown are lost. The texts are in the `discord` section of `messages.yml`.
 
 ### Public evidence links
 

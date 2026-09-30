@@ -2,6 +2,7 @@ package de.kylekreuter.vistructum.ui.gui;
 
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.FindingCreatedEvent;
+import de.kylekreuter.vistructum.api.Thumbnail;
 import de.kylekreuter.vistructum.api.Vistructum;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -49,6 +50,10 @@ public final class Thumbnails implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onFindingCreated(FindingCreatedEvent event) {
         fillMissing();
+    }
+
+    public CompletableFuture<Thumbnail> thumbnail(Finding finding) {
+        return picture(finding).thenApply(Picture::thumbnail);
     }
 
     CompletableFuture<Picture> picture(Finding finding) {

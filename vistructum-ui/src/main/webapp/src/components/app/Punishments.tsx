@@ -3,8 +3,9 @@ import { errorMessage } from "@/api/client";
 import { useMe, usePunishments } from "@/api/queries";
 import type { Punishment } from "@/api/types";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDateTime } from "@/logic/format";
-import { activeStatuses, expires, expiryLabel, inForce, punishmentTypeLabel } from "@/logic/punishments";
+import { activeStatuses, expiryLabel, inForce, punishmentTypeLabel } from "@/logic/punishments";
 import { cn } from "@/lib/utils";
 
 const typeVariants = { BAN: "rose", MUTE: "amber", WARN: "violet", KICK: "slate" } as const;
@@ -41,36 +42,45 @@ export function PunishmentHistory({ uuid, source }: { uuid: string; source: stri
       ) : !history.data.items.length ? (
         <p className="text-muted-foreground">No punishments.</p>
       ) : (
-        <ul className="grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
-          {history.data.items.map((punishment, index) => (
-            <PunishmentEntry key={index} punishment={punishment} />
-          ))}
-        </ul>
+        <div className="rounded-lg border">
+          <Table containerClassName="max-h-72 overflow-y-auto">
+            <TableHeader className="sticky top-0 bg-card">
+              <TableRow>
+                <TableHead>Type</TableHead>
+                <TableHead className="w-full">Reason</TableHead>
+                <TableHead>Staff</TableHead>
+                <TableHead>Issued</TableHead>
+                <TableHead>Expires</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {history.data.items.map((punishment, index) => (
+                <PunishmentRow key={index} punishment={punishment} />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </section>
   );
 }
 
-function PunishmentEntry({ punishment }: { punishment: Punishment }) {
+function PunishmentRow({ punishment }: { punishment: Punishment }) {
   const current = inForce(punishment);
   return (
-    <li className={cn("rounded-lg border px-3 py-2", !current && "text-muted-foreground")}>
-      <div className="flex items-center gap-2">
-        <Badge variant={current ? typeVariants[punishment.type] : "slate"}>{punishmentTypeLabel(punishment.type)}</Badge>
-        {current && <span className="text-xs font-medium">Active</span>}
-        <span className="ml-auto text-xs tabular-nums">{formatDateTime(punishment.issuedAt)}</span>
-      </div>
-      <p className={cn("mt-1 break-words", !punishment.reason && "italic")}>{punishment.reason ?? "No reason"}</p>
-      <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 text-xs text-muted-foreground">
-        <dt>Staff</dt>
-        <dd className="truncate">{punishment.operator ?? "Unknown"}</dd>
-        {expires(punishment) && (
-          <>
-            <dt>Expires</dt>
-            <dd className="tabular-nums">{expiryLabel(punishment)}</dd>
-          </>
-        )}
-      </dl>
-    </li>
+    <TableRow className={cn(!current && "text-muted-foreground")}>
+      <TableCell>
+        <span className="flex items-center gap-2">
+          <Badge variant={current ? typeVariants[punishment.type] : "slate"}>{punishmentTypeLabel(punishment.type)}</Badge>
+          {current && <span className="text-xs font-medium">Active</span>}
+        </span>
+      </TableCell>
+      <TableCell className={cn("max-w-0 truncate", !punishment.reason && "italic")} title={punishment.reason ?? undefined}>
+        {punishment.reason ?? "No reason"}
+      </TableCell>
+      <TableCell>{punishment.operator ?? "Unknown"}</TableCell>
+      <TableCell className="tabular-nums">{formatDateTime(punishment.issuedAt)}</TableCell>
+      <TableCell className="tabular-nums">{expiryLabel(punishment)}</TableCell>
+    </TableRow>
   );
 }

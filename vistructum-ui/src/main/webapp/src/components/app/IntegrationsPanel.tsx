@@ -1,4 +1,4 @@
-import { ChevronDown, Info, Plug, Undo2, UserSearch } from "lucide-react";
+import { ChevronDown, Info, Undo2, UserSearch } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
@@ -70,7 +70,7 @@ function IntegrationsCard({ storageKey, className, children }: { storageKey: str
       <CardHeader className="px-4">
         <CardTitle className="text-sm">
           <button type="button" onClick={toggle} aria-expanded={!collapsed} className="flex w-full items-center gap-2 text-left">
-            <Plug className="size-4" /> Integrations
+            Integrations
             <ChevronDown className={cn("ml-auto size-4 text-muted-foreground transition-transform", collapsed && "-rotate-90")} />
           </button>
         </CardTitle>

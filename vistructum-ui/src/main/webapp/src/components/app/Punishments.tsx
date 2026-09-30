@@ -29,7 +29,7 @@ export function PunishmentBadges({ uuid, className }: { uuid: string; className?
   );
 }
 
-const libertyBansLogo = "https://cdn.modrinth.com/data/PgXAUxLZ/icon.png";
+export const libertyBansLogo = "https://cdn.modrinth.com/data/PgXAUxLZ/icon.png";
 
 function LibertyBansHeading() {
   return (
@@ -84,8 +84,7 @@ export function FindingPunishments({ players }: { players: PlayerRef[] }) {
     .sort((a, b) => (b.punishment.issuedAt ?? "").localeCompare(a.punishment.issuedAt ?? ""));
   const failed = histories.find((history) => history.isError);
   return (
-    <section className="space-y-2">
-      <LibertyBansHeading />
+    <section>
       {!players.length ? (
         <p className="text-muted-foreground">No players recorded.</p>
       ) : histories.some((history) => history.isPending) ? (
@@ -95,7 +94,7 @@ export function FindingPunishments({ players }: { players: PlayerRef[] }) {
       ) : !entries.length ? (
         <p className="text-muted-foreground">No punishments.</p>
       ) : (
-        <ul className="max-h-56 divide-y overflow-y-auto rounded-lg border">
+        <ul className="divide-y rounded-lg border">
           {entries.map(({ player, punishment }, index) => (
             <FindingPunishmentEntry key={index} player={player} punishment={punishment} />
           ))}

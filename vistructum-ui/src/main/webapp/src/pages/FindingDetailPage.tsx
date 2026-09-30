@@ -8,7 +8,7 @@ import { findingsOptions, useEvidence, useFinding, useFindings, useHeatmap, useM
 import { urls } from "@/api/client";
 import type { FindingDetail, FindingSummary, Verdict } from "@/api/types";
 import { IndicatorIcons, RolledBackBadge, SourceBadge, VerdictBadge } from "@/components/app/Badges";
-import { IntegrationsPanel } from "@/components/app/IntegrationsPanel";
+import { FindingIntegrations } from "@/components/app/IntegrationsPanel";
 import { PlayerCard } from "@/components/app/PlayerFace";
 import { SharePanel } from "@/components/app/SharePanel";
 import { EmptyState, ErrorState, PageSpinner } from "@/components/app/States";
@@ -20,10 +20,12 @@ import { SceneView } from "@/features/scene/SceneView";
 import type { ReplayControls } from "@/features/replay/ReplayView";
 import { copyText } from "@/lib/clipboard";
 import { useHeightToBottom } from "@/lib/useHeightToBottom";
+import { useStoredChoice } from "@/lib/useStoredChoice";
 import { cn } from "@/lib/utils";
 import { boxSize } from "@/logic/coords";
 import { listParams, parseFilter, parsePaging } from "@/logic/filters";
 import { formatDateTime, formatRelative, formatScore } from "@/logic/format";
+import { findingIntegrations } from "@/logic/integrations";
 import { detailAction, isEditableTarget } from "@/logic/keyboard";
 import { locateNeighbour, neighbour, type ListEntry, type LoadedPage } from "@/logic/listNavigation";
 import { pageCount } from "@/logic/pagination";
@@ -40,6 +42,8 @@ const TerrainView = lazy(() => import("@/features/terrain/TerrainView"));
 type Tab = "replay" | "scene" | "3d";
 
 const noTabs: ReadonlySet<Tab> = new Set();
+
+const sideTabs = ["verdict", "integrations", "builders"] as const;
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -104,6 +108,7 @@ export default function FindingDetailPage() {
   const [aside, setAside] = useState<HTMLElement | null>(null);
   const stageHeight = useHeightToBottom(stage, aside);
   const replayControls = useRef<ReplayControls | null>(null);
+  const [storedSideTab, chooseSideTab] = useStoredChoice("vistructum-finding-sidebar", sideTabs, "verdict");
 
   const defaultTab: Tab = data?.hasEvidence ? "replay" : "scene";
   const available = (next: Tab) => (next === "replay" ? !!data?.hasEvidence : next === "3d" ? !!data?.hasTerrain : true);
@@ -245,6 +250,8 @@ export default function FindingDetailPage() {
   };
   const size = boxSize(data.box);
   const canShare = !!me.data?.canShare;
+  const integrations = findingIntegrations(data, !!me.data?.blockLog, me.data?.punishments ?? null);
+  const sideTab = storedSideTab === "integrations" && !integrations.length ? "verdict" : storedSideTab;
   const heatmapState = !heatmapWanted ? "idle" : heatmap.isPending ? "loading" : heatmap.isError ? "unavailable" : "ready";
 
   return (
@@ -368,87 +375,91 @@ export default function FindingDetailPage() {
             className={cn("flex flex-col gap-4", tab === "scene" && "lg:mt-12", stageHeight !== null && "lg:h-(--stage-height)")}
             style={stageHeight !== null ? ({ "--stage-height": `${stageHeight}px` } as CSSProperties) : undefined}
           >
-            <Card className="shrink-0 gap-4 py-4">
-              <CardContent className="space-y-4 px-4">
-                <VerdictButtons finding={data} pending={verdict.isPending} onVerdict={judge} />
-                {data.review && (
-                  <p className="text-xs text-muted-foreground">
-                    {data.review.verdict === "CONFIRMED" ? "Confirmed" : "Marked as false alarm"} by {data.review.reviewer}, {formatDateTime(data.review.reviewedAt)}
-                  </p>
-                )}
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                  <Fact label="Score">
-                    <span className="tabular-nums">{formatScore(data.score)}</span>
-                    {data.votes > 1 && <span className="text-muted-foreground"> · {data.votes} votes</span>}
-                  </Fact>
-                  <Fact label="Model">
-                    <span>{data.modelVersion}</span>
-                  </Fact>
-                  <Fact label="Source">{data.source === "mask" ? "Live check" : "Full scan"}</Fact>
-                  <Fact label="Created">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span>{formatRelative(data.createdAt)}</span>
-                      </TooltipTrigger>
-                      <TooltipContent>{formatDateTime(data.createdAt)}</TooltipContent>
-                    </Tooltip>
-                  </Fact>
-                  <Fact label="World">
-                    <span>{data.world}</span>
-                  </Fact>
-                  <Fact label="Box">
-                    <span className="tabular-nums">
-                      {size.x}×{size.y}×{size.z}
-                    </span>
-                  </Fact>
-                </dl>
-                <div className="space-y-1.5">
-                  <div className="text-xs text-muted-foreground">Teleport</div>
-                  <div className="flex gap-2">
-                    <code className="min-w-0 flex-1 truncate rounded-md border bg-muted px-2 py-1.5 text-xs select-all" title={data.teleport}>
-                      {data.teleport}
-                    </code>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={() => void copyTeleport()} aria-label="Copy teleport command">
-                          <Copy />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Copy</TooltipContent>
-                    </Tooltip>
+            <Tabs value={sideTab} onValueChange={chooseSideTab} className="min-h-0 flex-1">
+              <TabsList className="w-full shrink-0">
+                <TabsTrigger value="verdict">Verdict</TabsTrigger>
+                {integrations.length > 0 && <TabsTrigger value="integrations">Integrations</TabsTrigger>}
+                <TabsTrigger value="builders">
+                  Builders <span className="text-muted-foreground tabular-nums">{data.players.length}</span>
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="verdict" className="flex min-h-0 flex-col gap-4 overflow-y-auto">
+                <Card className="shrink-0 gap-4 py-4">
+                  <CardContent className="space-y-4 px-4">
+                    <VerdictButtons finding={data} pending={verdict.isPending} onVerdict={judge} />
+                    {data.review && (
+                      <p className="text-xs text-muted-foreground">
+                        {data.review.verdict === "CONFIRMED" ? "Confirmed" : "Marked as false alarm"} by {data.review.reviewer}, {formatDateTime(data.review.reviewedAt)}
+                      </p>
+                    )}
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <Fact label="Score">
+                        <span className="tabular-nums">{formatScore(data.score)}</span>
+                        {data.votes > 1 && <span className="text-muted-foreground"> · {data.votes} votes</span>}
+                      </Fact>
+                      <Fact label="Model">
+                        <span>{data.modelVersion}</span>
+                      </Fact>
+                      <Fact label="Source">{data.source === "mask" ? "Live check" : "Full scan"}</Fact>
+                      <Fact label="Created">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>{formatRelative(data.createdAt)}</span>
+                          </TooltipTrigger>
+                          <TooltipContent>{formatDateTime(data.createdAt)}</TooltipContent>
+                        </Tooltip>
+                      </Fact>
+                      <Fact label="World">
+                        <span>{data.world}</span>
+                      </Fact>
+                      <Fact label="Box">
+                        <span className="tabular-nums">
+                          {size.x}×{size.y}×{size.z}
+                        </span>
+                      </Fact>
+                    </dl>
+                    <div className="space-y-1.5">
+                      <div className="text-xs text-muted-foreground">Teleport</div>
+                      <div className="flex gap-2">
+                        <code className="min-w-0 flex-1 truncate rounded-md border bg-muted px-2 py-1.5 text-xs select-all" title={data.teleport}>
+                          {data.teleport}
+                        </code>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="icon" className="size-8 shrink-0" onClick={() => void copyTeleport()} aria-label="Copy teleport command">
+                              <Copy />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copy</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {shareView(data, canShare) !== "hidden" && (
+                  <div className="shrink-0">
+                    <SharePanel key={data.id} finding={data} canShare={canShare} />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {(me.data?.blockLog || data.rolledBackAt || me.data?.punishments) && (
-              <div className="shrink-0">
-                <IntegrationsPanel
-                  key={data.id}
-                  finding={data}
-                  blockLog={!!me.data?.blockLog}
-                  canRollback={!!me.data?.canRollback}
-                  punishments={me.data?.punishments ?? null}
-                />
-              </div>
-            )}
-            {shareView(data, canShare) !== "hidden" && (
-              <div className="shrink-0">
-                <SharePanel key={data.id} finding={data} canShare={canShare} />
-              </div>
-            )}
-            <div className="min-h-24 flex-1 overflow-y-auto pr-1">
-              {data.players.length ? (
-                <div className="flex flex-col gap-2">
-                  {data.players.map((player) => (
-                    <PlayerCard key={player.uuid} player={player} className="w-full" />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No players recorded.</p>
+                )}
+              </TabsContent>
+              {integrations.length > 0 && (
+                <TabsContent value="integrations" className="flex min-h-0 flex-col">
+                  <FindingIntegrations key={data.id} finding={data} integrations={integrations} blockLog={!!me.data?.blockLog} canRollback={!!me.data?.canRollback} />
+                </TabsContent>
               )}
-            </div>
-
+              <TabsContent value="builders" className="min-h-0 overflow-y-auto pr-1 max-lg:max-h-[70vh]">
+                {data.players.length ? (
+                  <div className="flex flex-col gap-2">
+                    {data.players.map((player) => (
+                      <PlayerCard key={player.uuid} player={player} className="w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No players recorded.</p>
+                )}
+              </TabsContent>
+            </Tabs>
           </aside>
         </div>
       </Tabs>

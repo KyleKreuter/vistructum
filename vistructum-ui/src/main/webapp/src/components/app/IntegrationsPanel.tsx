@@ -1,35 +1,55 @@
-import { ChevronDown, Info, Undo2, UserSearch } from "lucide-react";
+import { ChevronDown, Undo2, UserSearch } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
 import { useAttribution, useMe, useRollback } from "@/api/queries";
 import type { FindingDetail } from "@/api/types";
-import { FindingPunishments, PunishmentHistory } from "@/components/app/Punishments";
+import { FindingPunishments, libertyBansLogo, PunishmentHistory } from "@/components/app/Punishments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { Integration } from "@/logic/integrations";
 import { attributionMessage, canAttribute, canRollBack, rollbackMessage } from "@/logic/blockLog";
 import { formatDateTime } from "@/logic/format";
+import { useStoredChoice } from "@/lib/useStoredChoice";
 import { cn } from "@/lib/utils";
 
 const coreProtectLogo = "https://cdn.modrinth.com/data/Lu3KuzdV/b2c4b7b0033ab09cc166f2848003ef3a02c70a83.png";
 
-export function IntegrationsPanel({
+const integrationLabels: Record<Integration, { name: string; logo: string }> = {
+  coreprotect: { name: "CoreProtect", logo: coreProtectLogo },
+  libertybans: { name: "LibertyBans", logo: libertyBansLogo },
+};
+
+export function FindingIntegrations({
   finding,
+  integrations,
   blockLog,
   canRollback,
-  punishments,
 }: {
   finding: FindingDetail;
+  integrations: Integration[];
   blockLog: boolean;
   canRollback: boolean;
-  punishments: string | null;
 }) {
+  const [selected, select] = useStoredChoice("vistructum-finding-integration", integrations, integrations[0]);
   return (
-    <IntegrationsCard storageKey="vistructum-integrations-finding">
-      {(blockLog || finding.rolledBackAt) && <CoreProtectSection finding={finding} blockLog={blockLog} canRollback={canRollback} />}
-      {punishments && <FindingPunishments players={finding.players} />}
-    </IntegrationsCard>
+    <Card className="min-h-0 py-4">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-4 text-sm">
+        <ToggleGroup type="single" variant="outline" size="sm" value={selected} onValueChange={(value) => value && select(value)} className="shrink-0">
+          {integrations.map((integration) => (
+            <ToggleGroupItem key={integration} value={integration} className="gap-2">
+              <img src={integrationLabels[integration].logo} alt="" className="size-4 rounded-sm" referrerPolicy="no-referrer" loading="lazy" />
+              {integrationLabels[integration].name}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        <div className="min-h-0 flex-1 overflow-y-auto max-lg:max-h-[70vh]">
+          {selected === "coreprotect" ? <CoreProtectSection finding={finding} blockLog={blockLog} canRollback={canRollback} /> : <FindingPunishments players={finding.players} />}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -84,7 +104,6 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
   const attribution = useAttribution(finding.id);
   const rollback = useRollback(finding.id);
   const [confirming, setConfirming] = useState(false);
-  const [unavailableInfo, setUnavailableInfo] = useState(false);
   const busy = attribution.isPending || rollback.isPending;
   const rollbackable = canRollBack(finding);
   const attributable = canAttribute(finding);
@@ -113,25 +132,7 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
 
   return (
     <section className="space-y-2">
-      <h3 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        <img src={coreProtectLogo} alt="" className="size-4 rounded-sm" referrerPolicy="no-referrer" loading="lazy" /> CoreProtect
-        {!blockLog && (
-          <Tooltip open={unavailableInfo} onOpenChange={setUnavailableInfo}>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label="CoreProtect status"
-                className="rounded-sm text-muted-foreground hover:text-foreground"
-                onPointerDown={(event) => event.preventDefault()}
-                onClick={() => setUnavailableInfo((open) => !open)}
-              >
-                <Info className="size-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>CoreProtect is not available right now.</TooltipContent>
-          </Tooltip>
-        )}
-      </h3>
+      {!blockLog && <p className="text-xs text-muted-foreground">CoreProtect is not available right now.</p>}
       {finding.rolledBackAt && (
         <p className="text-xs">
           Rolled back by {finding.rolledBackBy}, {formatDateTime(finding.rolledBackAt)}

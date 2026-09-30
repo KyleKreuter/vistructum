@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
 import { useAttribution, useMe, useRollback } from "@/api/queries";
 import type { FindingDetail } from "@/api/types";
-import { LibertyBansHeading, PunishmentHistory } from "@/components/app/Punishments";
+import { FindingPunishments, PunishmentHistory } from "@/components/app/Punishments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -28,7 +28,7 @@ export function IntegrationsPanel({
   return (
     <IntegrationsCard storageKey="vistructum-integrations-finding">
       {(blockLog || finding.rolledBackAt) && <CoreProtectSection finding={finding} blockLog={blockLog} canRollback={canRollback} />}
-      {punishments && <LibertyBansHeading />}
+      {punishments && <FindingPunishments players={finding.players} />}
     </IntegrationsCard>
   );
 }

@@ -1,4 +1,4 @@
-import { keepPreviousData, queryOptions, useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions, useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { findingsQuery } from "@/logic/filters";
 import { ApiError, request } from "./client";
 import type {
@@ -156,13 +156,21 @@ export function usePlayer(uuid: string, enabled: boolean) {
   });
 }
 
-export function usePunishments(uuid: string, enabled: boolean) {
-  return useQuery({
+function punishmentsOptions(uuid: string, enabled: boolean) {
+  return queryOptions({
     queryKey: keys.punishments(uuid),
     queryFn: () => request<PunishmentHistory>(`/players/${encodeURIComponent(uuid)}/punishments`),
     enabled,
     staleTime: 60_000,
   });
+}
+
+export function usePunishments(uuid: string, enabled: boolean) {
+  return useQuery(punishmentsOptions(uuid, enabled));
+}
+
+export function usePlayersPunishments(uuids: string[], enabled: boolean) {
+  return useQueries({ queries: uuids.map((uuid) => punishmentsOptions(uuid, enabled)) });
 }
 
 export function usePublicEvidence(token: string) {

@@ -51,12 +51,12 @@ The statistics page shows findings per day, precision per detection path, and re
 
 ## What you install
 
-This version has two files. Install both.
+Vistructum has two plugins. Install both.
 
-| File | Purpose |
+| Plugin | Purpose |
 |---|---|
-| `vistructum-<version>.jar` (primary file) | Detection, storage, and the public API. It has no commands. |
-| `vistructum-ui-<version>.jar` (additional file) | The `/vis` command, the review menu, chat alerts, the resource pack, and the web app. It uses only the public API, so you can replace it with your own plugin. |
+| [Vistructum Core](https://modrinth.com/plugin/vistructum-core) (`vistructum-<version>.jar`) | Detection, storage, and the public API. It has no commands. Every version of this project names the matching core version as a required dependency. |
+| Vistructum (`vistructum-ui-<version>.jar`, this project) | The `/vis` command, the review menu, chat alerts, the resource pack, and the web app. It uses only the public API, so you can replace it with your own plugin. |
 
 ## Requirements
 
@@ -65,7 +65,7 @@ This version has two files. Install both.
 
 ## Installation
 
-1. Copy both jars into `plugins/`.
+1. Copy `vistructum-ui-<version>.jar` and the matching `vistructum-<version>.jar` from Vistructum Core into `plugins/`.
 2. In `plugins/vistructum-ui/config.yml`, set `pack.public-url` to an address your players can reach. The default `http://localhost:8765/pack.zip` works only on the machine that runs the server.
 3. Restart the server.
 

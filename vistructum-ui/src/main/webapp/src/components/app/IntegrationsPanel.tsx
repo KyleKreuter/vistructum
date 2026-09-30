@@ -1,4 +1,4 @@
-import { Info, Plug, Undo2, UserSearch } from "lucide-react";
+import { Gavel, Info, Plug, Undo2, UserSearch } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
@@ -12,7 +12,17 @@ import { formatDateTime } from "@/logic/format";
 
 const coreProtectLogo = "https://cdn.modrinth.com/data/Lu3KuzdV/b2c4b7b0033ab09cc166f2848003ef3a02c70a83.png";
 
-export function IntegrationsPanel({ finding, blockLog, canRollback }: { finding: FindingDetail; blockLog: boolean; canRollback: boolean }) {
+export function IntegrationsPanel({
+  finding,
+  blockLog,
+  canRollback,
+  punishments,
+}: {
+  finding: FindingDetail;
+  blockLog: boolean;
+  canRollback: boolean;
+  punishments: string | null;
+}) {
   return (
     <Card className="gap-3 py-4">
       <CardHeader className="px-4">
@@ -20,8 +30,15 @@ export function IntegrationsPanel({ finding, blockLog, canRollback }: { finding:
           <Plug className="size-4" /> Integrations
         </CardTitle>
       </CardHeader>
-      <CardContent className="px-4 text-sm">
-        <CoreProtectSection finding={finding} blockLog={blockLog} canRollback={canRollback} />
+      <CardContent className="flex flex-col gap-3 px-4 text-sm">
+        {(blockLog || finding.rolledBackAt) && <CoreProtectSection finding={finding} blockLog={blockLog} canRollback={canRollback} />}
+        {punishments && (
+          <div className="flex items-center gap-2">
+            <Gavel className="size-4 shrink-0 text-muted-foreground" />
+            <span className="font-medium">Punishments</span>
+            <span className="ml-auto text-xs text-muted-foreground">from {punishments}</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

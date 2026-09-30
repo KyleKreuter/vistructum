@@ -20,6 +20,7 @@ export const endpointKeys = [
   "stats",
   "activity",
   "players",
+  "punishments",
   "skin",
   "face",
   "palette",

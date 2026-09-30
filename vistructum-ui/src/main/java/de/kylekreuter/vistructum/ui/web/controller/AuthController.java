@@ -3,6 +3,7 @@ package de.kylekreuter.vistructum.ui.web.controller;
 import de.kylekreuter.vistructum.api.BlockLog;
 import de.kylekreuter.vistructum.api.WebAccess;
 import de.kylekreuter.vistructum.api.WebSession;
+import de.kylekreuter.vistructum.ui.integration.punishment.PunishmentLog;
 import de.kylekreuter.vistructum.ui.web.GameServer;
 import de.kylekreuter.vistructum.ui.web.Handoff;
 import de.kylekreuter.vistructum.ui.web.Requests;
@@ -28,14 +29,17 @@ public final class AuthController {
 
     private final WebAccess web;
     private final BlockLog blockLog;
+    private final Optional<PunishmentLog> punishments;
     private final WebSettings settings;
     private final GameServer game;
     private final Handoff handoff;
     private final SecureRandom random = new SecureRandom();
 
-    public AuthController(WebAccess web, BlockLog blockLog, WebSettings settings, GameServer game, Handoff handoff) {
+    public AuthController(WebAccess web, BlockLog blockLog, Optional<PunishmentLog> punishments, WebSettings settings,
+                          GameServer game, Handoff handoff) {
         this.web = Objects.requireNonNull(web, "web");
         this.blockLog = Objects.requireNonNull(blockLog, "blockLog");
+        this.punishments = Objects.requireNonNull(punishments, "punishments");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.game = Objects.requireNonNull(game, "game");
         this.handoff = Objects.requireNonNull(handoff, "handoff");
@@ -80,7 +84,8 @@ public final class AuthController {
     private void me(Context ctx) {
         WebSession session = SessionFilter.session(ctx);
         ctx.future(() -> handoff.onMain(() -> MeView.of(session, game.canShare(session.player()),
-                        blockLog.available(), game.canRollback(session.player())))
+                        blockLog.available(), game.canRollback(session.player()),
+                        punishments.map(PunishmentLog::source)))
                 .thenAccept(view -> Responses.json(ctx, view)));
     }
 

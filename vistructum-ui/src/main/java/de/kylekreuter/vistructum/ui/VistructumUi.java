@@ -9,6 +9,8 @@ import de.kylekreuter.vistructum.ui.gui.ReviewMenus;
 import de.kylekreuter.vistructum.ui.gui.Thumbnails;
 import de.kylekreuter.vistructum.ui.integration.discord.DiscordNotifier;
 import de.kylekreuter.vistructum.ui.integration.discord.DiscordSettings;
+import de.kylekreuter.vistructum.ui.integration.punishment.PunishmentLog;
+import de.kylekreuter.vistructum.ui.integration.punishment.PunishmentLogs;
 import de.kylekreuter.vistructum.ui.text.Messages;
 import de.kylekreuter.vistructum.ui.web.BukkitGameServer;
 import de.kylekreuter.vistructum.ui.web.ReviewLinks;
@@ -31,6 +33,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 
 public final class VistructumUi extends JavaPlugin {
@@ -47,6 +51,7 @@ public final class VistructumUi extends JavaPlugin {
     private GameAssets gameAssets;
     private ScanBossBar scanBossBar;
     private DiscordNotifier discord;
+    private ExecutorService punishmentQueries;
 
     @Override
     public void onEnable() {
@@ -102,6 +107,10 @@ public final class VistructumUi extends JavaPlugin {
             gameAssets.close();
             gameAssets = null;
         }
+        if (punishmentQueries != null) {
+            punishmentQueries.shutdownNow();
+            punishmentQueries = null;
+        }
     }
 
     private void startWebApplication(Vistructum vistructum, ResourcePack pack, WebSettings web, Clock clock) {
@@ -112,8 +121,8 @@ public final class VistructumUi extends JavaPlugin {
                 web.enabled() && getConfig().getBoolean("web.textures.download"));
         Optional<WebApplication.WebApp> app = web.enabled()
                 ? Optional.of(new WebApplication.WebApp(vistructum, web, new BukkitGameServer(SHARE_PERMISSION, ROLLBACK_PERMISSION),
-                BukkitGameServer.palette(), gameAssets, Bukkit.getScheduler().getMainThreadExecutor(this),
-                getClassLoader(), clock))
+                BukkitGameServer.palette(), gameAssets, connectPunishments(clock),
+                Bukkit.getScheduler().getMainThreadExecutor(this), getClassLoader(), clock))
                 : Optional.empty();
         try {
             webApplication = WebApplication.start(address, pack, app, getLogger());
@@ -126,6 +135,18 @@ public final class VistructumUi extends JavaPlugin {
                     + WebSettings.HOME);
             gameAssets.fetch(GameAssets.MANIFEST, getLogger());
         }
+    }
+
+    private Optional<PunishmentLog> connectPunishments(Clock clock) {
+        if (!getConfig().getBoolean("punishments.enabled")) {
+            return Optional.empty();
+        }
+        punishmentQueries = Executors.newFixedThreadPool(2, Thread.ofPlatform().daemon()
+                .name("vistructum-punishments-", 0).factory());
+        PunishmentLog log = PunishmentLogs.connect(getServer().getPluginManager(),
+                Bukkit.getScheduler().getMainThreadExecutor(this), punishmentQueries, clock, getLogger());
+        getLogger().info("the web app shows punishments from " + log.source());
+        return Optional.of(log);
     }
 
     private void startDiscord(Vistructum vistructum, Thumbnails thumbnails, Messages messages, WebSettings web) {

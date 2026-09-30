@@ -83,6 +83,7 @@ export function PlayerCard({
   skin,
   colour,
   detail,
+  status,
   onSelect,
   className,
 }: {
@@ -90,6 +91,7 @@ export function PlayerCard({
   skin?: string;
   colour?: string;
   detail?: ReactNode;
+  status?: ReactNode;
   onSelect?: () => void;
   className?: string;
 }) {
@@ -103,6 +105,7 @@ export function PlayerCard({
           {label}
         </span>
         {detail && <span className="text-xs text-muted-foreground tabular-nums">{detail}</span>}
+        {status}
       </span>
     </>
   );

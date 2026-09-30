@@ -4,6 +4,7 @@ import { matchesState } from "@/logic/filters";
 import { paintLayer, sceneColours } from "@/logic/sceneLayers";
 import { publicUrl, type MockDb, type MockFinding } from "./data";
 import { relativeEvidence } from "./evidence";
+import { mockPunishments } from "./punishments";
 import { sceneTerrain } from "./terrain";
 import { activeSettings, type EndpointKey } from "./settings";
 import { facePng, imagePng, lookFor, skinPng } from "./skins";
@@ -357,6 +358,13 @@ export function handlers(db: MockDb) {
           falseAlarms: mine.filter((finding) => finding.review?.verdict === "FALSE_ALARM").length,
         },
       });
+    }),
+
+    http.get(`${api}/players/:uuid/punishments`, async ({ params }) => {
+      const blocked = await gate("punishments", 300);
+      if (blocked) return blocked;
+      if (!db.me.punishments) return error(503, "unavailable");
+      return HttpResponse.json({ source: db.me.punishments, items: mockPunishments(String(params.uuid), Date.now()) });
     }),
 
     http.get(`${api}/players/:uuid/skin.png`, async ({ params }) => {

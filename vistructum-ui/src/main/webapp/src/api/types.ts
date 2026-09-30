@@ -9,6 +9,7 @@ export interface Me {
   canShare: boolean;
   blockLog: boolean;
   canRollback: boolean;
+  punishments: string | null;
 }
 
 export interface InferenceModel {
@@ -226,6 +227,22 @@ export interface PlayerInfo {
   uuid: string;
   name: string | null;
   findings: { total: number; open: number; confirmed: number; falseAlarms: number };
+}
+
+export type PunishmentType = "BAN" | "MUTE" | "WARN" | "KICK";
+
+export interface Punishment {
+  type: PunishmentType;
+  reason: string | null;
+  operator: string | null;
+  issuedAt: string | null;
+  expiresAt: string | null;
+  active: boolean;
+}
+
+export interface PunishmentHistory {
+  source: string;
+  items: Punishment[];
 }
 
 export type Palette = Record<string, number>;

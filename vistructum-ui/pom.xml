@@ -30,6 +30,22 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>com.gitlab.ruany</groupId>
+            <artifactId>LiteBansAPI</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>space.arim.libertybans</groupId>
+            <artifactId>bans-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>space.arim.omnibus</groupId>
+            <artifactId>omnibus</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.essentialsx</groupId>
+            <artifactId>EssentialsX</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.javalin</groupId>
             <artifactId>javalin</artifactId>
             <exclusions>

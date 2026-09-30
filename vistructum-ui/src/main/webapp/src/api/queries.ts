@@ -13,6 +13,7 @@ import type {
   Me,
   Palette,
   PlayerInfo,
+  PunishmentHistory,
   PublicEvidence,
   RollbackResult,
   Scene,
@@ -36,6 +37,7 @@ export const keys = {
   stats: (from: string, to: string) => ["stats", from, to] as const,
   activity: ["activity"] as const,
   player: (uuid: string) => ["player", uuid] as const,
+  punishments: (uuid: string) => ["punishments", uuid] as const,
   publicEvidence: (token: string) => ["public", token] as const,
 };
 
@@ -151,6 +153,15 @@ export function usePlayer(uuid: string, enabled: boolean) {
     queryKey: keys.player(uuid),
     queryFn: () => request<PlayerInfo>(`/players/${encodeURIComponent(uuid)}`),
     enabled,
+  });
+}
+
+export function usePunishments(uuid: string, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.punishments(uuid),
+    queryFn: () => request<PunishmentHistory>(`/players/${encodeURIComponent(uuid)}/punishments`),
+    enabled,
+    staleTime: 60_000,
   });
 }
 

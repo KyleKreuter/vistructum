@@ -4,6 +4,7 @@ import { ApiError, urls } from "@/api/client";
 import { usePlayer } from "@/api/queries";
 import { FindingList } from "@/components/app/FindingList";
 import { PlayerFace } from "@/components/app/PlayerFace";
+import { PunishmentBadges, PunishmentHistoryCard } from "@/components/app/Punishments";
 import { EmptyState, ErrorState, PageSpinner } from "@/components/app/States";
 import { Card, CardContent } from "@/components/ui/card";
 import { isUuid } from "@/logic/filters";
@@ -41,6 +42,7 @@ export default function PlayerPage() {
                 <p className="truncate text-xs text-muted-foreground" title={uuid}>
                   {shortUuid(uuid)}
                 </p>
+                <PunishmentBadges uuid={uuid} className="mt-1" />
               </div>
             </div>
             {missingSkin === uuid ? (
@@ -52,6 +54,7 @@ export default function PlayerPage() {
             )}
           </CardContent>
         </Card>
+        <PunishmentHistoryCard uuid={uuid} />
       </div>
       <div className="flex min-w-0 flex-col lg:min-h-0">
         <FindingList

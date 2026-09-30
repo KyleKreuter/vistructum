@@ -60,6 +60,7 @@ pack:
 web:
   disabled: "<prefix><red>The web app is not enabled on this server.</red>"
   link: "<prefix><gray>A sign-in link to the web app was created, valid for <minutes> minutes:</gray> <link><aqua>[Open]</aqua></link>"
+  finding-link: "<prefix><gray>A sign-in link to finding #<id> was created, valid for <minutes> minutes:</gray> <link><aqua>[Open]</aqua></link>"
 
 evidence:
   link: "<prefix><gray>A sign-in link to the evidence of finding #<id> was created, valid for <minutes> minutes:</gray> <link><aqua>[Open]</aqua></link>"
@@ -93,6 +94,7 @@ menu:
   false-alarm: "<red>False alarm</red>"
   teleport: "<aqua>Teleport</aqua>"
   evidence: "<light_purple>Evidence</light_purple>"
+  web: "<aqua>Open web</aqua>"
   back: "<white>Back to the list</white>"
   previous: "<white>Previous page</white>"
   next: "<white>Next page</white>"

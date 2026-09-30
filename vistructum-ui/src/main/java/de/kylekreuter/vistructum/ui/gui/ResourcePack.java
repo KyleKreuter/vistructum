@@ -18,7 +18,7 @@ import java.util.zip.ZipOutputStream;
 public record ResourcePack(byte[] zip, String sha1) {
 
     static final List<String> ICONS = List.of("confirm", "deny", "teleport", "list", "card", "previous", "next", "previous_disabled",
-            "next_disabled", "filter_open", "filter_closed", "card_confirmed", "card_dismissed", "evidence");
+            "next_disabled", "filter_open", "filter_closed", "card_confirmed", "card_dismissed", "evidence", "web");
     static final int FIRST_MODEL_DATA = 7001;
 
     public static ResourcePack build() {

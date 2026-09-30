@@ -186,9 +186,14 @@ public final class ReviewMenus {
         menu.put(Layout.BACK, icon("list", messages.item(Message.MENU_BACK), List.of()),
                 clicked -> openList(clicked, back));
         if (view.evidence()) {
-            menu.put(Layout.EVIDENCE, icon("evidence", messages.item(Message.MENU_EVIDENCE), List.of()), clicked -> {
+            menu.put(Layout.LINK, icon("evidence", messages.item(Message.MENU_EVIDENCE), List.of()), clicked -> {
                 clicked.closeInventory();
                 deliver(clicked, links.evidence(clicked, finding.id()), clicked::sendMessage);
+            });
+        } else if (links.enabled()) {
+            menu.put(Layout.LINK, icon("web", messages.item(Message.MENU_WEB), List.of()), clicked -> {
+                clicked.closeInventory();
+                deliver(clicked, links.finding(clicked, finding.id()), clicked::sendMessage);
             });
         }
         player.openInventory(menu.getInventory());

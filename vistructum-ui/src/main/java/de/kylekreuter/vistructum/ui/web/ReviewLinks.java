@@ -32,6 +32,11 @@ public final class ReviewLinks {
                 Messages.link("link", url), number("minutes", WebAccess.LOGIN_MINUTES)));
     }
 
+    public CompletableFuture<Component> finding(Player player, long findingId) {
+        return login(player, WebSettings.findingPath(findingId)).thenApply(url -> messages.chat(Message.WEB_FINDING_LINK,
+                Messages.link("link", url), number("id", findingId), number("minutes", WebAccess.LOGIN_MINUTES)));
+    }
+
     public CompletableFuture<Component> evidence(Player player, long findingId) {
         return login(player, WebSettings.evidencePath(findingId)).thenApply(url -> messages.chat(Message.EVIDENCE_LINK,
                 Messages.link("link", url), number("id", findingId), number("minutes", WebAccess.LOGIN_MINUTES)));

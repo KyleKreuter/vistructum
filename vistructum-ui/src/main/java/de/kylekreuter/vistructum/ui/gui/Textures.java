@@ -21,6 +21,7 @@ final class Textures {
     private static final Color BUTTON = new Color(0x4A, 0x4A, 0x4A);
     private static final Color ARROW = new Color(0xA0, 0xA0, 0xA0);
     private static final Color EVIDENCE = new Color(0xB0, 0x7C, 0xF0);
+    private static final Color WEB = new Color(0x4F, 0xC3, 0xF7);
     private static final Color ARROW_DISABLED = new Color(0x5A, 0x5A, 0x5A);
     private static final Color BAR_EDGE = new Color(0x1E, 0x1E, 0x1E);
     private static final Color BAR_WELL = new Color(0x3A, 0x3A, 0x3A);
@@ -162,6 +163,16 @@ final class Textures {
                 g.setColor(EVIDENCE);
                 g.fillPolygon(new int[]{5, 5, 12}, new int[]{4, 12, 8}, 3);
             }
+            case "web" -> {
+                g.setColor(BORDER);
+                g.fillRect(0, 0, 16, 16);
+                g.setColor(BUTTON);
+                g.fillRect(1, 1, 14, 14);
+                disc(image, 4.0, 5.2, WEB);
+                meridian(image, WEB);
+                g.setColor(WEB);
+                g.fillRect(3, 7, 10, 2);
+            }
             case "card_confirmed" -> card(g, new Color(0x9E, 0x1F, 0x1F), new Color(0xD3, 0x3B, 0x3B));
             case "card_dismissed" -> card(g, new Color(0x7A, 0x7A, 0x7A), new Color(0x9E, 0x9E, 0x9E));
             default -> card(g, new Color(0x1E, 0x4F, 0xC2), new Color(0x3F, 0x74, 0xE8));
@@ -175,6 +186,17 @@ final class Textures {
             for (int x = 0; x < image.getWidth(); x++) {
                 double distance = Math.hypot(x - 7.5, y - 7.5);
                 if (distance >= inner && distance <= outer) {
+                    image.setRGB(x, y, color.getRGB());
+                }
+            }
+        }
+    }
+
+    private static void meridian(BufferedImage image, Color color) {
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                double distance = Math.pow((x - 7.5) / 2.0, 2) + Math.pow((y - 7.5) / 5.0, 2);
+                if (distance >= 0.6 && distance <= 1.0) {
                     image.setRGB(x, y, color.getRGB());
                 }
             }

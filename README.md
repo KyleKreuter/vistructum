@@ -208,7 +208,7 @@ integrations:
 
 Set `enabled: false` to turn the integration off. The CoreProtect API must be enabled in the CoreProtect config, which is its default.
 
-While the integration runs, the **Integrations** panel on the finding page of the web app has a CoreProtect section:
+While the integration runs, the **Integrations** tab on the finding page of the web app has a CoreProtect section. A disabled button names the reason in a tooltip:
 
 - **Find builders** searches the log again for the finding's box at the time of detection. If the log names builders, they replace the finding's players, and the activity log records the search. A finding without evidence gets a replay of the logged changes. The button stays off once the finding has builders and evidence.
 - **Roll back** reverts the blocks of a **confirmed** finding with builders, after a confirmation step. Only blocks inside the finding's box that these builders placed or broke change. Each returns to its state before their first logged change. Blocks that someone else changed since are skipped, and the panel reports how many. CoreProtect logs every restored block as `#vistructum`, so a CoreProtect rollback can undo it. The finding, its verdict, and its evidence stay. The finding gets a **Rolled back** label in the list and on its page, and the activity log records the rollback. A finding is rolled back once. The button needs `vistructum.coreprotect.rollback`.
@@ -217,7 +217,7 @@ The browser loads the CoreProtect logo of the panel from `cdn.modrinth.com`.
 
 ### LibertyBans integration
 
-The web app shows which players are punished. Each player card on the finding page shows an active ban or mute as a label, for example **Banned until 06 Oct 2026, 14:50** or **Muted**. The **Integrations** panel on the player page lists the full history with type, reason, staff member, date, and expiry, newest first, at most 100 entries. Both panels show LibertyBans with its logo, which the browser loads from `cdn.modrinth.com`.
+The web app shows the punishment history of players. The **Integrations** tab on the finding page has a LibertyBans section with the history of every player of the finding. A green dot on the section marks that at least one of them has punishments. The **Integrations** panel on the player page lists the history of that player. Each history shows type, reason, staff member, date, and expiry, newest first, at most 100 entries. Both show LibertyBans with its logo, which the browser loads from `cdn.modrinth.com`.
 
 The UI plugin reads the history from [LibertyBans](https://modrinth.com/plugin/libertybans) 1.1 or newer. Other punishment plugins are not supported. Without LibertyBans, the web app shows no punishments.
 

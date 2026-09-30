@@ -6,8 +6,12 @@ import java.util.Objects;
 /**
  * Proof of how the structure of a finding was built, secured when the finding was created.
  *
- * <p>Evidence exists only for findings of the live check and only while recording is enabled on the server. It
- * covers the block changes still tracked at that time, which reach back at most as far as the tracking window.
+ * <p>Evidence of a live check finding exists while recording is enabled on the server. It covers the block changes
+ * still tracked at that time, which reach back at most as far as the tracking window, and the movement of nearby
+ * players.
+ *
+ * <p>For every other finding, evidence exists if CoreProtect is installed and its integration is enabled. It covers
+ * the block changes CoreProtect logged within the configured lookup window, and it holds no recordings.
  *
  * @param findingId identifier of the finding the evidence belongs to
  * @param before block states of the box of the finding and its margin before the first recorded change

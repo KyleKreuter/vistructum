@@ -50,6 +50,14 @@ recording:
   lead-seconds: 30
   margin: 4
 
+# Reads CoreProtect's block log for findings without tracked block changes, mostly those of the full scan. The
+# players who placed the blocks become the players of the finding, and the logged changes are secured as evidence.
+integrations:
+  coreprotect:
+    enabled: true
+    lookup-days: 30
+    timeout-seconds: 10
+
 retention:
   reviewed-days: 90
   confirmed-days: 365

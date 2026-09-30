@@ -13,12 +13,14 @@ import de.kylekreuter.vistructum.core.alert.TerrainStore;
 import de.kylekreuter.vistructum.core.evidence.EvidenceKeeper;
 import de.kylekreuter.vistructum.core.evidence.EvidenceSettings;
 import de.kylekreuter.vistructum.core.evidence.EvidenceStore;
+import de.kylekreuter.vistructum.core.history.BlockHistory;
 import de.kylekreuter.vistructum.core.inference.FallbackInference;
 import de.kylekreuter.vistructum.core.inference.Inference;
 import de.kylekreuter.vistructum.core.inference.InferenceSettings;
 import de.kylekreuter.vistructum.core.inference.LocalInference;
 import de.kylekreuter.vistructum.core.inference.OcclusionEngine;
 import de.kylekreuter.vistructum.core.inference.RemoteInference;
+import de.kylekreuter.vistructum.core.integration.coreprotect.CoreProtectHistory;
 import de.kylekreuter.vistructum.core.mask.MaskMonitor;
 import de.kylekreuter.vistructum.core.metrics.UsageMetrics;
 import de.kylekreuter.vistructum.core.recording.MotionRecorder;
@@ -44,6 +46,7 @@ import de.kylekreuter.vistructum.inference.InferenceEngine;
 import de.kylekreuter.vistructum.inference.ModelFiles;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -63,11 +66,13 @@ public final class VistructumCore extends JavaPlugin {
     private static final double VOLUME_PRISM_FILL = 0.9;
     private static final int VOLUME_MIN_SIDE = 5;
     private static final String EXPORT_FOLDER = "exports";
+    private static final String COREPROTECT = "CoreProtect";
 
     private Database database;
     private Inference inference;
     private OcclusionEngine occlusion;
     private MotionRecorder recorder;
+    private Optional<BlockHistory> history = Optional.empty();
     private MaskMonitor maskMonitor;
     private WorldScanner scanner;
     private DailySchedule schedule;
@@ -112,30 +117,30 @@ public final class VistructumCore extends JavaPlugin {
         scheduleUpdateChecks(settings, engine);
 
         Duration dedupe = Duration.ofDays(config.getLong("alerts.dedupe-days"));
-        FindingReporter reporter = new FindingReporter(mainThread, findings, getLogger(), dedupe, clock);
-
         getServer().getPluginManager().registerEvents(new BlockChangeListener(changes, clock::millis), this);
         ClusterSettings clusterSettings = new ClusterSettings(Duration.ofMinutes(config.getLong("tracking.ttl-minutes")),
                 config.getInt("tracking.link-distance"), Duration.ofSeconds(config.getLong("tracking.quiet-seconds")),
                 config.getInt("tracking.min-blocks"), config.getInt("tracking.max-extent"));
         boolean recordingEnabled = config.getBoolean("recording.enabled");
-        EvidenceStore evidence = new EvidenceStore(database);
-        Consumer<Finding> secureEvidence = finding -> {
-        };
+        EvidenceSettings evidenceSettings = new EvidenceSettings(config.getInt("recording.radius"),
+                Duration.ofSeconds(config.getLong("recording.lead-seconds")), config.getInt("recording.margin"));
         if (recordingEnabled) {
-            EvidenceSettings evidenceSettings = new EvidenceSettings(config.getInt("recording.radius"),
-                    Duration.ofSeconds(config.getLong("recording.lead-seconds")), config.getInt("recording.margin"));
             recorder = new MotionRecorder(this, new MotionStore(database), clock::millis,
                     clusterSettings.ttl().plus(evidenceSettings.lead()));
             recorder.start();
-            EvidenceKeeper keeper = new EvidenceKeeper(mainThread, evidence, recorder, evidenceSettings);
-            secureEvidence = finding -> keeper.secure(finding).exceptionally(error -> {
-                getLogger().warning("cannot secure evidence for finding #" + finding.id() + ": " + error);
-                return false;
-            });
         }
+        history = connectBlockHistory(config);
+        EvidenceStore evidence = new EvidenceStore(database);
+        EvidenceKeeper keeper = new EvidenceKeeper(mainThread, evidence, Optional.ofNullable(recorder), history,
+                evidenceSettings);
+        Consumer<Finding> secureEvidence = finding -> keeper.secure(finding).exceptionally(error -> {
+            getLogger().warning("cannot secure evidence for finding #" + finding.id() + ": " + error);
+            return false;
+        });
+        FindingReporter reporter = new FindingReporter(mainThread, findings, getLogger(), dedupe, history,
+                Duration.ofSeconds(config.getLong("integrations.coreprotect.timeout-seconds")), secureEvidence, clock);
         maskMonitor = new MaskMonitor(mainThread, changes, clusterSettings, new MaskProjector(), inference, reporter,
-                secureEvidence, clock);
+                clock);
         maskMonitor.start(20L * config.getLong("tracking.poll-seconds"));
 
         VolumeSettings volume = new VolumeSettings(config.getDouble("scan.volume.filler-share"),
@@ -190,6 +195,7 @@ public final class VistructumCore extends JavaPlugin {
         if (recorder != null) {
             recorder.stop();
         }
+        history.ifPresent(BlockHistory::close);
         if (occlusion != null) {
             occlusion.close();
         }
@@ -199,6 +205,21 @@ public final class VistructumCore extends JavaPlugin {
         if (database != null) {
             database.close();
         }
+    }
+
+    private Optional<BlockHistory> connectBlockHistory(FileConfiguration config) {
+        if (!config.getBoolean("integrations.coreprotect.enabled")) {
+            return Optional.empty();
+        }
+        Plugin coreProtect = getServer().getPluginManager().getPlugin(COREPROTECT);
+        if (coreProtect == null || !coreProtect.isEnabled()) {
+            return Optional.empty();
+        }
+        Optional<BlockHistory> connected = CoreProtectHistory.connect(coreProtect,
+                Duration.ofDays(config.getLong("integrations.coreprotect.lookup-days")), getLogger());
+        connected.ifPresent(ignored -> getLogger().info("CoreProtect attributes and secures evidence for findings "
+                + "without tracked block changes"));
+        return connected;
     }
 
     private Optional<Duration> retentionDays(FileConfiguration config, String key, Duration dedupe) {

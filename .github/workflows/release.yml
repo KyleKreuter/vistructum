@@ -120,7 +120,8 @@ jobs:
               loaders: $loaders,
               dependencies: [
                 {project_id: "P1OZGk5p", dependency_type: "optional"},
-                {project_id: "NpvuJQoq", dependency_type: "optional"}
+                {project_id: "NpvuJQoq", dependency_type: "optional"},
+                {project_id: "Lu3KuzdV", dependency_type: "optional"}
               ],
               featured: ($type == "release"),
               file_parts: ["core", "ui"],

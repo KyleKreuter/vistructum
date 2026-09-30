@@ -2,7 +2,9 @@ package de.kylekreuter.vistructum.core.evidence;
 
 import de.kylekreuter.vistructum.api.BlockBox;
 import de.kylekreuter.vistructum.api.Finding;
+import de.kylekreuter.vistructum.api.Source;
 import de.kylekreuter.vistructum.core.MainThread;
+import de.kylekreuter.vistructum.core.history.BlockHistory;
 import de.kylekreuter.vistructum.core.recording.MotionRecorder;
 import de.kylekreuter.vistructum.inference.Contract;
 import org.bukkit.Bukkit;
@@ -18,24 +20,42 @@ public final class EvidenceKeeper {
 
     private final MainThread mainThread;
     private final EvidenceStore store;
-    private final MotionRecorder recorder;
+    private final Optional<MotionRecorder> recorder;
+    private final Optional<BlockHistory> history;
     private final EvidenceSettings settings;
 
-    public EvidenceKeeper(MainThread mainThread, EvidenceStore store, MotionRecorder recorder,
-                          EvidenceSettings settings) {
+    public EvidenceKeeper(MainThread mainThread, EvidenceStore store, Optional<MotionRecorder> recorder,
+                          Optional<BlockHistory> history, EvidenceSettings settings) {
         this.mainThread = Objects.requireNonNull(mainThread, "mainThread");
         this.store = Objects.requireNonNull(store, "store");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
+        this.history = Objects.requireNonNull(history, "history");
         this.settings = Objects.requireNonNull(settings, "settings");
     }
 
     public CompletableFuture<Boolean> secure(Finding finding) {
+        if (recorder.isPresent() && finding.source() == Source.MASK) {
+            return secureTracked(finding, recorder.get());
+        }
+        return history.map(blocks -> secureHistory(finding, blocks))
+                .orElseGet(() -> CompletableFuture.completedFuture(false));
+    }
+
+    private CompletableFuture<Boolean> secureTracked(Finding finding, MotionRecorder motion) {
         return mainThread.supply(() -> {
-            recorder.flushAll();
+            motion.flushAll();
             return snapshot(finding);
         }).thenCompose(snapshot -> snapshot
                 .map(current -> store.secure(finding.id(), finding.world(), finding.box(), current, settings,
                         finding.createdAt()))
+                .orElseGet(() -> CompletableFuture.completedFuture(false)));
+    }
+
+    private CompletableFuture<Boolean> secureHistory(Finding finding, BlockHistory blocks) {
+        return mainThread.supply(() -> snapshot(finding)).thenCompose(snapshot -> snapshot
+                .map(current -> blocks.lookup(finding.world(), current.region(), finding.createdAt())
+                        .thenCompose(entries -> store.secureHistory(finding.id(), current, entries, settings.lead(),
+                                finding.createdAt())))
                 .orElseGet(() -> CompletableFuture.completedFuture(false)));
     }
 

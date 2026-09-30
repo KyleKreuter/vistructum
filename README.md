@@ -27,6 +27,7 @@ Vistructum never kicks, bans, or rolls back on its own. Every decision stays wit
 - **Chat alerts:** Staff get a message with **[Open]** and **[TP]** buttons for every new finding.
 - **Review web app (optional):** Staff sign in with a one-time link from `/vis web` and review findings in the browser: filtered list, scene with model heatmap, 3D view of full scan findings, 3D replay of recorded builds, statistics, status, and an activity log. Off by default.
 - **Evidence recording (optional):** Records player movement for a few minutes and secures the build, the blocks before it, and the nearby players as a replay when the live check creates a finding. Off by default.
+- **CoreProtect integration (optional):** Reads CoreProtect's block log for findings without tracked block changes. Full scan findings get their builders and a replay of the logged changes. On when CoreProtect is installed.
 - **Public evidence links (optional):** Share the replay of a confirmed finding through a link without coordinates or world name, and deactivate it at any time.
 - **Local or remote inference:** Runs the models inside the server process, or on a separate sidecar with a local fallback.
 - **Update notices:** Checks GitHub Releases daily and logs when a new plugin version or model is available. New models install automatically only after you set `updates.auto-update-models: true` (`MODELS_AUTO_UPDATE=true` for the sidecar).
@@ -130,7 +131,7 @@ docker compose up -d sidecar
 
 | File | Content |
 |---|---|
-| `plugins/vistructum/config.yml` | Inference mode, update checks, sidecar address, live check timing, evidence recording, daily fullscan worlds and scan threads, retention |
+| `plugins/vistructum/config.yml` | Inference mode, update checks, sidecar address, live check timing, evidence recording, daily fullscan worlds and scan threads, CoreProtect integration, retention |
 | `plugins/vistructum-ui/config.yml` | Resource pack and web app port, public URLs, web app switch, texture download, map previews in the list |
 | `plugins/vistructum-ui/messages.yml` | All chat and menu texts in MiniMessage format |
 
@@ -179,11 +180,30 @@ While recording is on, the core samples the position, pose, and held item of eve
 - every block change of the build, with player and time
 - the movement of every player within `radius` blocks, starting `lead-seconds` before the first change
 
-Full scan findings never get a replay, because they have no recent block changes.
+Full scan findings have no tracked block changes. They get a replay only through the [CoreProtect integration](#coreprotect-integration).
 
 ### Turn off evidence recording
 
-Set `recording.enabled: false` and restart. The core stops recording movement and secures no new evidence. The live check keeps tracking block changes, because detection needs them. New findings have no replay, and you can't share them. Evidence secured earlier stays until retention deletes its finding.
+Set `recording.enabled: false` and restart. The core stops recording movement and secures no new evidence. The live check keeps tracking block changes, because detection needs them. New findings get a replay only through the [CoreProtect integration](#coreprotect-integration). Without it, they have no replay, and you can't share them. Evidence secured earlier stays until retention deletes its finding.
+
+### CoreProtect integration
+
+When [CoreProtect](https://modrinth.com/plugin/coreprotect) 23.0 or newer runs on the server, the core reads its block log for every finding without tracked block changes. These are all full scan findings, and live check findings while evidence recording is off.
+
+- **Builders:** Before the finding is stored, the core looks up who placed the blocks that still stand in the finding box. These players become the players of the finding, and alerts, the review menu, and the web app show them.
+- **Replay:** After the finding is stored, the core secures the logged block changes around the box as evidence, with the same `margin` as evidence recording. The replay has no player movement.
+
+```yaml
+integrations:
+  coreprotect:
+    enabled: true
+    lookup-days: 30
+    timeout-seconds: 10
+```
+
+`lookup-days` limits how far back the core searches the log. If a lookup takes longer than `timeout-seconds`, the finding is stored without builders. CoreProtect names players, not IDs. The core maps a name to a player only if that player has joined the server before. Changes that CoreProtect rolled back before the lookup are ignored. A rollback after the lookup does not change the finding.
+
+Set `enabled: false` to turn the integration off. The CoreProtect API must be enabled in the CoreProtect config, which is its default.
 
 ### Public evidence links
 

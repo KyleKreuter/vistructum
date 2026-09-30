@@ -14,6 +14,7 @@ import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.core.alert.DetectedCandidate;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
 import de.kylekreuter.vistructum.core.alert.ModelInput;
+import de.kylekreuter.vistructum.core.history.HistoryEntry;
 import de.kylekreuter.vistructum.core.recording.MotionChunk;
 import de.kylekreuter.vistructum.core.recording.MotionStore;
 import de.kylekreuter.vistructum.core.scene.BlockPos;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -36,6 +38,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -108,6 +111,38 @@ class EvidenceStoreTest {
     }
 
     @Test
+    void historyEvidenceReplaysTheLoggedEntriesWithoutRecordings() throws Exception {
+        Finding finding = finding();
+        List<HistoryEntry> history = List.of(
+                entry(new BlockPos(1, 60, 1), BlockAction.PLACE, "minecraft:stone", T - 5_000),
+                entry(new BlockPos(1, 60, 1), BlockAction.BREAK, "minecraft:stone", T - 4_000),
+                entry(new BlockPos(1, 60, 1), BlockAction.PLACE, "minecraft:oak_planks", T - 3_000),
+                entry(new BlockPos(2, 60, 0), BlockAction.BREAK, "minecraft:dirt", T - 2_000),
+                entry(new BlockPos(50, 60, 50), BlockAction.PLACE, "minecraft:glass", T - 2_000),
+                entry(new BlockPos(0, 60, 0), BlockAction.PLACE, "minecraft:glass", T + 1_000));
+
+        assertTrue(store.secureHistory(finding.id(), current(), history, SETTINGS.lead(), CREATED).get());
+        Evidence evidence = store.evidence(finding.id()).get().orElseThrow();
+
+        assertEquals("minecraft:air", evidence.before().blockAt(1, 60, 1));
+        assertEquals("minecraft:dirt", evidence.before().blockAt(2, 60, 0));
+        assertEquals("minecraft:grass_block", evidence.before().blockAt(3, 59, 3));
+        assertEquals(4, evidence.changes().size());
+        assertEquals(new BlockEvent(Instant.ofEpochMilli(T - 2_000), BUILDER, "Builder", BlockAction.BREAK, 2, 60, 0,
+                "minecraft:dirt"), evidence.changes().getLast());
+        assertTrue(evidence.recordings().isEmpty());
+    }
+
+    @Test
+    void historyEntriesOfUnknownPlayersGetTheirOfflineId() {
+        HistoryEntry unknown = new HistoryEntry(1, 60, 1, "Stranger", Optional.empty(), BlockAction.PLACE,
+                "minecraft:stone", T);
+
+        assertEquals(UUID.nameUUIDFromBytes("OfflinePlayer:Stranger".getBytes(StandardCharsets.UTF_8)),
+                EvidenceStore.replayed(List.of(unknown), REGION, T).getFirst().player());
+    }
+
+    @Test
     void recordingsOfNearbyPlayersWithinTheLeadAreCopiedAndTrimmed() throws Exception {
         Finding finding = finding();
         change(new BlockPos(1, 60, 1), ChangeKind.PLACE, "minecraft:stone", "minecraft:air", T - 5_000);
@@ -169,6 +204,11 @@ class EvidenceStoreTest {
                 0.97, 2, Set.of(BUILDER), "Achse Y", "bf-mask-2", new Preview(1, 1, new byte[]{40})),
                 new ModelInput(ModelKind.MASK, SurfaceScene.maskOnly(1, 1, new byte[]{1}), 0, 0, 64, 64)), CREATED,
                 Duration.ofDays(14)).get().orElseThrow();
+    }
+
+    private static HistoryEntry entry(BlockPos pos, BlockAction action, String blockData, long changedAt) {
+        return new HistoryEntry(pos.x(), pos.y(), pos.z(), "Builder", Optional.of(BUILDER), action, blockData,
+                changedAt);
     }
 
     private void change(BlockPos pos, ChangeKind kind, String blockData, String previousData, long changedAt) {

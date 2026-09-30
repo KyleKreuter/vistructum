@@ -15,8 +15,9 @@ import java.util.UUID;
  * @param box block region covered by the detection
  * @param score highest model score among the windows of the detection, in the range {@code 0} to {@code 1}
  * @param votes number of model windows whose score reached the model threshold
- * @param players unmodifiable set of the players whose block changes formed the detected build; empty for
- *                candidates of {@link Source#FULLSCAN}
+ * @param players unmodifiable set of the players whose block changes formed the detected build; for candidates of
+ *                {@link Source#FULLSCAN} the players CoreProtect logged as placing the blocks that still stand in
+ *                the box, empty without CoreProtect
  * @param detail human-readable description of the detection context for display purposes; its format is not
  *               part of the API contract
  * @param modelVersion version identifier of the model that produced the detection

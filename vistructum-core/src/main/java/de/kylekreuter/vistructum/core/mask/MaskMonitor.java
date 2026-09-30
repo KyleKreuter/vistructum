@@ -30,7 +30,6 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Clock;
 import java.util.EnumMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -105,19 +104,21 @@ public final class MaskMonitor {
     private void checkCarved(Cluster cluster, Map<Axis, Set<BlockPos>> carvedPerAxis) {
         Set<BlockPos> placed = cluster.placed();
         for (Axis axis : Axis.values()) {
-            Set<BlockPos> carved = carvedPerAxis.get(axis);
-            Set<BlockPos> positions = new HashSet<>(placed);
-            positions.addAll(carved);
-            if (positions.size() < settings.minBlocks()) {
-                continue;
+            for (MaskLayer layer : MaskLayer.of(cluster, placed, carvedPerAxis.get(axis), settings.minBlocks())) {
+                check(cluster, axis, layer);
             }
-            Set<UUID> players = cluster.responsibleFor(placed, carved);
-            projector.project(axis, positions).ifPresent(projection ->
-                    inference.infer(ModelKind.MASK, projection.scene(), context(cluster, projection, positions.size()))
-                            .thenCompose(result -> reporter.reportAll(candidates(cluster, players, projection, result)))
-                            .thenAccept(stored -> stored.forEach(created))
-                            .exceptionally(this::warn));
         }
+    }
+
+    private void check(Cluster cluster, Axis axis, MaskLayer layer) {
+        Set<BlockPos> positions = layer.positions();
+        Set<UUID> players = cluster.responsibleFor(layer.placed(), layer.carved());
+        projector.project(axis, positions).ifPresent(projection ->
+                inference.infer(ModelKind.MASK, projection.scene(), context(cluster, projection, positions.size()))
+                        .thenCompose(result -> reporter.reportAll(
+                                candidates(cluster, players, projection, layer.detail(axis), result)))
+                        .thenAccept(stored -> stored.forEach(created))
+                        .exceptionally(this::warn));
     }
 
     private static Map<Axis, Set<BlockPos>> noneCarved() {
@@ -149,19 +150,22 @@ public final class MaskMonitor {
     }
 
     private static List<DetectedCandidate> candidates(Cluster cluster, Set<UUID> players, Projection projection,
-                                                     InferResult result) {
+                                                     String detail, InferResult result) {
         if (!result.flagged()) {
             return List.of();
         }
         SurfaceScene scene = projection.scene();
-        return result.detections().stream().map(d -> candidate(cluster, players, projection, scene, result, d)).toList();
+        return result.detections().stream()
+                .map(d -> candidate(cluster, players, projection, scene, detail, result, d))
+                .toList();
     }
 
     private static DetectedCandidate candidate(Cluster cluster, Set<UUID> players, Projection projection,
-                                               SurfaceScene scene, InferResult result, Detection detection) {
+                                               SurfaceScene scene, String detail, InferResult result,
+                                               Detection detection) {
         FindingCandidate candidate = new FindingCandidate(Source.MASK, cluster.world(),
                 projection.toWorld(detection.top(), detection.left(), detection.bottom(), detection.right()),
-                detection.score(), detection.votes(), players, "Achse " + projection.axis(),
+                detection.score(), detection.votes(), players, detail,
                 result.modelVersion(), PreviewCrop.ofMask(scene.modified(), scene.width(), scene.height(), detection.top(),
                 detection.left(), detection.bottom(), detection.right()));
         return new DetectedCandidate(candidate, ModelInput.of(ModelKind.MASK, scene, detection));

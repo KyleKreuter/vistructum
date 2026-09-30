@@ -19,11 +19,15 @@ export function Pagination({
   paging,
   total,
   onChange,
+  unit = "Findings",
+  sizes = pageSizes,
   className,
 }: {
   paging: Paging;
   total: number;
   onChange: (paging: Paging) => void;
+  unit?: string;
+  sizes?: readonly number[];
   className?: string;
 }) {
   const { page, pageSize } = paging;
@@ -39,11 +43,11 @@ export function Pagination({
           {format(range.from)}–{format(range.to)} of {format(total)}
         </span>
         <Select value={String(pageSize)} onValueChange={(value) => onChange({ page: 1, pageSize: Number(value) })}>
-          <SelectTrigger size="sm" aria-label="Findings per page">
+          <SelectTrigger size="sm" aria-label={`${unit} per page`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {pageSizes.map((size) => (
+            {sizes.map((size) => (
               <SelectItem key={size} value={String(size)}>
                 {size} per page
               </SelectItem>

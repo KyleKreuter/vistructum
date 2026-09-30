@@ -1,12 +1,15 @@
 import { Check, History, Link2, Link2Off, Undo2, X } from "lucide-react";
 import { useMemo } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useActivity } from "@/api/queries";
-import type { ActivityKind } from "@/api/types";
+import type { ActivityKind, Paging } from "@/api/types";
+import { Pagination } from "@/components/app/Pagination";
 import { EmptyState, ErrorState, PageHeader, PageSpinner } from "@/components/app/States";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { parsePaging, pagingParams } from "@/logic/filters";
 import { formatDateTime, formatRelative } from "@/logic/format";
+import { pageCount } from "@/logic/pagination";
 import { cn } from "@/lib/utils";
 
 const kinds: Record<ActivityKind, { label: string; icon: typeof Check; tone: string }> = {
@@ -19,8 +22,12 @@ const kinds: Record<ActivityKind, { label: string; icon: typeof Check; tone: str
 };
 
 export default function ActivityPage() {
-  const activity = useActivity();
-  const items = useMemo(() => activity.data?.pages.flatMap((page) => page.items) ?? [], [activity.data]);
+  const [params, setParams] = useSearchParams();
+  const paging = useMemo(() => parsePaging(params), [params]);
+  const activity = useActivity(paging);
+  const items = activity.data?.items ?? [];
+  const total = activity.data?.total ?? 0;
+  const turn = (next: Paging) => setParams(pagingParams(next));
   return (
     <div className="space-y-4">
       <PageHeader title="Activity" description="Verdicts and public links, newest first" />
@@ -28,10 +35,16 @@ export default function ActivityPage() {
         <PageSpinner />
       ) : activity.isError ? (
         <ErrorState error={activity.error} onRetry={() => void activity.refetch()} />
+      ) : items.length === 0 && total > 0 ? (
+        <EmptyState title={`Page ${paging.page} is empty`}>
+          <Button variant="outline" size="sm" className="mt-2" onClick={() => turn({ page: pageCount(total, paging.pageSize), pageSize: paging.pageSize })}>
+            Go to the last page
+          </Button>
+        </EmptyState>
       ) : items.length === 0 ? (
         <EmptyState title="No activity yet" />
       ) : (
-        <>
+        <div className={cn("space-y-3", activity.isPlaceholderData && "opacity-60 transition-opacity")}>
           <Card className="gap-0 divide-y py-0">
             {items.map((item, index) => {
               const kind = kinds[item.kind];
@@ -52,14 +65,8 @@ export default function ActivityPage() {
               );
             })}
           </Card>
-          {activity.hasNextPage && (
-            <div className="flex justify-center">
-              <Button variant="outline" size="sm" onClick={() => void activity.fetchNextPage()} disabled={activity.isFetchingNextPage}>
-                {activity.isFetchingNextPage ? "Loading…" : "Load older"}
-              </Button>
-            </div>
-          )}
-        </>
+          <Pagination paging={paging} total={total} onChange={turn} unit="Entries" />
+        </div>
       )}
     </div>
   );

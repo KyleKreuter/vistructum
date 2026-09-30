@@ -462,13 +462,14 @@ class FindingStoreTest {
             return null;
         }).get();
 
-        List<Activity> all = store.activity(NOW.plusSeconds(3600), 10).get();
+        List<Activity> all = store.activity(0, 10).get();
         assertEquals(List.of(
                 new Activity(NOW.plusSeconds(40), "Ben", ActivityKind.UNSHARED, first.id()),
                 new Activity(NOW.plusSeconds(30), "Anna", ActivityKind.SHARED, first.id()),
                 new Activity(NOW.plusSeconds(20), "Ben", ActivityKind.FALSE_ALARM, second.id()),
                 new Activity(NOW.plusSeconds(10), "Anna", ActivityKind.CONFIRMED, first.id())), all);
-        assertEquals(all.subList(2, 3), store.activity(NOW.plusSeconds(30), 1).get());
+        assertEquals(all.subList(2, 3), store.activity(2, 1).get());
+        assertEquals(4L, store.activityCount().get());
     }
 
     @Test
@@ -482,13 +483,13 @@ class FindingStoreTest {
         assertEquals(builders, attributed.players());
         assertEquals(attributed, store.find(finding.id()).get().orElseThrow());
         assertEquals(List.of(new Activity(NOW.plusSeconds(10), "Anna", ActivityKind.ATTRIBUTED, finding.id())),
-                store.activity(NOW.plusSeconds(60), 10).get());
+                store.activity(0, 10).get());
     }
 
     @Test
     void attributionOfAMissingFindingIsEmpty() throws Exception {
         assertEquals(Optional.empty(), store.attribute(404, Set.of(UUID.randomUUID()), "Anna", NOW).get());
-        assertEquals(List.of(), store.activity(NOW.plusSeconds(60), 10).get());
+        assertEquals(List.of(), store.activity(0, 10).get());
     }
 
     @Test
@@ -498,14 +499,15 @@ class FindingStoreTest {
         store.record(finding.id(), ActivityKind.ROLLED_BACK, "Ben", NOW.plusSeconds(20)).get();
 
         assertEquals(new Activity(NOW.plusSeconds(20), "Ben", ActivityKind.ROLLED_BACK, finding.id()),
-                store.activity(NOW.plusSeconds(60), 10).get().getFirst());
+                store.activity(0, 10).get().getFirst());
         store.record(finding.id(), ActivityKind.ROLLED_BACK, "Anna", NOW.plusSeconds(30)).get();
         assertEquals(Optional.of(new Activity(NOW.plusSeconds(30), "Anna", ActivityKind.ROLLED_BACK, finding.id())),
                 store.lastEvent(finding.id(), ActivityKind.ROLLED_BACK).get());
         assertEquals(Optional.empty(), store.lastEvent(finding.id(), ActivityKind.ATTRIBUTED).get());
 
         store.deleteReviewedBefore(Verdict.CONFIRMED, NOW.plusSeconds(3600)).get();
-        assertEquals(List.of(), store.activity(NOW.plusSeconds(60), 10).get());
+        assertEquals(List.of(), store.activity(0, 10).get());
+        assertEquals(0L, store.activityCount().get());
     }
 
     @Test
@@ -527,7 +529,7 @@ class FindingStoreTest {
         store = new FindingStore(database);
 
         assertEquals(List.of(new Activity(NOW.plusSeconds(5), "Anna", ActivityKind.SHARED, finding.id())),
-                store.activity(NOW.plusSeconds(60), 10).get());
+                store.activity(0, 10).get());
     }
 
     @Test

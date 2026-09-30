@@ -269,8 +269,13 @@ public final class FakeVistructum implements Vistructum, Findings, Scans, Player
     }
 
     @Override
-    public CompletableFuture<List<Activity>> activity(Instant before, int limit) {
+    public CompletableFuture<List<Activity>> activity(int offset, int limit) {
         return completedFuture(List.of());
+    }
+
+    @Override
+    public CompletableFuture<Long> activityCount() {
+        return completedFuture(0L);
     }
 
     @Override

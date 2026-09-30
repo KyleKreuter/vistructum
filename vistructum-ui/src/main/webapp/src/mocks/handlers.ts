@@ -337,10 +337,10 @@ export function handlers(db: MockDb) {
       const blocked = await gate("activity", 150);
       if (blocked) return blocked;
       const url = new URL(request.url);
-      const before = url.searchParams.get("before");
-      const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") ?? 50)));
-      const items: ActivityItem[] = db.activity.filter((item) => !before || item.at < before).slice(0, limit);
-      return HttpResponse.json({ items });
+      const pageSize = Math.max(1, Math.min(100, Number(url.searchParams.get("pageSize") ?? 25)));
+      const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
+      const items: ActivityItem[] = db.activity.slice((page - 1) * pageSize, page * pageSize);
+      return HttpResponse.json({ items, total: db.activity.length, page, pageSize });
     }),
 
     http.get(`${api}/players/:uuid`, async ({ params }) => {

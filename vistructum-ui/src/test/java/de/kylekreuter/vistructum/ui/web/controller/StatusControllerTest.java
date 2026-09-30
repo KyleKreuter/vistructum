@@ -57,7 +57,9 @@ class StatusControllerTest {
         assertEquals(400, web.get("/review/api/stats?from=2026-09-30T00:00:00Z&to=2026-09-01T00:00:00Z", cookie)
                 .statusCode());
         assertEquals(400, web.get("/review/api/stats?from=yesterday", cookie).statusCode());
-        assertTrue(json(web.get("/review/api/activity?limit=10", cookie)).getAsJsonArray("items").isEmpty());
-        assertEquals(400, web.get("/review/api/activity?limit=101", cookie).statusCode());
+        assertTrue(json(web.get("/review/api/activity?page=1&pageSize=10", cookie)).getAsJsonArray("items").isEmpty());
+        assertEquals(0, json(web.get("/review/api/activity", cookie)).get("total").getAsLong());
+        assertEquals(400, web.get("/review/api/activity?pageSize=101", cookie).statusCode());
+        assertEquals(400, web.get("/review/api/activity?page=0", cookie).statusCode());
     }
 }

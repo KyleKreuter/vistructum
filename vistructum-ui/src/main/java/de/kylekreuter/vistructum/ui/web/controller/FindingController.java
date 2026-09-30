@@ -80,7 +80,7 @@ public final class FindingController {
 
     private void list(Context ctx) {
         int pageSize = Requests.param(ctx, "pageSize").map(Params::limit).orElse(DEFAULT_PAGE_SIZE);
-        int page = Requests.param(ctx, "page").map(value -> pageNumber(value, pageSize)).orElse(1);
+        int page = Requests.param(ctx, "page").map(value -> Params.page(value, pageSize)).orElse(1);
         FindingQuery query = query(ctx).limit(pageSize).offset((page - 1) * pageSize);
         CompletableFuture<Long> total = handoff.off(vistructum.findings().count(query));
         ctx.future(() -> handoff.off(vistructum.findings().find(query)).thenCompose(found -> {
@@ -190,14 +190,6 @@ public final class FindingController {
             query = query.since(Params.instant(since.get()));
         }
         return query;
-    }
-
-    private static int pageNumber(String value, int pageSize) {
-        long page = Params.id(value);
-        if (page < 1 || (page - 1) * pageSize > Integer.MAX_VALUE) {
-            throw ApiError.badRequest();
-        }
-        return (int) page;
     }
 
     private static ReviewState state(String value) {

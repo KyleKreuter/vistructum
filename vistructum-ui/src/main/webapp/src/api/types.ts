@@ -221,6 +221,9 @@ export interface ActivityItem {
 
 export interface ActivityPage {
   items: ActivityItem[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface PlayerInfo {

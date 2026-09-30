@@ -48,4 +48,12 @@ final class Params {
         }
         return (int) limit;
     }
+
+    static int page(String value, int pageSize) {
+        long page = id(value);
+        if (page < 1 || (page - 1) * pageSize > Integer.MAX_VALUE) {
+            throw ApiError.badRequest();
+        }
+        return (int) page;
+    }
 }

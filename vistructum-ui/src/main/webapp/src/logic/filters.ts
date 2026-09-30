@@ -51,11 +51,14 @@ export function parsePaging(params: URLSearchParams): Paging {
   };
 }
 
-export function listParams(filter: FindingFilter, paging: Paging): URLSearchParams {
-  const params = filterParams(filter);
+export function pagingParams(paging: Paging, params = new URLSearchParams()): URLSearchParams {
   if (paging.page > 1) params.set("page", String(paging.page));
   if (paging.pageSize !== defaultPaging.pageSize) params.set("pageSize", String(paging.pageSize));
   return params;
+}
+
+export function listParams(filter: FindingFilter, paging: Paging): URLSearchParams {
+  return pagingParams(paging, filterParams(filter));
 }
 
 export function sinceInstant(day: string): string | null {

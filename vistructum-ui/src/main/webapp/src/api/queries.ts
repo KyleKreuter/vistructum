@@ -1,4 +1,4 @@
-import { keepPreviousData, queryOptions, useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions, useMutation, useQueries, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { findingsQuery } from "@/logic/filters";
 import { ApiError, request } from "./client";
 import type {
@@ -135,16 +135,11 @@ export function useStats(from: string, to: string) {
   });
 }
 
-export function useActivity() {
-  return useInfiniteQuery({
-    queryKey: keys.activity,
-    queryFn: ({ pageParam }) => {
-      const params = new URLSearchParams({ limit: "50" });
-      if (pageParam) params.set("before", pageParam);
-      return request<ActivityPage>(`/activity?${params.toString()}`);
-    },
-    initialPageParam: null as string | null,
-    getNextPageParam: (last) => (last.items.length >= 50 ? last.items[last.items.length - 1].at : null),
+export function useActivity(paging: Paging) {
+  return useQuery({
+    queryKey: [...keys.activity, paging.page, paging.pageSize],
+    queryFn: () => request<ActivityPage>(`/activity?${new URLSearchParams({ page: String(paging.page), pageSize: String(paging.pageSize) }).toString()}`),
+    placeholderData: keepPreviousData,
   });
 }
 

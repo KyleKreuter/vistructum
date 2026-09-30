@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAttribute, canRollBack, rollbackMessage } from "./blockLog";
+import { attributionMessage, canAttribute, canRollBack, rollbackMessage } from "./blockLog";
 
 const confirmed = { verdict: "CONFIRMED" as const, reviewer: "kyleonaut", reviewedAt: "2026-09-01T10:00:00Z" };
 const falseAlarm = { verdict: "FALSE_ALARM" as const, reviewer: "kyleonaut", reviewedAt: "2026-09-01T10:00:00Z" };
@@ -34,5 +34,13 @@ describe("rollbackMessage", () => {
     expect(rollbackMessage(48, 0)).toBe("Rolled back 48 blocks.");
     expect(rollbackMessage(1, 1)).toBe("Rolled back 1 block. Skipped 1 block that others changed since.");
     expect(rollbackMessage(0, 3)).toBe("No block needed a rollback. Skipped 3 blocks that others changed since.");
+  });
+});
+
+describe("attributionMessage", () => {
+  it("names up to two builders and counts more", () => {
+    expect(attributionMessage(["Mira_Builds"])).toBe("Builders: Mira_Builds");
+    expect(attributionMessage(["Mira_Builds", "Tom"])).toBe("Builders: Mira_Builds, Tom");
+    expect(attributionMessage(["Mira_Builds", "Tom", "Ana"])).toBe("Found 3 builders.");
   });
 });

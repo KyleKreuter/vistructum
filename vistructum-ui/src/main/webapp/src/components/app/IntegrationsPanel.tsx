@@ -8,7 +8,7 @@ import { FindingPunishments, PunishmentHistory } from "@/components/app/Punishme
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { canAttribute, canRollBack, rollbackMessage } from "@/logic/blockLog";
+import { attributionMessage, canAttribute, canRollBack, rollbackMessage } from "@/logic/blockLog";
 import { formatDateTime } from "@/logic/format";
 import { cn } from "@/lib/utils";
 
@@ -93,7 +93,7 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
     attribution.mutate(undefined, {
       onSuccess: (summary) => {
         const names = summary.players.map((player) => player.name ?? player.uuid.slice(0, 8));
-        if (names.length) toast.success(`Builders: ${names.join(", ")}`);
+        if (names.length) toast.success(attributionMessage(names));
         else toast.info("CoreProtect logged no builders for this box.");
       },
       onError: (error) => toast.error(errorMessage(error)),

@@ -171,6 +171,22 @@ public final class FindingStore {
         });
     }
 
+    public CompletableFuture<Optional<Activity>> lastEvent(long id, ActivityKind kind) {
+        return database.transaction(connection -> {
+            try (PreparedStatement select = connection.prepareStatement("""
+                    SELECT at, actor FROM finding_events WHERE finding_id = ? AND kind = ? ORDER BY at DESC, id DESC LIMIT 1
+                    """)) {
+                select.setLong(1, id);
+                select.setString(2, kind.name());
+                try (ResultSet rows = select.executeQuery()) {
+                    return rows.next()
+                            ? Optional.of(new Activity(Instant.ofEpochMilli(rows.getLong(1)), rows.getString(2), kind, id))
+                            : Optional.empty();
+                }
+            }
+        });
+    }
+
     private static void recordEvent(Connection connection, long id, ActivityKind kind, String actor, Instant at)
             throws SQLException {
         try (PreparedStatement insert = connection.prepareStatement(

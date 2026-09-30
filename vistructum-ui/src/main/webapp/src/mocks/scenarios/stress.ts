@@ -187,6 +187,8 @@ export function createStressDb(fixture: Fixture, now = Date.now()): MockDb {
       hasTerrain: source === "fullscan",
       sharedSince,
       shareUrl: shareActive && shareToken ? publicUrl(shareToken) : null,
+      rolledBackAt: null,
+      rolledBackBy: null,
       teleport: teleport(world, centre.x, centre.y, centre.z),
       scene: sceneSet.scene,
       heatmap: id % 11 === 3 ? null : sceneSet.heatmap,

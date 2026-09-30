@@ -499,6 +499,10 @@ class FindingStoreTest {
 
         assertEquals(new Activity(NOW.plusSeconds(20), "Ben", ActivityKind.ROLLED_BACK, finding.id()),
                 store.activity(NOW.plusSeconds(60), 10).get().getFirst());
+        store.record(finding.id(), ActivityKind.ROLLED_BACK, "Anna", NOW.plusSeconds(30)).get();
+        assertEquals(Optional.of(new Activity(NOW.plusSeconds(30), "Anna", ActivityKind.ROLLED_BACK, finding.id())),
+                store.lastEvent(finding.id(), ActivityKind.ROLLED_BACK).get());
+        assertEquals(Optional.empty(), store.lastEvent(finding.id(), ActivityKind.ATTRIBUTED).get());
 
         store.deleteReviewedBefore(Verdict.CONFIRMED, NOW.plusSeconds(3600)).get();
         assertEquals(List.of(), store.activity(NOW.plusSeconds(60), 10).get());

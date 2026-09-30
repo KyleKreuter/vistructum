@@ -59,6 +59,8 @@ function summary(finding: MockFinding): FindingSummary {
     hasTerrain: finding.hasTerrain,
     sharedSince: finding.sharedSince,
     shareUrl: finding.shareActive && finding.shareToken ? publicUrl(finding.shareToken) : null,
+    rolledBackAt: finding.rolledBackAt,
+    rolledBackBy: finding.rolledBackBy,
   };
 }
 
@@ -279,7 +281,9 @@ export function handlers(db: MockDb) {
       const finding = byId(params.id);
       if (!finding) return error(404, "not_found");
       if (finding.review?.verdict !== "CONFIRMED" || !finding.players.length) return error(409, "not_rollbackable");
-      db.activity.unshift({ at: new Date().toISOString(), actor: db.me.name, kind: "ROLLED_BACK", findingId: finding.id });
+      finding.rolledBackAt = new Date().toISOString();
+      finding.rolledBackBy = db.me.name;
+      db.activity.unshift({ at: finding.rolledBackAt, actor: db.me.name, kind: "ROLLED_BACK", findingId: finding.id });
       return HttpResponse.json({ changes: 48 });
     }),
 

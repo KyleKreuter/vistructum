@@ -207,10 +207,10 @@ integrations:
 
 Set `enabled: false` to turn the integration off. The CoreProtect API must be enabled in the CoreProtect config, which is its default.
 
-While the integration runs, the finding page of the web app shows a CoreProtect panel:
+While the integration runs, the **Integrations** panel on the finding page of the web app has a CoreProtect section:
 
 - **Find builders** searches the log again for the finding's box at the time of detection. If the log names builders, they replace the finding's players, and the activity log records the search. A finding without evidence gets a replay of the logged changes.
-- **Roll back** reverts the blocks of a **confirmed** finding with builders, after a confirmation step. CoreProtect reverts only placements and removals by these builders, in the finding's box, since their first logged change there. The finding, its verdict, and its evidence stay. The activity log records the rollback. The button needs `vistructum.coreprotect.rollback`.
+- **Roll back** reverts the blocks of a **confirmed** finding with builders, after a confirmation step. CoreProtect reverts only placements and removals by these builders, in the finding's box, since their first logged change there. The finding, its verdict, and its evidence stay. The finding gets a **Rolled back** label in the list and on its page, and the activity log records the rollback. The button needs `vistructum.coreprotect.rollback`.
 
 ### Discord notifications
 

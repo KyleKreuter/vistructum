@@ -98,6 +98,8 @@ export interface FindingSummary {
   hasTerrain: boolean;
   sharedSince: string | null;
   shareUrl: string | null;
+  rolledBackAt: string | null;
+  rolledBackBy: string | null;
 }
 
 export interface FindingDetail extends FindingSummary {

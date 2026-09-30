@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.ui.web;
 
 import de.kylekreuter.vistructum.api.Activity;
+import de.kylekreuter.vistructum.api.ActivityKind;
 import de.kylekreuter.vistructum.api.BlockLog;
 import de.kylekreuter.vistructum.api.Evidence;
 import de.kylekreuter.vistructum.api.EvidenceShare;
@@ -115,6 +116,12 @@ public final class FakeVistructum implements Vistructum, Findings, Scans, Player
         }
         rollbacks.put(findingId, actor);
         return completedFuture(Optional.of(12));
+    }
+
+    @Override
+    public CompletableFuture<Optional<Activity>> lastRollback(long findingId) {
+        return completedFuture(Optional.ofNullable(rollbacks.get(findingId))
+                .map(actor -> new Activity(now, actor, ActivityKind.ROLLED_BACK, findingId)));
     }
 
     @Override

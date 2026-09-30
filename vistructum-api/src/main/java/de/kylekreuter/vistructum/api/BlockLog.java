@@ -7,8 +7,8 @@ import java.util.concurrent.CompletableFuture;
  * Access to the block log of the server, which records which player placed or broke which block.
  *
  * <p>The block log is read from CoreProtect. Without CoreProtect, or with the integration turned off in the
- * configuration of the core plugin, {@link #available()} returns {@code false} and the other methods return futures
- * that fail with an {@link IllegalStateException}. All returned futures complete on the server main thread as
+ * configuration of the core plugin, {@link #available()} returns {@code false} and {@link #attribute(long, String)}
+ * and {@link #rollback(long, String)} return futures that fail with an {@link IllegalStateException}. All returned futures complete on the server main thread as
  * specified by {@link Vistructum}.
  *
  * @see Vistructum#blockLog()
@@ -56,4 +56,15 @@ public interface BlockLog {
      * @throws NullPointerException if {@code actor} is {@code null}
      */
     CompletableFuture<Optional<Integer>> rollback(long findingId, String actor);
+
+    /**
+     * Returns the latest rollback of a finding.
+     *
+     * <p>The rollback is read from the activity log, so it is returned even while the block log is not available.
+     *
+     * @param findingId identifier of the finding
+     * @return a future completing with the latest {@link ActivityKind#ROLLED_BACK} entry of the finding, or with an
+     *         empty {@link Optional} if the finding was never rolled back or no finding has this identifier
+     */
+    CompletableFuture<Optional<Activity>> lastRollback(long findingId);
 }

@@ -1,5 +1,6 @@
 package de.kylekreuter.vistructum.core.history;
 
+import de.kylekreuter.vistructum.api.Activity;
 import de.kylekreuter.vistructum.api.ActivityKind;
 import de.kylekreuter.vistructum.api.BlockLog;
 import de.kylekreuter.vistructum.api.Finding;
@@ -52,6 +53,11 @@ public final class BlockLogService implements BlockLog {
     public CompletableFuture<Optional<Integer>> rollback(long findingId, String actor) {
         Objects.requireNonNull(actor, "actor");
         return withFinding(findingId, (blocks, finding) -> rollback(blocks, finding, actor));
+    }
+
+    @Override
+    public CompletableFuture<Optional<Activity>> lastRollback(long findingId) {
+        return mainThread.handOff(findings.lastEvent(findingId, ActivityKind.ROLLED_BACK));
     }
 
     private <T> CompletableFuture<Optional<T>> withFinding(long findingId,

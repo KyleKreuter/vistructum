@@ -7,8 +7,8 @@ import { ApiError, errorMessage } from "@/api/client";
 import { findingsOptions, useEvidence, useFinding, useFindings, useHeatmap, useMe, usePalette, useScene, useTerrain, useVerdict } from "@/api/queries";
 import { urls } from "@/api/client";
 import type { FindingDetail, FindingSummary, Verdict } from "@/api/types";
-import { IndicatorIcons, SourceBadge, VerdictBadge } from "@/components/app/Badges";
-import { BlockLogPanel } from "@/components/app/BlockLogPanel";
+import { IndicatorIcons, RolledBackBadge, SourceBadge, VerdictBadge } from "@/components/app/Badges";
+import { IntegrationsPanel } from "@/components/app/IntegrationsPanel";
 import { PlayerCard } from "@/components/app/PlayerFace";
 import { SharePanel } from "@/components/app/SharePanel";
 import { EmptyState, ErrorState, PageSpinner } from "@/components/app/States";
@@ -284,6 +284,7 @@ export default function FindingDetailPage() {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">#{data.id}</h1>
         <VerdictBadge review={data.review} />
+        <RolledBackBadge finding={data} />
         <SourceBadge source={data.source} />
         <IndicatorIcons finding={data} />
       </div>
@@ -421,9 +422,9 @@ export default function FindingDetailPage() {
               </CardContent>
             </Card>
 
-            {me.data?.blockLog && (
+            {(me.data?.blockLog || data.rolledBackAt) && (
               <div className="shrink-0">
-                <BlockLogPanel key={data.id} finding={data} canRollback={me.data.canRollback} />
+                <IntegrationsPanel key={data.id} finding={data} blockLog={!!me.data?.blockLog} canRollback={!!me.data?.canRollback} />
               </div>
             )}
             {shareView(data, canShare) !== "hidden" && (

@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { boxCentre } from "@/logic/coords";
 import { formatDateTime, formatRelative, formatScore } from "@/logic/format";
-import { IndicatorIcons, SourceBadge, VerdictBadge } from "./Badges";
+import { IndicatorIcons, RolledBackBadge, SourceBadge, VerdictBadge } from "./Badges";
 import { PlayerChip } from "./PlayerFace";
 import { Thumbnail } from "./Thumbnail";
 
@@ -62,7 +62,10 @@ export function FindingTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <VerdictBadge review={finding.review} />
+                  <span className="flex flex-wrap items-center gap-1">
+                    <VerdictBadge review={finding.review} />
+                    <RolledBackBadge finding={finding} />
+                  </span>
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {formatScore(finding.score)}

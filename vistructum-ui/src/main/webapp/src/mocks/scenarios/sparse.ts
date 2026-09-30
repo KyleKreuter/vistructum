@@ -33,6 +33,8 @@ export function createSparseDb(fixture: Fixture, now = Date.now()): MockDb {
     votes: 1,
     sharedSince: null,
     shareUrl: null,
+    rolledBackAt: null,
+    rolledBackBy: null,
     shareToken: null,
     shareActive: false,
     teleport: teleport("world", 14, 90, -6),

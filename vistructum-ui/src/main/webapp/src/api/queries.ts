@@ -221,6 +221,8 @@ export function useRollback(id: number) {
   return useMutation({
     mutationFn: () => request<RollbackResult>(`/findings/${id}/rollback`, { method: "POST" }),
     onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.finding(id) });
+      void client.invalidateQueries({ queryKey: ["findings"], refetchType: "none" });
       void client.invalidateQueries({ queryKey: keys.activity });
     },
   });

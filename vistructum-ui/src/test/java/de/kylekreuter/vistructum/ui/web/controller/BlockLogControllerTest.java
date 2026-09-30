@@ -69,6 +69,9 @@ class BlockLogControllerTest {
         assertEquals(200, rolledBack.statusCode());
         assertEquals(12, json(rolledBack).get("changes").getAsInt());
         assertEquals(Map.of(7L, "Staff"), web.vistructum.rollbacks);
+        var detail = json(web.get("/review/api/findings/7", cookie(session)));
+        assertEquals("Staff", detail.get("rolledBackBy").getAsString());
+        assertEquals(WebFixture.NOW.toString(), detail.get("rolledBackAt").getAsString());
     }
 
     @Test

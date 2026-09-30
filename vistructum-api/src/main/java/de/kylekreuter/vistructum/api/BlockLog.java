@@ -40,22 +40,23 @@ public interface BlockLog {
     CompletableFuture<Optional<Finding>> attribute(long findingId, String actor);
 
     /**
-     * Reverts the block changes that the players of a confirmed finding made at the finding.
+     * Reverts the block changes that the players of a confirmed finding made inside the box of the finding.
      *
-     * <p>The rollback covers the players of the finding, block placements and removals only, and the time since the
-     * first change a player of the finding logged inside the box of the finding. It reaches as far around the centre
-     * of the box as half its largest extent plus one block, so changes of these players right next to the box are
-     * reverted as well. The finding and its evidence stay unchanged. The rollback is written to the activity log as
+     * <p>Only blocks inside the box that a player of the finding placed or broke are changed. Each of them is set back
+     * to its state before the first logged change of a player of the finding. A block is skipped if its last logged
+     * change inside the box is by someone else, or if it no longer matches the last logged change. Blocks outside the
+     * box stay unchanged. Every restored block is written to the block log. The finding and its evidence stay
+     * unchanged. A rollback that restores at least one block is written to the activity log as
      * {@link ActivityKind#ROLLED_BACK}.
      *
      * @param findingId identifier of the finding
      * @param actor name of the party that requests the action, as it is to be stored and displayed
-     * @return a future completing with the number of reverted block changes, or with an empty {@link Optional} if no
-     *         finding has this identifier; the future fails with an {@link IllegalStateException} if the block log is
-     *         not available, the finding is not confirmed or it has no players
+     * @return a future completing with the numbers of restored and skipped blocks, or with an empty {@link Optional}
+     *         if no finding has this identifier; the future fails with an {@link IllegalStateException} if the block
+     *         log is not available, the finding is not confirmed or it has no players
      * @throws NullPointerException if {@code actor} is {@code null}
      */
-    CompletableFuture<Optional<Integer>> rollback(long findingId, String actor);
+    CompletableFuture<Optional<RollbackResult>> rollback(long findingId, String actor);
 
     /**
      * Returns the latest rollback of a finding.

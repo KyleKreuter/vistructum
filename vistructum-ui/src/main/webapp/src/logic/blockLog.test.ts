@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRollBack } from "./blockLog";
+import { canRollBack, rollbackMessage } from "./blockLog";
 
 const confirmed = { verdict: "CONFIRMED" as const, reviewer: "kyleonaut", reviewedAt: "2026-09-01T10:00:00Z" };
 const falseAlarm = { verdict: "FALSE_ALARM" as const, reviewer: "kyleonaut", reviewedAt: "2026-09-01T10:00:00Z" };
@@ -14,5 +14,13 @@ describe("canRollBack", () => {
     expect(canRollBack({ review: confirmed, players: [] })).toBe(false);
     expect(canRollBack({ review: falseAlarm, players: [builder] })).toBe(false);
     expect(canRollBack({ review: null, players: [builder] })).toBe(false);
+  });
+});
+
+describe("rollbackMessage", () => {
+  it("names restored and skipped blocks", () => {
+    expect(rollbackMessage(48, 0)).toBe("Rolled back 48 blocks.");
+    expect(rollbackMessage(1, 1)).toBe("Rolled back 1 block. Skipped 1 block that others changed since.");
+    expect(rollbackMessage(0, 3)).toBe("No block needed a rollback. Skipped 3 blocks that others changed since.");
   });
 });

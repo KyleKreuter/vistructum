@@ -67,7 +67,8 @@ class BlockLogControllerTest {
 
         HttpResponse<String> rolledBack = web.post("/review/api/findings/7/rollback", "", authorized(session));
         assertEquals(200, rolledBack.statusCode());
-        assertEquals(12, json(rolledBack).get("changes").getAsInt());
+        assertEquals(12, json(rolledBack).get("restored").getAsInt());
+        assertEquals(2, json(rolledBack).get("skipped").getAsInt());
         assertEquals(Map.of(7L, "Staff"), web.vistructum.rollbacks);
         var detail = json(web.get("/review/api/findings/7", cookie(session)));
         assertEquals("Staff", detail.get("rolledBackBy").getAsString());

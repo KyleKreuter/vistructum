@@ -184,7 +184,8 @@ export interface Evidence {
 }
 
 export interface RollbackResult {
-  changes: number;
+  restored: number;
+  skipped: number;
 }
 
 export interface ShareResult {

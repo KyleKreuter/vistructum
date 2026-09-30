@@ -6,7 +6,7 @@ import { useAttribution, useRollback } from "@/api/queries";
 import type { FindingDetail } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { canRollBack } from "@/logic/blockLog";
+import { canRollBack, rollbackMessage } from "@/logic/blockLog";
 import { formatDateTime } from "@/logic/format";
 
 export function IntegrationsPanel({ finding, blockLog, canRollback }: { finding: FindingDetail; blockLog: boolean; canRollback: boolean }) {
@@ -45,7 +45,7 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
     rollback.mutate(undefined, {
       onSuccess: (result) => {
         setConfirming(false);
-        toast.success(result.changes === 1 ? "Rolled back 1 block change." : `Rolled back ${result.changes} block changes.`);
+        toast.success(rollbackMessage(result.restored, result.skipped));
       },
       onError: (error) => {
         setConfirming(false);
@@ -68,7 +68,7 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
       ) : confirming ? (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
-            CoreProtect reverts every block the listed builders placed or broke in this box since their first logged change. The finding and its evidence stay.
+            Every block in this box that the listed builders placed or broke returns to its state before their first logged change. Blocks outside the box and blocks changed by others since stay. The finding and its evidence stay.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="destructive" onClick={roll} disabled={busy}>

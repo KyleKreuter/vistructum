@@ -21,6 +21,7 @@ import de.kylekreuter.vistructum.api.PlayerSkin;
 import de.kylekreuter.vistructum.api.Players;
 import de.kylekreuter.vistructum.api.Preview;
 import de.kylekreuter.vistructum.api.Review;
+import de.kylekreuter.vistructum.api.RollbackResult;
 import de.kylekreuter.vistructum.api.ReviewState;
 import de.kylekreuter.vistructum.api.ScanJob;
 import de.kylekreuter.vistructum.api.Scans;
@@ -110,12 +111,12 @@ public final class FakeVistructum implements Vistructum, Findings, Scans, Player
     }
 
     @Override
-    public synchronized CompletableFuture<Optional<Integer>> rollback(long findingId, String actor) {
+    public synchronized CompletableFuture<Optional<RollbackResult>> rollback(long findingId, String actor) {
         if (!findings.containsKey(findingId)) {
             return completedFuture(Optional.empty());
         }
         rollbacks.put(findingId, actor);
-        return completedFuture(Optional.of(12));
+        return completedFuture(Optional.of(new RollbackResult(12, 2)));
     }
 
     @Override

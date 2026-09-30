@@ -57,7 +57,7 @@ public final class BlockLogController {
         ctx.future(() -> rollbackable(id, session)
                 .thenCompose(ignored -> handoff.off(blockLog.rollback(id, session.playerName())))
                 .thenAccept(changes -> Responses.json(ctx,
-                        new RollbackView(changes.orElseThrow(ApiError::notFound)))));
+                        RollbackView.of(changes.orElseThrow(ApiError::notFound)))));
     }
 
     private BlockLog available() {

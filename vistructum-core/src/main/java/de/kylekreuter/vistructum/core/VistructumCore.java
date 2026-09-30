@@ -130,7 +130,7 @@ public final class VistructumCore extends JavaPlugin {
                     clusterSettings.ttl().plus(evidenceSettings.lead()));
             recorder.start();
         }
-        history = connectBlockHistory(config);
+        history = connectBlockHistory(config, mainThread);
         EvidenceStore evidence = new EvidenceStore(database);
         EvidenceKeeper keeper = new EvidenceKeeper(mainThread, evidence, Optional.ofNullable(recorder), history,
                 evidenceSettings);
@@ -210,7 +210,7 @@ public final class VistructumCore extends JavaPlugin {
         }
     }
 
-    private Optional<BlockHistory> connectBlockHistory(FileConfiguration config) {
+    private Optional<BlockHistory> connectBlockHistory(FileConfiguration config, MainThread mainThread) {
         if (!config.getBoolean("integrations.coreprotect.enabled")) {
             return Optional.empty();
         }
@@ -218,7 +218,7 @@ public final class VistructumCore extends JavaPlugin {
         if (coreProtect == null || !coreProtect.isEnabled()) {
             return Optional.empty();
         }
-        Optional<BlockHistory> connected = CoreProtectHistory.connect(coreProtect,
+        Optional<BlockHistory> connected = CoreProtectHistory.connect(coreProtect, mainThread,
                 Duration.ofDays(config.getLong("integrations.coreprotect.lookup-days")), getLogger());
         connected.ifPresent(ignored -> getLogger().info("CoreProtect attributes and secures evidence for findings "
                 + "without tracked block changes"));

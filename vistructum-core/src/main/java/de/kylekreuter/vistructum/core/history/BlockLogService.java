@@ -5,6 +5,7 @@ import de.kylekreuter.vistructum.api.ActivityKind;
 import de.kylekreuter.vistructum.api.BlockLog;
 import de.kylekreuter.vistructum.api.Finding;
 import de.kylekreuter.vistructum.api.Review;
+import de.kylekreuter.vistructum.api.RollbackResult;
 import de.kylekreuter.vistructum.api.Verdict;
 import de.kylekreuter.vistructum.core.MainThread;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
@@ -12,7 +13,6 @@ import de.kylekreuter.vistructum.core.evidence.EvidenceKeeper;
 import de.kylekreuter.vistructum.core.evidence.EvidenceStore;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -50,7 +50,7 @@ public final class BlockLogService implements BlockLog {
     }
 
     @Override
-    public CompletableFuture<Optional<Integer>> rollback(long findingId, String actor) {
+    public CompletableFuture<Optional<RollbackResult>> rollback(long findingId, String actor) {
         Objects.requireNonNull(actor, "actor");
         return withFinding(findingId, (blocks, finding) -> rollback(blocks, finding, actor));
     }
@@ -89,7 +89,7 @@ public final class BlockLogService implements BlockLog {
                 .thenApply(updated -> updated.orElse(finding));
     }
 
-    private CompletableFuture<Integer> rollback(BlockHistory blocks, Finding finding, String actor) {
+    private CompletableFuture<RollbackResult> rollback(BlockHistory blocks, Finding finding, String actor) {
         if (!finding.review().map(Review::verdict).filter(Verdict.CONFIRMED::equals).isPresent()) {
             return CompletableFuture.failedFuture(new IllegalStateException("finding #" + finding.id()
                     + " is not confirmed"));
@@ -98,15 +98,13 @@ public final class BlockLogService implements BlockLog {
             return CompletableFuture.failedFuture(new IllegalStateException("finding #" + finding.id()
                     + " has no players"));
         }
-        Instant now = clock.instant();
-        return blocks.lookup(finding.world(), finding.box(), now)
-                .thenApply(entries -> RollbackPlan.of(entries, finding.box(), finding.players(), now))
-                .thenCompose(plan -> plan
-                        .map(steps -> blocks.rollback(finding.world(), finding.box(), steps.playerNames(),
-                                        steps.since())
-                                .thenCompose(reverted -> findings.record(finding.id(), ActivityKind.ROLLED_BACK,
-                                        actor, clock.instant()).thenApply(ignored -> reverted)))
-                        .orElseGet(() -> CompletableFuture.completedFuture(0)));
+        return blocks.lookup(finding.world(), finding.box(), clock.instant())
+                .thenApply(entries -> RollbackPlan.of(entries, finding.box(), finding.players()))
+                .thenCompose(plan -> blocks.restore(finding.world(), plan.restores())
+                        .thenApply(done -> new RollbackResult(done.restored(), done.skipped() + plan.skipped())))
+                .thenCompose(result -> result.restored() == 0 ? CompletableFuture.completedFuture(result)
+                        : findings.record(finding.id(), ActivityKind.ROLLED_BACK, actor, clock.instant())
+                                .thenApply(ignored -> result));
     }
 
     @FunctionalInterface

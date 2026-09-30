@@ -284,7 +284,7 @@ export function handlers(db: MockDb) {
       finding.rolledBackAt = new Date().toISOString();
       finding.rolledBackBy = db.me.name;
       db.activity.unshift({ at: finding.rolledBackAt, actor: db.me.name, kind: "ROLLED_BACK", findingId: finding.id });
-      return HttpResponse.json({ changes: 48 });
+      return HttpResponse.json({ restored: 48, skipped: 3 });
     }),
 
     http.get(`${api}/stats`, async ({ request }) => {

@@ -73,6 +73,9 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
       MODRINTH_PROJECT: vistructum
+      MODRINTH_CORE_PROJECT: vistructum-core
+      CORE_DEPENDENCIES: '[{"project_id":"Lu3KuzdV","dependency_type":"optional"}]'
+      UI_DEPENDENCIES: '[{"project_id":"PgXAUxLZ","dependency_type":"optional"},{"project_id":"P1OZGk5p","dependency_type":"optional"},{"project_id":"NpvuJQoq","dependency_type":"optional"}]'
       GAME_LINE: "1.21"
       LOADERS: '["paper"]'
       API: https://api.modrinth.com/v2
@@ -92,42 +95,44 @@ jobs:
         run: |
           modrinth() { curl -sS --fail-with-body -H "Authorization: $MODRINTH_TOKEN" -H "User-Agent: $AGENT" "$@"; }
           query() { modrinth --retry 5 --retry-delay 5 --retry-all-errors "$@"; }
-          project=$(query "$API/project/$MODRINTH_PROJECT")
-          project=$(jq -er .id <<< "$project")
           games=$(query "$API/tag/game_version")
           games=$(jq -ec --arg line "$GAME_LINE" \
             '[.[] | select(.version_type == "release" and (.version == $line or (.version | startswith($line + "."))))
               | .version] | select(length > 0)' <<< "$games")
-          versions=$(query "$API/project/$project/version")
-          jq -e 'type == "array"' <<< "$versions" > /dev/null
-          if jq -e --arg v "$VERSION" 'any(.[]; .version_number == $v)' <<< "$versions" > /dev/null; then
-            echo "Modrinth already has $VERSION"
-            exit 0
-          fi
           case "$VERSION" in
             *-alpha*) type=alpha ;;
             *-*) type=beta ;;
             *) type=release ;;
           esac
-          jq -n --arg project "$project" --arg version "$VERSION" --arg type "$type" \
-            --rawfile changelog changelog.md --argjson games "$games" --argjson loaders "$LOADERS" '{
-              project_id: $project,
-              version_number: $version,
-              name: ("Vistructum " + $version),
-              changelog: $changelog,
-              version_type: $type,
-              game_versions: $games,
-              loaders: $loaders,
-              dependencies: [
-                {project_id: "P1OZGk5p", dependency_type: "optional"},
-                {project_id: "NpvuJQoq", dependency_type: "optional"},
-                {project_id: "Lu3KuzdV", dependency_type: "optional"}
-              ],
-              featured: ($type == "release"),
-              file_parts: ["core", "ui"],
-              primary_file: "core"
-            }' > version.json
-          modrinth -X POST "$API/version" \
-            -F "data=@version.json;type=application/json" \
-            -F "core=@dist/vistructum-$VERSION.jar" \
-            -F "ui=@dist/vistructum-ui-$VERSION.jar" | jq '{id, version_number, version_type, files: [.files[].filename]}'
+          publish() {
+            local slug=$1 title=$2 file=$3 dependencies=$4 project versions existing
+            project=$(query "$API/project/$slug" | jq -er .id)
+            versions=$(query "$API/project/$project/version")
+            existing=$(jq -r --arg v "$VERSION" 'map(select(.version_number == $v)) | first | .id // empty' <<< "$versions")
+            if [[ -n "$existing" ]]; then
+              echo "Modrinth project $slug already has $VERSION" >&2
+              echo "$existing"
+              return
+            fi
+            jq -n --arg project "$project" --arg version "$VERSION" --arg type "$type" --arg title "$title" \
+              --rawfile changelog changelog.md --argjson games "$games" --argjson loaders "$LOADERS" \
+              --argjson dependencies "$dependencies" '{
+                project_id: $project,
+                version_number: $version,
+                name: ($title + " " + $version),
+                changelog: $changelog,
+                version_type: $type,
+                game_versions: $games,
+                loaders: $loaders,
+                dependencies: $dependencies,
+                featured: ($type == "release"),
+                file_parts: ["jar"],
+                primary_file: "jar"
+              }' > version.json
+            modrinth -X POST "$API/version" \
+              -F "data=@version.json;type=application/json" \
+              -F "jar=@$file" | tee /dev/stderr | jq -er .id
+          }
+          core=$(publish "$MODRINTH_CORE_PROJECT" "Vistructum Core" "dist/vistructum-$VERSION.jar" "$CORE_DEPENDENCIES")
+          ui_dependencies=$(jq -c --arg core "$core" '[{project_id: "nOum8t4d", version_id: $core, dependency_type: "required"}] + .' <<< "$UI_DEPENDENCIES")
+          publish "$MODRINTH_PROJECT" "Vistructum" "dist/vistructum-ui-$VERSION.jar" "$ui_dependencies" > /dev/null

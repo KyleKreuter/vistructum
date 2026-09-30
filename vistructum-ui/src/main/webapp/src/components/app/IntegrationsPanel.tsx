@@ -1,5 +1,5 @@
-import { Gavel, Info, Plug, Undo2, UserSearch } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, Gavel, Info, Plug, Undo2, UserSearch } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
 import { useAttribution, useMe, useRollback } from "@/api/queries";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { canAttribute, canRollBack, rollbackMessage } from "@/logic/blockLog";
 import { formatDateTime } from "@/logic/format";
+import { cn } from "@/lib/utils";
 
 const coreProtectLogo = "https://cdn.modrinth.com/data/Lu3KuzdV/b2c4b7b0033ab09cc166f2848003ef3a02c70a83.png";
 
@@ -25,23 +26,16 @@ export function IntegrationsPanel({
   punishments: string | null;
 }) {
   return (
-    <Card className="gap-3 py-4">
-      <CardHeader className="px-4">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Plug className="size-4" /> Integrations
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3 px-4 text-sm">
-        {(blockLog || finding.rolledBackAt) && <CoreProtectSection finding={finding} blockLog={blockLog} canRollback={canRollback} />}
-        {punishments && (
-          <div className="flex items-center gap-2">
-            <Gavel className="size-4 shrink-0 text-muted-foreground" />
-            <span className="font-medium">Punishments</span>
-            <span className="ml-auto text-xs text-muted-foreground">from {punishments}</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <IntegrationsCard storageKey="vistructum-integrations-finding">
+      {(blockLog || finding.rolledBackAt) && <CoreProtectSection finding={finding} blockLog={blockLog} canRollback={canRollback} />}
+      {punishments && (
+        <div className="flex items-center gap-2">
+          <Gavel className="size-4 shrink-0 text-muted-foreground" />
+          <span className="font-medium">Punishments</span>
+          <span className="ml-auto text-xs text-muted-foreground">from {punishments}</span>
+        </div>
+      )}
+    </IntegrationsCard>
   );
 }
 
@@ -49,15 +43,46 @@ export function PlayerIntegrationsPanel({ uuid }: { uuid: string }) {
   const source = useMe().data?.punishments;
   if (!source) return null;
   return (
-    <Card className="shrink-0 gap-3 py-4">
+    <IntegrationsCard storageKey="vistructum-integrations-player" className="shrink-0">
+      <PunishmentHistory uuid={uuid} source={source} />
+    </IntegrationsCard>
+  );
+}
+
+function readCollapsed(storageKey: string): boolean {
+  try {
+    return localStorage.getItem(storageKey) === "collapsed";
+  } catch {
+    return false;
+  }
+}
+
+function storeCollapsed(storageKey: string, collapsed: boolean) {
+  try {
+    if (collapsed) localStorage.setItem(storageKey, "collapsed");
+    else localStorage.removeItem(storageKey);
+  } catch {
+    return;
+  }
+}
+
+function IntegrationsCard({ storageKey, className, children }: { storageKey: string; className?: string; children: ReactNode }) {
+  const [collapsed, setCollapsed] = useState(() => readCollapsed(storageKey));
+  const toggle = () => {
+    setCollapsed(!collapsed);
+    storeCollapsed(storageKey, !collapsed);
+  };
+  return (
+    <Card className={cn("gap-3 py-4", className)}>
       <CardHeader className="px-4">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Plug className="size-4" /> Integrations
+        <CardTitle className="text-sm">
+          <button type="button" onClick={toggle} aria-expanded={!collapsed} className="flex w-full items-center gap-2 text-left">
+            <Plug className="size-4" /> Integrations
+            <ChevronDown className={cn("ml-auto size-4 text-muted-foreground transition-transform", collapsed && "-rotate-90")} />
+          </button>
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 px-4 text-sm">
-        <PunishmentHistory uuid={uuid} source={source} />
-      </CardContent>
+      {!collapsed && <CardContent className="flex flex-col gap-3 px-4 text-sm">{children}</CardContent>}
     </Card>
   );
 }

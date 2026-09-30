@@ -49,6 +49,9 @@ class BlockLogControllerTest {
         assertEquals(1, players.size());
         assertEquals(STRANGER.toString(), players.get(0).getAsJsonObject().get("uuid").getAsString());
         assertEquals(404, web.post("/review/api/findings/99/attribute", "", authorized(session)).statusCode());
+        HttpResponse<String> attributed = web.post("/review/api/findings/7/attribute", "", authorized(session));
+        assertEquals(409, attributed.statusCode());
+        assertEquals("not_attributable", json(attributed).get("error").getAsString());
         assertEquals(403, web.post("/review/api/findings/8/attribute", "", cookie(session)).statusCode());
     }
 
@@ -73,6 +76,9 @@ class BlockLogControllerTest {
         var detail = json(web.get("/review/api/findings/7", cookie(session)));
         assertEquals("Staff", detail.get("rolledBackBy").getAsString());
         assertEquals(WebFixture.NOW.toString(), detail.get("rolledBackAt").getAsString());
+        HttpResponse<String> again = web.post("/review/api/findings/7/rollback", "", authorized(session));
+        assertEquals(409, again.statusCode());
+        assertEquals("not_rollbackable", json(again).get("error").getAsString());
     }
 
     @Test

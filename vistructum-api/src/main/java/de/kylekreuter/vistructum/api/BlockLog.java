@@ -42,7 +42,7 @@ public interface BlockLog {
     /**
      * Reverts the block changes that the players of a confirmed finding made inside the box of the finding.
      *
-     * <p>Only blocks inside the box that a player of the finding placed or broke are changed. Each of them is set back
+     * <p>A finding is rolled back at most once. Only blocks inside the box that a player of the finding placed or broke are changed. Each of them is set back
      * to its state before the first logged change of a player of the finding. A block is skipped if its last logged
      * change inside the box is by someone else, or if it no longer matches the last logged change. Blocks outside the
      * box stay unchanged. Every restored block is written to the block log. The finding and its evidence stay
@@ -53,7 +53,7 @@ public interface BlockLog {
      * @param actor name of the party that requests the action, as it is to be stored and displayed
      * @return a future completing with the numbers of restored and skipped blocks, or with an empty {@link Optional}
      *         if no finding has this identifier; the future fails with an {@link IllegalStateException} if the block
-     *         log is not available, the finding is not confirmed or it has no players
+     *         log is not available, the finding is not confirmed, it has no players or it was rolled back before
      * @throws NullPointerException if {@code actor} is {@code null}
      */
     CompletableFuture<Optional<RollbackResult>> rollback(long findingId, String actor);

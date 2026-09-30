@@ -209,8 +209,10 @@ Set `enabled: false` to turn the integration off. The CoreProtect API must be en
 
 While the integration runs, the **Integrations** panel on the finding page of the web app has a CoreProtect section:
 
-- **Find builders** searches the log again for the finding's box at the time of detection. If the log names builders, they replace the finding's players, and the activity log records the search. A finding without evidence gets a replay of the logged changes.
-- **Roll back** reverts the blocks of a **confirmed** finding with builders, after a confirmation step. Only blocks inside the finding's box that these builders placed or broke change. Each returns to its state before their first logged change. Blocks that someone else changed since are skipped, and the panel reports how many. CoreProtect logs every restored block as `#vistructum`, so a CoreProtect rollback can undo it. The finding, its verdict, and its evidence stay. The finding gets a **Rolled back** label in the list and on its page, and the activity log records the rollback. The button needs `vistructum.coreprotect.rollback`.
+- **Find builders** searches the log again for the finding's box at the time of detection. If the log names builders, they replace the finding's players, and the activity log records the search. A finding without evidence gets a replay of the logged changes. The button stays off once the finding has builders and evidence.
+- **Roll back** reverts the blocks of a **confirmed** finding with builders, after a confirmation step. Only blocks inside the finding's box that these builders placed or broke change. Each returns to its state before their first logged change. Blocks that someone else changed since are skipped, and the panel reports how many. CoreProtect logs every restored block as `#vistructum`, so a CoreProtect rollback can undo it. The finding, its verdict, and its evidence stay. The finding gets a **Rolled back** label in the list and on its page, and the activity log records the rollback. A finding is rolled back once. The button needs `vistructum.coreprotect.rollback`.
+
+The browser loads the CoreProtect logo of the panel from `cdn.modrinth.com`.
 
 ### Discord notifications
 

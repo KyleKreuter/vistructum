@@ -1,7 +1,11 @@
 import type { FindingSummary } from "@/api/types";
 
-export function canRollBack(finding: Pick<FindingSummary, "review" | "players">): boolean {
-  return finding.review?.verdict === "CONFIRMED" && finding.players.length > 0;
+export function canRollBack(finding: Pick<FindingSummary, "review" | "players" | "rolledBackAt">): boolean {
+  return finding.review?.verdict === "CONFIRMED" && finding.players.length > 0 && !finding.rolledBackAt;
+}
+
+export function canAttribute(finding: Pick<FindingSummary, "players" | "hasEvidence">): boolean {
+  return finding.players.length === 0 || !finding.hasEvidence;
 }
 
 export function rollbackMessage(restored: number, skipped: number): string {

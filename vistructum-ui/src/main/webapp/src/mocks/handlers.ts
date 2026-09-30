@@ -264,6 +264,7 @@ export function handlers(db: MockDb) {
       if (!db.me.blockLog) return error(503, "unavailable");
       const finding = byId(params.id);
       if (!finding) return error(404, "not_found");
+      if (finding.players.length && finding.hasEvidence) return error(409, "not_attributable");
       const builder = db.players[0];
       if (!finding.players.length && builder) {
         finding.players = [builder];
@@ -280,7 +281,7 @@ export function handlers(db: MockDb) {
       if (!db.me.canRollback) return error(403, "forbidden");
       const finding = byId(params.id);
       if (!finding) return error(404, "not_found");
-      if (finding.review?.verdict !== "CONFIRMED" || !finding.players.length) return error(409, "not_rollbackable");
+      if (finding.review?.verdict !== "CONFIRMED" || !finding.players.length || finding.rolledBackAt) return error(409, "not_rollbackable");
       finding.rolledBackAt = new Date().toISOString();
       finding.rolledBackBy = db.me.name;
       db.activity.unshift({ at: finding.rolledBackAt, actor: db.me.name, kind: "ROLLED_BACK", findingId: finding.id });

@@ -1,4 +1,4 @@
-import { History, Plug, Undo2, UserSearch } from "lucide-react";
+import { Plug, Undo2, UserSearch } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/api/client";
@@ -6,8 +6,10 @@ import { useAttribution, useRollback } from "@/api/queries";
 import type { FindingDetail } from "@/api/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { canRollBack, rollbackMessage } from "@/logic/blockLog";
+import { canAttribute, canRollBack, rollbackMessage } from "@/logic/blockLog";
 import { formatDateTime } from "@/logic/format";
+
+const coreProtectLogo = "https://cdn.modrinth.com/data/Lu3KuzdV/b2c4b7b0033ab09cc166f2848003ef3a02c70a83.png";
 
 export function IntegrationsPanel({ finding, blockLog, canRollback }: { finding: FindingDetail; blockLog: boolean; canRollback: boolean }) {
   return (
@@ -30,6 +32,7 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
   const [confirming, setConfirming] = useState(false);
   const busy = attribution.isPending || rollback.isPending;
   const rollbackable = canRollBack(finding);
+  const attributable = canAttribute(finding);
 
   const attribute = () =>
     attribution.mutate(undefined, {
@@ -56,7 +59,7 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
   return (
     <section className="space-y-2">
       <h3 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        <History className="size-3.5" /> CoreProtect
+        <img src={coreProtectLogo} alt="" className="size-4 rounded-sm" referrerPolicy="no-referrer" loading="lazy" /> CoreProtect
       </h3>
       {finding.rolledBackAt && (
         <p className="text-xs">
@@ -81,7 +84,13 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
         </div>
       ) : (
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={attribute} disabled={busy}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={attribute}
+            disabled={busy || !attributable}
+            title={attributable ? undefined : "The builders and the evidence of this finding are already known."}
+          >
             <UserSearch /> Find builders
           </Button>
           {canRollback && (
@@ -91,7 +100,7 @@ function CoreProtectSection({ finding, blockLog, canRollback }: { finding: Findi
               className="text-destructive"
               onClick={() => setConfirming(true)}
               disabled={busy || !rollbackable}
-              title={rollbackable ? undefined : "Only confirmed findings with builders can be rolled back."}
+              title={rollbackable ? undefined : finding.rolledBackAt ? "This finding was rolled back already." : "Only confirmed findings with builders can be rolled back."}
             >
               <Undo2 /> Roll back
             </Button>

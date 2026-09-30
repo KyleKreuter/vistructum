@@ -98,7 +98,12 @@ public final class BlockLogService implements BlockLog {
             return CompletableFuture.failedFuture(new IllegalStateException("finding #" + finding.id()
                     + " has no players"));
         }
-        return blocks.lookup(finding.world(), finding.box(), clock.instant())
+        return findings.lastEvent(finding.id(), ActivityKind.ROLLED_BACK).thenCompose(previous -> {
+            if (previous.isPresent()) {
+                throw new IllegalStateException("finding #" + finding.id() + " is already rolled back");
+            }
+            return blocks.lookup(finding.world(), finding.box(), clock.instant());
+        })
                 .thenApply(entries -> RollbackPlan.of(entries, finding.box(), finding.players()))
                 .thenCompose(plan -> blocks.restore(finding.world(), plan.restores())
                         .thenApply(done -> new RollbackResult(done.restored(), done.skipped() + plan.skipped())))

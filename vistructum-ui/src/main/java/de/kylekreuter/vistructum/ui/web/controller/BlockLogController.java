@@ -45,7 +45,8 @@ public final class BlockLogController {
         long id = FindingController.id(ctx);
         WebSession session = SessionFilter.session(ctx);
         BlockLog blockLog = available();
-        ctx.future(() -> handoff.off(blockLog.attribute(id, session.playerName()))
+        ctx.future(() -> attributable(id)
+                .thenCompose(ignored -> handoff.off(blockLog.attribute(id, session.playerName())))
                 .thenCompose(found -> findings.summary(found.orElseThrow(ApiError::notFound)))
                 .thenAccept(view -> Responses.json(ctx, view)));
     }
@@ -74,11 +75,28 @@ public final class BlockLogController {
                 throw ApiError.forbidden();
             }
             return handoff.off(vistructum.findings().get(id));
-        }).thenAccept(found -> {
+        }).thenCompose(found -> {
             Finding finding = found.orElseThrow(ApiError::notFound);
             if (!confirmed(finding) || finding.players().isEmpty()) {
                 throw ApiError.notRollbackable();
             }
+            return handoff.off(vistructum.blockLog().lastRollback(id));
+        }).thenAccept(previous -> {
+            if (previous.isPresent()) {
+                throw ApiError.notRollbackable();
+            }
+        });
+    }
+
+    private CompletableFuture<Void> attributable(long id) {
+        return handoff.off(vistructum.findings().get(id)).thenCompose(found -> {
+            Finding finding = found.orElseThrow(ApiError::notFound);
+            return handoff.off(vistructum.findings().hasEvidence(id))
+                    .thenAccept(evidence -> {
+                        if (!finding.players().isEmpty() && evidence) {
+                            throw ApiError.notAttributable();
+                        }
+                    });
         });
     }
 

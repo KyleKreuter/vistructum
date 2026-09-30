@@ -20,6 +20,9 @@ export default defineConfig(({ mode }) => {
     define: {
       __MOCK__: JSON.stringify(mock),
     },
+    optimizeDeps: {
+      entries: ["index.html", "src/**/*.{ts,tsx}", "!src/**/*.test.ts"],
+    },
     server: {
       port: 5173,
       proxy: mock

@@ -83,6 +83,10 @@ export function storedEvidence(finding: MockFinding): Evidence | null {
   return finding.evidence;
 }
 
+function loggedEvidence(evidence: Evidence): Evidence {
+  return { ...evidence, changes: evidence.changes.map((change) => ({ ...change, t: Math.floor(change.t / 1000) * 1000 })), recordings: [] };
+}
+
 export function expiresIn(now: number): string {
   return new Date(now + 12 * 3600_000).toISOString();
 }
@@ -284,8 +288,15 @@ export function createDefaultDb(fixture: Fixture, now = Date.now()): MockDb {
       shareActive: false,
     });
   }
-  const evidenceFindings: { id: number; review: FindingSummary["review"]; token: string | null; start: number }[] = [
+  const evidenceFindings: { id: number; review: FindingSummary["review"]; token: string | null; start: number; logged?: boolean }[] = [
     { id: 1001 + total, review: null, token: null, start: now - 42 * 60_000 },
+    {
+      id: 1001 + total - 3,
+      review: { verdict: "CONFIRMED", reviewer: "mod_jonas", reviewedAt: new Date(now - 2 * 3600_000).toISOString() },
+      token: null,
+      start: now - 6 * 3600_000,
+      logged: true,
+    },
     {
       id: 1001 + total - 5,
       review: { verdict: "CONFIRMED", reviewer: "Staff_Anna", reviewedAt: new Date(now - 5 * 3600_000).toISOString() },
@@ -294,19 +305,19 @@ export function createDefaultDb(fixture: Fixture, now = Date.now()): MockDb {
     },
   ];
   for (const entry of evidenceFindings) {
-    const evidence = syntheticEvidence(entry.id, entry.start);
+    const evidence = entry.logged ? loggedEvidence(syntheticEvidence(entry.id, entry.start)) : syntheticEvidence(entry.id, entry.start);
     const { scene, heatmap } = evidenceScene(evidence, palette);
     const centre = { x: Math.floor((findingBox.minX + findingBox.maxX) / 2), y: findingBox.minY, z: Math.floor((findingBox.minZ + findingBox.maxZ) / 2) };
     const createdAt = new Date(evidence.changes[evidence.changes.length - 1].t + 1500).toISOString();
     const finding: MockFinding = {
       id: entry.id,
-      source: "mask",
+      source: entry.logged ? "fullscan" : "mask",
       world: "world",
       box: findingBox,
       score: 0.962,
       votes: 1,
-      detail: "Live check after block placement",
-      modelVersion: "bf-scan-3",
+      detail: entry.logged ? `Tile ${findingBox.minX >> 4},${findingBox.minZ >> 4}` : "Live check after block placement",
+      modelVersion: entry.logged ? "scan-v5" : "bf-scan-3",
       createdAt,
       players: [
         { uuid: builder.uuid, name: builder.name },

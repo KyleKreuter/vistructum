@@ -193,7 +193,7 @@ Set `recording.enabled: false` and restart. The core stops recording movement an
 When [CoreProtect](https://modrinth.com/plugin/coreprotect) 23.0 or newer runs on the server, the core reads its block log for every finding without tracked block changes. These are all full scan findings, and live check findings while evidence recording is off.
 
 - **Builders:** Before the finding is stored, the core looks up who placed the blocks that still stand in the finding box. These players become the players of the finding, and alerts, the review menu, and the web app show them.
-- **Replay:** After the finding is stored, the core secures the logged block changes around the box as evidence, with the same `margin` as evidence recording. The replay has no player movement.
+- **Replay:** After the finding is stored, the core secures the logged block changes around the box as evidence, with the same `margin` as evidence recording. The log has no player movement. In the web app, the replay shows each builder semi-transparent next to the changed blocks, reconstructed from the log: the figure looks at each block, holds the placed block, and walks to the next position once a block is out of reach. The public evidence page shows no reconstructed figures.
 
 ```yaml
 integrations:

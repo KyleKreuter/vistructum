@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { ChevronLeft, ChevronRight, Orbit, Pause, Play, Video } from "lucide-react";
+import { ChevronLeft, ChevronRight, Orbit, Pause, Play, Route, Video } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useState, useSyncExternalStore, type Ref, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { Evidence, Palette, PlayerRef } from "@/api/types";
@@ -15,6 +15,7 @@ import { useBlockLibrary } from "@/features/world/library";
 import { skyTheme } from "@/features/world/skyColours";
 import { prepareTrack } from "@/logic/motion";
 import { appliedCount, buildTimeline, formatClock, speeds, tallies, type Timeline } from "@/logic/timeline";
+import { reconstructRecordings } from "@/logic/reconstruct";
 import { indexVolume } from "@/logic/volume";
 import { createClock } from "./clock";
 import { playerColour } from "./colours";
@@ -29,6 +30,7 @@ export interface ReplayViewProps {
   palette: Palette;
   skinUrl: (uuid: string) => string;
   facesFromSkin?: boolean;
+  reconstruct?: boolean;
   controlsRef?: RefObject<ReplayControls | null>;
   active?: boolean;
   playersTarget?: HTMLElement | null;
@@ -58,10 +60,15 @@ const TimelineMarks = memo(function TimelineMarks({ timeline, applied, colourFor
   );
 });
 
-export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin = false, controlsRef, active = true, playersTarget, stageRef }: ReplayViewProps) {
+export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin = false, reconstruct = false, controlsRef, active = true, playersTarget, stageRef }: ReplayViewProps) {
   const timeline = useMemo(() => buildTimeline(evidence), [evidence]);
   const indexed = useMemo(() => indexVolume(evidence.before, timeline.changes), [evidence.before, timeline.changes]);
-  const tracks = useMemo(() => evidence.recordings.map(prepareTrack), [evidence.recordings]);
+  const reconstructed = useMemo(
+    () => (reconstruct ? reconstructRecordings(timeline.changes, new Set(evidence.recordings.map((recording) => recording.player))) : []),
+    [reconstruct, timeline.changes, evidence.recordings],
+  );
+  const tracks = useMemo(() => [...evidence.recordings, ...reconstructed].map(prepareTrack), [evidence.recordings, reconstructed]);
+  const ghosts = useMemo(() => new Set(reconstructed.map((recording) => recording.player)), [reconstructed]);
   const [clock] = useState(() => createClock(timeline));
   const state = useSyncExternalStore(clock.subscribe, clock.getSnapshot);
   const [camera, setCamera] = useState<CameraMode>({ kind: "orbit" });
@@ -150,6 +157,7 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
             indexed={indexed}
             timeline={timeline}
             tracks={tracks}
+            ghosts={ghosts}
             assets={assets}
             loaded={loaded}
             clock={clock}
@@ -194,6 +202,12 @@ export default function ReplayView({ evidence, palette, skinUrl, facesFromSkin =
               </Tooltip>
             ))}
         </div>
+        {ghosts.size > 0 && (
+          <div className="pointer-events-none absolute top-3 left-3 flex items-center gap-1.5 rounded-md bg-black/55 px-2 py-1 text-xs text-white/85 backdrop-blur-sm">
+            <Route className="size-3.5" />
+            Position reconstructed from the block log
+          </div>
+        )}
         <div className="pointer-events-none absolute bottom-2 left-3 text-[11px] text-white/60">Drag to rotate · right-drag to pan · scroll to zoom</div>
       </div>
 

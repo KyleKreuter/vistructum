@@ -2,7 +2,7 @@ import { OrbitControls } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { PlayerObject } from "skinview3d/libs/model.js";
-import { BoxGeometry, EdgesGeometry, Group, LineBasicMaterial, LineSegments, Vector3 } from "three";
+import { BoxGeometry, EdgesGeometry, Group, LineBasicMaterial, LineSegments, Material, Mesh, Vector3 } from "three";
 import { isAir, isFullOpaque } from "@/logic/blocks";
 import type { Grid } from "@/logic/mc/mesher";
 import { skeletonFor, followCameraOffset, eyeHeight, poseAt, type JointPose, type Track } from "@/logic/motion";
@@ -26,6 +26,7 @@ interface OrbitLike {
 export type CameraMode = { kind: "orbit" } | { kind: "follow"; player: string };
 
 const pixel = 0.9 / 16;
+const ghostOpacity = 0.5;
 
 function useApplied(clock: ReplayClock, timeline: Timeline): number {
   return useSyncExternalStore(clock.subscribe, () => appliedCount(timeline, clock.getSnapshot().time));
@@ -121,6 +122,17 @@ function createAvatar(): Avatar {
   return { root, player, hand, held: "" };
 }
 
+function fadeAvatar(avatar: Avatar) {
+  avatar.player.traverse((node) => {
+    if (!(node instanceof Mesh)) return;
+    const materials: Material[] = Array.isArray(node.material) ? node.material : [node.material];
+    for (const material of materials) {
+      material.transparent = true;
+      material.opacity = ghostOpacity;
+    }
+  });
+}
+
 function dressAvatar(avatar: Avatar, skin: LoadedSkin | null) {
   avatar.player.skin.map = skin ? skin.texture : null;
   if (skin) avatar.player.skin.modelType = skin.slim ? "slim" : "default";
@@ -156,18 +168,24 @@ function poseAvatar(avatar: Avatar, track: Track, time: number, origin: [number,
 
 function PlayerAvatar({
   track,
+  ghost,
   skinUrl,
   clock,
   assets,
   origin,
 }: {
   track: Track;
+  ghost: boolean;
   skinUrl: string;
   clock: ReplayClock;
   assets: WorldAssets | null;
   origin: [number, number, number];
 }) {
   const avatar = useMemo(() => createAvatar(), []);
+
+  useEffect(() => {
+    if (ghost) fadeAvatar(avatar);
+  }, [avatar, ghost]);
 
   useEffect(
     () => () => {
@@ -250,6 +268,7 @@ interface ReplaySceneProps {
   indexed: IndexedVolume;
   timeline: Timeline;
   tracks: Track[];
+  ghosts: ReadonlySet<string>;
   assets: WorldAssets | null;
   loaded: LoadedLibrary | null;
   clock: ReplayClock;
@@ -284,7 +303,7 @@ function groundLevel(indexed: IndexedVolume): number {
   return best;
 }
 
-export const ReplayScene = memo(function ReplayScene({ indexed, timeline, tracks, assets, loaded, clock, skinUrl, colourOf: playerColour, camera, sky }: ReplaySceneProps) {
+export const ReplayScene = memo(function ReplayScene({ indexed, timeline, tracks, ghosts, assets, loaded, clock, skinUrl, colourOf: playerColour, camera, sky }: ReplaySceneProps) {
   const { volume } = indexed;
   const origin: [number, number, number] = useMemo(() => [volume.minX, volume.minY, volume.minZ], [volume.minX, volume.minY, volume.minZ]);
   const ground = useMemo(() => groundLevel(indexed), [indexed]);
@@ -298,7 +317,7 @@ export const ReplayScene = memo(function ReplayScene({ indexed, timeline, tracks
       {loaded && <ReplayBlocks indexed={indexed} loaded={loaded} clock={clock} timeline={timeline} />}
       <ChangeHighlight indexed={indexed} clock={clock} timeline={timeline} highlightColour={playerColour} />
       {tracks.map((track, index) => (
-        <PlayerAvatar key={`${track.player}-${index}`} track={track} skinUrl={skinUrl(track.player)} clock={clock} assets={assets} origin={origin} />
+        <PlayerAvatar key={`${track.player}-${index}`} track={track} ghost={ghosts.has(track.player)} skinUrl={skinUrl(track.player)} clock={clock} assets={assets} origin={origin} />
       ))}
       <OrbitControls makeDefault enableDamping target={centre} maxPolarAngle={Math.PI * 0.495} />
       <CameraRig mode={camera} tracks={tracks} clock={clock} origin={origin} centre={centre} />

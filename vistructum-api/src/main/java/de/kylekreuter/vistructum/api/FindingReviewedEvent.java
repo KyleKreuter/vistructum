@@ -9,7 +9,8 @@ import java.util.Objects;
  * Fired after a verdict has been recorded for a finding.
  *
  * <p>The event is fired synchronously on the server main thread after the verdict has been committed, each time
- * {@link Findings#review(long, Verdict, String)} succeeds, including when an existing verdict is replaced.
+ * {@link Findings#review(long, Verdict, String)} records a new verdict or replaces a different one. It is not fired
+ * when a finding is given the verdict it already has.
  */
 public final class FindingReviewedEvent extends Event {
 

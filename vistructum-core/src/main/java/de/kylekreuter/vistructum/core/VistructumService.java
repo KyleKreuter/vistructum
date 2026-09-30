@@ -33,6 +33,7 @@ import de.kylekreuter.vistructum.core.alert.FindingExporter;
 import de.kylekreuter.vistructum.core.alert.FindingHeatmaps;
 import de.kylekreuter.vistructum.core.alert.FindingSlice;
 import de.kylekreuter.vistructum.core.alert.FindingStore;
+import de.kylekreuter.vistructum.core.alert.Reviewed;
 import de.kylekreuter.vistructum.core.alert.MaterialKeys;
 import de.kylekreuter.vistructum.core.alert.PreviewImage;
 import de.kylekreuter.vistructum.core.alert.SceneView;
@@ -155,9 +156,9 @@ public final class VistructumService implements Vistructum {
             Objects.requireNonNull(reviewer, "reviewer");
             return mainThread.handOff(findingStore.review(id, verdict, reviewer, clock.instant())
                     .thenCompose(reviewed -> mainThread.supply(() -> {
-                        reviewed.ifPresent(finding ->
-                                Bukkit.getPluginManager().callEvent(new FindingReviewedEvent(finding)));
-                        return reviewed;
+                        reviewed.filter(Reviewed::verdictChanged).ifPresent(changed ->
+                                Bukkit.getPluginManager().callEvent(new FindingReviewedEvent(changed.finding())));
+                        return reviewed.map(Reviewed::finding);
                     })));
         }
 

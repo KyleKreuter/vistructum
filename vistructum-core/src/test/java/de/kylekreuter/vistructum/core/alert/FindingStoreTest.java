@@ -127,8 +127,10 @@ class FindingStoreTest {
                 .get().orElseThrow();
         assertEquals(1L, store.count(FindingQuery.open()).get());
 
-        Finding reviewed = store.review(stored.id(), Verdict.FALSE_ALARM, "Staff", NOW.plusSeconds(60)).get()
+        Reviewed result = store.review(stored.id(), Verdict.FALSE_ALARM, "Staff", NOW.plusSeconds(60)).get()
                 .orElseThrow();
+        assertTrue(result.verdictChanged());
+        Finding reviewed = result.finding();
         assertFalse(reviewed.open());
         assertEquals(Verdict.FALSE_ALARM, reviewed.review().orElseThrow().verdict());
         assertEquals("Staff", reviewed.review().orElseThrow().reviewer());
@@ -136,6 +138,39 @@ class FindingStoreTest {
         assertEquals(1L, store.count(FindingQuery.all().state(ReviewState.REVIEWED).before(stored.id() + 1).limit(1)).get());
         assertTrue(store.query(FindingQuery.open()).get().findings().isEmpty());
         assertEquals(1, store.query(FindingQuery.all().state(ReviewState.REVIEWED).since(NOW)).get().findings().size());
+    }
+
+    @Test
+    void repeatingTheVerdictKeepsTheFirstReview() throws Exception {
+        Finding stored = store.insertUnlessDuplicate(detected("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE)
+                .get().orElseThrow();
+        store.review(stored.id(), Verdict.CONFIRMED, "First", NOW.plusSeconds(60)).get();
+
+        Reviewed repeated = store.review(stored.id(), Verdict.CONFIRMED, "Second", NOW.plusSeconds(120)).get()
+                .orElseThrow();
+
+        assertFalse(repeated.verdictChanged());
+        assertEquals("First", repeated.finding().review().orElseThrow().reviewer());
+        assertEquals(NOW.plusSeconds(60), repeated.finding().review().orElseThrow().reviewedAt());
+    }
+
+    @Test
+    void changingTheVerdictReplacesTheReview() throws Exception {
+        Finding stored = store.insertUnlessDuplicate(detected("world", new BlockBox(0, 60, 0, 10, 62, 10)), NOW, DEDUPE)
+                .get().orElseThrow();
+        store.review(stored.id(), Verdict.CONFIRMED, "First", NOW.plusSeconds(60)).get();
+
+        Reviewed changed = store.review(stored.id(), Verdict.FALSE_ALARM, "Second", NOW.plusSeconds(120)).get()
+                .orElseThrow();
+
+        assertTrue(changed.verdictChanged());
+        assertEquals(Verdict.FALSE_ALARM, changed.finding().review().orElseThrow().verdict());
+        assertEquals("Second", changed.finding().review().orElseThrow().reviewer());
+    }
+
+    @Test
+    void reviewingAnUnknownFindingReturnsNothing() throws Exception {
+        assertTrue(store.review(404, Verdict.CONFIRMED, "Staff", NOW).get().isEmpty());
     }
 
     @Test

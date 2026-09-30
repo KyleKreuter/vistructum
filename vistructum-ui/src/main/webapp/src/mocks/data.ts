@@ -1,4 +1,4 @@
-import type { ActivityItem, Evidence, FindingDetail, FindingSummary, Heatmap, Palette, PlayerRef, ScanCause, Scene, Source, Status, Verdict } from "@/api/types";
+import type { ActivityItem, Evidence, FindingDetail, FindingSummary, Heatmap, Me, Palette, PlayerRef, ScanCause, Scene, Source, Status, Verdict } from "@/api/types";
 import { colourOf, isAir, materialOf, rgbTriple } from "@/logic/blocks";
 import { seededRandom } from "@/logic/mc/random";
 import { appliedCount, buildTimeline } from "@/logic/timeline";
@@ -56,7 +56,7 @@ export interface MockScan {
 }
 
 export interface MockDb {
-  me: { player: string; name: string; expiresAt: string; canShare: boolean };
+  me: Me;
   findings: MockFinding[];
   players: PlayerRef[];
   palette: Palette;
@@ -333,7 +333,7 @@ export function createDefaultDb(fixture: Fixture, now = Date.now()): MockDb {
   findings.sort((a, b) => b.id - a.id);
   activity.sort((a, b) => b.at.localeCompare(a.at));
   return {
-    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true },
+    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true, blockLog: true, canRollback: true },
     findings,
     players: [...players, staff],
     palette,

@@ -451,7 +451,7 @@ class FindingStoreTest {
         store.review(second.id(), Verdict.FALSE_ALARM, "Ben", NOW.plusSeconds(20)).get();
         database.transaction(connection -> {
             try (PreparedStatement insert = connection.prepareStatement("""
-                    INSERT INTO share_events (finding_id, at, actor, kind) VALUES (?, ?, 'Anna', 'SHARED'), (?, ?, 'Ben', 'UNSHARED')
+                    INSERT INTO finding_events (finding_id, at, actor, kind) VALUES (?, ?, 'Anna', 'SHARED'), (?, ?, 'Ben', 'UNSHARED')
                     """)) {
                 insert.setLong(1, first.id());
                 insert.setLong(2, NOW.plusSeconds(30).toEpochMilli());
@@ -469,6 +469,61 @@ class FindingStoreTest {
                 new Activity(NOW.plusSeconds(20), "Ben", ActivityKind.FALSE_ALARM, second.id()),
                 new Activity(NOW.plusSeconds(10), "Anna", ActivityKind.CONFIRMED, first.id())), all);
         assertEquals(all.subList(2, 3), store.activity(NOW.plusSeconds(30), 1).get());
+    }
+
+    @Test
+    void attributionReplacesThePlayersAndIsLogged() throws Exception {
+        Finding finding = insert("world");
+        Set<UUID> builders = Set.of(UUID.randomUUID(), UUID.randomUUID());
+
+        Finding attributed = store.attribute(finding.id(), builders, "Anna", NOW.plusSeconds(10)).get()
+                .orElseThrow();
+
+        assertEquals(builders, attributed.players());
+        assertEquals(attributed, store.find(finding.id()).get().orElseThrow());
+        assertEquals(List.of(new Activity(NOW.plusSeconds(10), "Anna", ActivityKind.ATTRIBUTED, finding.id())),
+                store.activity(NOW.plusSeconds(60), 10).get());
+    }
+
+    @Test
+    void attributionOfAMissingFindingIsEmpty() throws Exception {
+        assertEquals(Optional.empty(), store.attribute(404, Set.of(UUID.randomUUID()), "Anna", NOW).get());
+        assertEquals(List.of(), store.activity(NOW.plusSeconds(60), 10).get());
+    }
+
+    @Test
+    void recordedEventsAppearInTheActivityAndCascade() throws Exception {
+        Finding finding = insert("world");
+        store.review(finding.id(), Verdict.CONFIRMED, "Anna", NOW.plusSeconds(10)).get();
+        store.record(finding.id(), ActivityKind.ROLLED_BACK, "Ben", NOW.plusSeconds(20)).get();
+
+        assertEquals(new Activity(NOW.plusSeconds(20), "Ben", ActivityKind.ROLLED_BACK, finding.id()),
+                store.activity(NOW.plusSeconds(60), 10).get().getFirst());
+
+        store.deleteReviewedBefore(Verdict.CONFIRMED, NOW.plusSeconds(3600)).get();
+        assertEquals(List.of(), store.activity(NOW.plusSeconds(60), 10).get());
+    }
+
+    @Test
+    void shareEventsOfAnEarlierSchemaAreMigrated() throws Exception {
+        Finding finding = insert("world");
+        database.transaction(connection -> {
+            try (var statement = connection.createStatement()) {
+                statement.execute("CREATE TABLE share_events (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                        + "finding_id INTEGER NOT NULL, at INTEGER NOT NULL, actor TEXT NOT NULL, kind TEXT NOT NULL)");
+                statement.execute("INSERT INTO share_events (finding_id, at, actor, kind) VALUES ("
+                        + finding.id() + ", " + NOW.plusSeconds(5).toEpochMilli() + ", 'Anna', 'SHARED'), (404, "
+                        + NOW.plusSeconds(6).toEpochMilli() + ", 'Ben', 'SHARED')");
+            }
+            return null;
+        }).get();
+        database.close();
+
+        database = TestDatabase.open(directory);
+        store = new FindingStore(database);
+
+        assertEquals(List.of(new Activity(NOW.plusSeconds(5), "Anna", ActivityKind.SHARED, finding.id())),
+                store.activity(NOW.plusSeconds(60), 10).get());
     }
 
     @Test

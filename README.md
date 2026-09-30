@@ -125,6 +125,7 @@ docker compose up -d sidecar
 | `vistructum.staff` | op | Chat alerts, list, detail view, reviews, `/vis stats`, and sign-in to the web app |
 | `vistructum.admin` | op | `vistructum.staff`, `/vis scan`, and `/vis export` |
 | `vistructum.evidence.share` | op | Activates and deactivates public evidence links. Not included in `vistructum.admin` |
+| `vistructum.coreprotect.rollback` | op | Rolls back confirmed findings through CoreProtect in the web app. Not included in `vistructum.admin` |
 
 `/vis export` writes one `<kind>.jsonl` file per model kind with the model input scene, the detection window, and the verdict of each reviewed finding. Retention deletes false alarms after `retention.reviewed-days` and confirmed findings after `retention.confirmed-days`, so export them before. Convert a file into a training split with `python ml/train/findings.py mask.jsonl --out <data-dir>`; run it with `ml` and `ml/train` on `PYTHONPATH`.
 
@@ -205,6 +206,11 @@ integrations:
 `lookup-days` limits how far back the core searches the log. If a lookup takes longer than `timeout-seconds`, the finding is stored without builders. CoreProtect names players, not IDs. The core maps a name to a player only if that player has joined the server before. Changes that CoreProtect rolled back before the lookup are ignored. A rollback after the lookup does not change the finding.
 
 Set `enabled: false` to turn the integration off. The CoreProtect API must be enabled in the CoreProtect config, which is its default.
+
+While the integration runs, the finding page of the web app shows a CoreProtect panel:
+
+- **Find builders** searches the log again for the finding's box at the time of detection. If the log names builders, they replace the finding's players, and the activity log records the search. A finding without evidence gets a replay of the logged changes.
+- **Roll back** reverts the blocks of a **confirmed** finding with builders, after a confirmation step. CoreProtect reverts only placements and removals by these builders, in the finding's box, since their first logged change there. The finding, its verdict, and its evidence stay. The activity log records the rollback. The button needs `vistructum.coreprotect.rollback`.
 
 ### Discord notifications
 

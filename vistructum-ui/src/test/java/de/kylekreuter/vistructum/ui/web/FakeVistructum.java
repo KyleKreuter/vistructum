@@ -1,6 +1,7 @@
 package de.kylekreuter.vistructum.ui.web;
 
 import de.kylekreuter.vistructum.api.Activity;
+import de.kylekreuter.vistructum.api.BlockLog;
 import de.kylekreuter.vistructum.api.Evidence;
 import de.kylekreuter.vistructum.api.EvidenceShare;
 import de.kylekreuter.vistructum.api.Finding;
@@ -37,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -44,7 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-public final class FakeVistructum implements Vistructum, Findings, Scans, Players, WebAccess {
+public final class FakeVistructum implements Vistructum, Findings, Scans, Players, WebAccess, BlockLog {
 
     public final Map<Long, Finding> findings = new TreeMap<>();
     public final Map<Long, Evidence> evidence = new ConcurrentHashMap<>();
@@ -53,6 +55,9 @@ public final class FakeVistructum implements Vistructum, Findings, Scans, Player
     public final Map<String, WebSession> sessions = new ConcurrentHashMap<>();
     public final Map<String, Long> shares = new ConcurrentHashMap<>();
     public final Map<UUID, PlayerSkin> skins = new ConcurrentHashMap<>();
+    public final Map<Long, Set<UUID>> builders = new ConcurrentHashMap<>();
+    public final Map<Long, String> rollbacks = new ConcurrentHashMap<>();
+    public volatile boolean blockLogAvailable = true;
     final Instant now;
 
     public FakeVistructum(Instant now) {
@@ -77,6 +82,39 @@ public final class FakeVistructum implements Vistructum, Findings, Scans, Player
     @Override
     public WebAccess web() {
         return this;
+    }
+
+    @Override
+    public BlockLog blockLog() {
+        return this;
+    }
+
+    @Override
+    public boolean available() {
+        return blockLogAvailable;
+    }
+
+    @Override
+    public synchronized CompletableFuture<Optional<Finding>> attribute(long findingId, String actor) {
+        Finding finding = findings.get(findingId);
+        Set<UUID> players = builders.getOrDefault(findingId, Set.of());
+        if (finding == null || players.isEmpty()) {
+            return completedFuture(Optional.ofNullable(finding));
+        }
+        Finding attributed = new Finding(finding.id(), finding.source(), finding.world(), finding.box(),
+                finding.score(), finding.votes(), players, finding.detail(), finding.modelVersion(),
+                finding.createdAt(), finding.review());
+        findings.put(findingId, attributed);
+        return completedFuture(Optional.of(attributed));
+    }
+
+    @Override
+    public synchronized CompletableFuture<Optional<Integer>> rollback(long findingId, String actor) {
+        if (!findings.containsKey(findingId)) {
+            return completedFuture(Optional.empty());
+        }
+        rollbacks.put(findingId, actor);
+        return completedFuture(Optional.of(12));
     }
 
     @Override

@@ -248,7 +248,7 @@ public interface Findings {
     CompletableFuture<FindingStats> stats(Instant from, Instant to);
 
     /**
-     * Loads the activity log of reviews and evidence links, newest first.
+     * Loads the activity log of reviews, evidence links and block log actions, newest first.
      *
      * @param before exclusive upper bound for the time of the returned entries, used as the paging cursor
      * @param limit maximum number of entries, between {@code 1} and {@link FindingQuery#MAX_LIMIT} inclusive

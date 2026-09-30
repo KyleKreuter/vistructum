@@ -255,6 +255,34 @@ export function handlers(db: MockDb) {
       return new HttpResponse(null, { status: 204 });
     }),
 
+    http.post(`${api}/findings/:id/attribute`, async ({ params, request }) => {
+      const blocked = await gate("blockLog", 400);
+      if (blocked) return blocked;
+      if (!csrfOk(request)) return error(403, "csrf");
+      if (!db.me.blockLog) return error(503, "unavailable");
+      const finding = byId(params.id);
+      if (!finding) return error(404, "not_found");
+      const builder = db.players[0];
+      if (!finding.players.length && builder) {
+        finding.players = [builder];
+        db.activity.unshift({ at: new Date().toISOString(), actor: db.me.name, kind: "ATTRIBUTED", findingId: finding.id });
+      }
+      return HttpResponse.json(summary(finding));
+    }),
+
+    http.post(`${api}/findings/:id/rollback`, async ({ params, request }) => {
+      const blocked = await gate("blockLog", 600);
+      if (blocked) return blocked;
+      if (!csrfOk(request)) return error(403, "csrf");
+      if (!db.me.blockLog) return error(503, "unavailable");
+      if (!db.me.canRollback) return error(403, "forbidden");
+      const finding = byId(params.id);
+      if (!finding) return error(404, "not_found");
+      if (finding.review?.verdict !== "CONFIRMED" || !finding.players.length) return error(409, "not_rollbackable");
+      db.activity.unshift({ at: new Date().toISOString(), actor: db.me.name, kind: "ROLLED_BACK", findingId: finding.id });
+      return HttpResponse.json({ changes: 48 });
+    }),
+
     http.get(`${api}/stats`, async ({ request }) => {
       const blocked = await gate("stats", 200);
       if (blocked) return blocked;

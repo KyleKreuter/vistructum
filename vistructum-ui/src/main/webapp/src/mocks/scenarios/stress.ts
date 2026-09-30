@@ -200,7 +200,7 @@ export function createStressDb(fixture: Fixture, now = Date.now()): MockDb {
   if (newestShared) shares.set(stressPublicToken, newestShared.id);
   activity.sort((a, b) => b.at.localeCompare(a.at));
   return {
-    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true },
+    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true, blockLog: true, canRollback: true },
     findings,
     players: [...players, staff],
     palette: mockPalette(fixture),

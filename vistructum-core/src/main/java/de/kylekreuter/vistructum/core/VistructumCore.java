@@ -14,6 +14,7 @@ import de.kylekreuter.vistructum.core.evidence.EvidenceKeeper;
 import de.kylekreuter.vistructum.core.evidence.EvidenceSettings;
 import de.kylekreuter.vistructum.core.evidence.EvidenceStore;
 import de.kylekreuter.vistructum.core.history.BlockHistory;
+import de.kylekreuter.vistructum.core.history.BlockLogService;
 import de.kylekreuter.vistructum.core.inference.FallbackInference;
 import de.kylekreuter.vistructum.core.inference.Inference;
 import de.kylekreuter.vistructum.core.inference.InferenceSettings;
@@ -167,7 +168,9 @@ public final class VistructumCore extends JavaPlugin {
                 new VistructumService(mainThread, changes, findings,
                         new FindingExporter(findings, getDataFolder().toPath().resolve(EXPORT_FOLDER), clock), scans,
                         scanner, inference, new SkinCache(skins, new MojangSkins(), clock),
-                        new FindingHeatmaps(findings, occlusion), evidence, new TerrainStore(database), web, recordingEnabled, clock), this,
+                        new FindingHeatmaps(findings, occlusion), evidence, new TerrainStore(database), web,
+                        new BlockLogService(mainThread, findings, evidence, keeper, history, clock), recordingEnabled,
+                        clock), this,
                 ServicePriority.Normal);
 
         metrics = UsageMetrics.start(this, settings, config.getBoolean("scan.enabled"),

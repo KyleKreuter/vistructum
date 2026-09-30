@@ -16,6 +16,7 @@ export const endpointKeys = [
   "evidence",
   "verdict",
   "share",
+  "blockLog",
   "stats",
   "activity",
   "players",

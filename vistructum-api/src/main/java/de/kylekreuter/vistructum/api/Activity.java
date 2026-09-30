@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Entry in the activity log of reviews and evidence links.
+ * Entry in the activity log of reviews, evidence links and block log actions.
  *
  * <p>Only the current verdict of a finding is kept, so a replaced verdict no longer appears in the log.
  *

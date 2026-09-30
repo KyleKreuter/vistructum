@@ -37,6 +37,10 @@ public final class EvidenceKeeper {
         if (recorder.isPresent() && finding.source() == Source.MASK) {
             return secureTracked(finding, recorder.get());
         }
+        return secureFromHistory(finding);
+    }
+
+    public CompletableFuture<Boolean> secureFromHistory(Finding finding) {
         return history.map(blocks -> secureHistory(finding, blocks))
                 .orElseGet(() -> CompletableFuture.completedFuture(false));
     }

@@ -176,7 +176,7 @@ public final class WebStore {
     private static void record(Connection connection, long findingId, String actor, Instant now, ActivityKind kind)
             throws SQLException {
         try (PreparedStatement insert = connection.prepareStatement(
-                "INSERT INTO share_events (finding_id, at, actor, kind) VALUES (?, ?, ?, ?)")) {
+                "INSERT INTO finding_events (finding_id, at, actor, kind) VALUES (?, ?, ?, ?)")) {
             insert.setLong(1, findingId);
             insert.setLong(2, now.toEpochMilli());
             insert.setString(3, actor);

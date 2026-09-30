@@ -14,6 +14,7 @@ import type {
   Palette,
   PlayerInfo,
   PublicEvidence,
+  RollbackResult,
   Scene,
   ShareResult,
   Stats,
@@ -199,6 +200,30 @@ export function useShare(id: number) {
     },
   });
   return { activate: share, deactivate: revoke };
+}
+
+export function useAttribution(id: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<FindingSummary>(`/findings/${id}/attribute`, { method: "POST" }),
+    onSuccess: (summary) => {
+      patchFinding(client, summary);
+      void client.invalidateQueries({ queryKey: ["findings"], refetchType: "none" });
+      void client.invalidateQueries({ queryKey: keys.activity });
+      void client.invalidateQueries({ queryKey: ["player"] });
+      void client.invalidateQueries({ queryKey: keys.evidence(id) });
+    },
+  });
+}
+
+export function useRollback(id: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<RollbackResult>(`/findings/${id}/rollback`, { method: "POST" }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.activity });
+    },
+  });
 }
 
 export function useLogout() {

@@ -74,6 +74,8 @@ export function errorMessage(error: unknown): string {
         return "Not available right now.";
       case "not_shareable":
         return "Only confirmed findings with evidence can be shared.";
+      case "not_rollbackable":
+        return "Only confirmed findings with builders can be rolled back.";
       case "bad_request":
         return "The request was rejected.";
       case "unauthorized":

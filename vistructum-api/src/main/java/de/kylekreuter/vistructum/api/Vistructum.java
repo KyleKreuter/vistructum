@@ -86,6 +86,14 @@ public interface Vistructum {
     WebAccess web();
 
     /**
+     * Returns the block log area of the API.
+     *
+     * @return the block log area, never {@code null}; the same instance is returned on every call, also while the
+     *         block log is not available
+     */
+    BlockLog blockLog();
+
+    /**
      * Collects an aggregated snapshot of the operational state.
      *
      * <p>The storage-derived values are read independently of one another and do not form a single consistent

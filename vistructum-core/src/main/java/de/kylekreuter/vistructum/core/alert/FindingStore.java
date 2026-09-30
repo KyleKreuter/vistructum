@@ -113,7 +113,7 @@ public final class FindingStore {
     private static final String DELETE_REVIEWED = """
             DELETE FROM findings WHERE verdict = ? AND reviewed_at < ?
                 AND NOT EXISTS (SELECT 1 FROM evidence_shares s WHERE s.finding_id = findings.id AND s.active = 1)
-                AND NOT EXISTS (SELECT 1 FROM share_events e
+                AND NOT EXISTS (SELECT 1 FROM finding_events e
                     WHERE e.finding_id = findings.id AND e.kind = 'UNSHARED' AND e.at >= ?)
             """;
     private static final String ACTIVITY = """
@@ -121,7 +121,7 @@ public final class FindingStore {
                 SELECT reviewed_at AS at, reviewer AS actor, verdict AS kind, id AS finding_id, 0 AS rank
                 FROM findings WHERE verdict IS NOT NULL AND reviewed_at < ?
                 UNION ALL
-                SELECT at, actor, kind, finding_id, id FROM share_events WHERE at < ?)
+                SELECT at, actor, kind, finding_id, id FROM finding_events WHERE at < ?)
             ORDER BY at DESC, rank DESC, finding_id DESC
             LIMIT ?
             """;
@@ -148,6 +148,43 @@ public final class FindingStore {
             }
             return select(connection, id);
         });
+    }
+
+    public CompletableFuture<Optional<Finding>> attribute(long id, Set<UUID> players, String actor, Instant at) {
+        return database.transaction(connection -> {
+            try (PreparedStatement update = connection.prepareStatement("UPDATE findings SET players = ? WHERE id = ?")) {
+                update.setString(1, encodePlayers(players));
+                update.setLong(2, id);
+                if (update.executeUpdate() == 0) {
+                    return Optional.empty();
+                }
+            }
+            recordEvent(connection, id, ActivityKind.ATTRIBUTED, actor, at);
+            return select(connection, id);
+        });
+    }
+
+    public CompletableFuture<Void> record(long id, ActivityKind kind, String actor, Instant at) {
+        return database.transaction(connection -> {
+            recordEvent(connection, id, kind, actor, at);
+            return null;
+        });
+    }
+
+    private static void recordEvent(Connection connection, long id, ActivityKind kind, String actor, Instant at)
+            throws SQLException {
+        try (PreparedStatement insert = connection.prepareStatement(
+                "INSERT INTO finding_events (finding_id, at, actor, kind) VALUES (?, ?, ?, ?)")) {
+            insert.setLong(1, id);
+            insert.setLong(2, at.toEpochMilli());
+            insert.setString(3, actor);
+            insert.setString(4, kind.name());
+            insert.executeUpdate();
+        }
+    }
+
+    private static String encodePlayers(Set<UUID> players) {
+        return players.stream().map(UUID::toString).sorted().collect(Collectors.joining(","));
     }
 
     public CompletableFuture<Optional<Finding>> find(long id) {
@@ -558,7 +595,7 @@ public final class FindingStore {
             insert.setInt(8, box.maxZ());
             insert.setDouble(9, candidate.score());
             insert.setInt(10, candidate.votes());
-            insert.setString(11, candidate.players().stream().map(UUID::toString).sorted().collect(Collectors.joining(",")));
+            insert.setString(11, encodePlayers(candidate.players()));
             insert.setString(12, candidate.detail());
             insert.setString(13, candidate.modelVersion());
             insert.setInt(14, candidate.preview().width());

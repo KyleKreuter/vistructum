@@ -8,6 +8,7 @@ import { findingsOptions, useEvidence, useFinding, useFindings, useHeatmap, useM
 import { urls } from "@/api/client";
 import type { FindingDetail, FindingSummary, Verdict } from "@/api/types";
 import { IndicatorIcons, SourceBadge, VerdictBadge } from "@/components/app/Badges";
+import { BlockLogPanel } from "@/components/app/BlockLogPanel";
 import { PlayerCard } from "@/components/app/PlayerFace";
 import { SharePanel } from "@/components/app/SharePanel";
 import { EmptyState, ErrorState, PageSpinner } from "@/components/app/States";
@@ -420,6 +421,11 @@ export default function FindingDetailPage() {
               </CardContent>
             </Card>
 
+            {me.data?.blockLog && (
+              <div className="shrink-0">
+                <BlockLogPanel key={data.id} finding={data} canRollback={me.data.canRollback} />
+              </div>
+            )}
             {shareView(data, canShare) !== "hidden" && (
               <div className="shrink-0">
                 <SharePanel key={data.id} finding={data} canShare={canShare} />

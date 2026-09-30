@@ -9,5 +9,7 @@ public interface GameServer {
 
     boolean canShare(UUID player);
 
+    boolean canRollback(UUID player);
+
     Optional<String> dimension(String world);
 }

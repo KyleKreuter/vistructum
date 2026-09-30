@@ -18,6 +18,9 @@ permissions:
   vistructum.evidence.share:
     description: Shares the evidence of confirmed findings through public links and revokes these links
     default: op
+  vistructum.coreprotect.rollback:
+    description: Rolls back the blocks of confirmed findings through CoreProtect in the web app
+    default: op
   vistructum.admin:
     description: Starts and stops surface scans, exports reviewed findings as training data
     default: op

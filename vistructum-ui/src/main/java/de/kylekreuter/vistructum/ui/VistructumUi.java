@@ -38,6 +38,7 @@ public final class VistructumUi extends JavaPlugin {
     private static final String STAFF_PERMISSION = "vistructum.staff";
     private static final String ADMIN_PERMISSION = "vistructum.admin";
     private static final String SHARE_PERMISSION = "vistructum.evidence.share";
+    private static final String ROLLBACK_PERMISSION = "vistructum.coreprotect.rollback";
     private static final String MESSAGES_FILE = "messages.yml";
     private static final String MAPS_FILE = "maps.yml";
     private static final String ASSETS_FOLDER = "assets";
@@ -110,7 +111,7 @@ public final class VistructumUi extends JavaPlugin {
         gameAssets = new GameAssets(getDataFolder().toPath().resolve(ASSETS_FOLDER), Bukkit.getMinecraftVersion(),
                 web.enabled() && getConfig().getBoolean("web.textures.download"));
         Optional<WebApplication.WebApp> app = web.enabled()
-                ? Optional.of(new WebApplication.WebApp(vistructum, web, new BukkitGameServer(SHARE_PERMISSION),
+                ? Optional.of(new WebApplication.WebApp(vistructum, web, new BukkitGameServer(SHARE_PERMISSION, ROLLBACK_PERMISSION),
                 BukkitGameServer.palette(), gameAssets, Bukkit.getScheduler().getMainThreadExecutor(this),
                 getClassLoader(), clock))
                 : Optional.empty();

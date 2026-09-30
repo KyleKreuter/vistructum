@@ -90,7 +90,7 @@ export function createSparseDb(fixture: Fixture, now = Date.now()): MockDb {
     thumbnail: true,
   };
   return {
-    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true },
+    me: { player: staff.uuid, name: staff.name, expiresAt: expiresIn(now), canShare: true, blockLog: true, canRollback: true },
     findings: [open, confirmed, dismissed],
     players: [sparsePlayer, staff],
     palette: mockPalette(fixture),

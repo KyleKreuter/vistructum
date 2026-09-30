@@ -23,5 +23,19 @@ public enum ActivityKind {
     /**
      * The public link to the evidence of a finding was revoked.
      */
-    UNSHARED
+    UNSHARED,
+
+    /**
+     * The players of a finding were determined from the block log.
+     *
+     * @see BlockLog#attribute(long, String)
+     */
+    ATTRIBUTED,
+
+    /**
+     * The block changes of the players of a finding were reverted through the block log.
+     *
+     * @see BlockLog#rollback(long, String)
+     */
+    ROLLED_BACK
 }

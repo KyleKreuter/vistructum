@@ -14,9 +14,11 @@ import java.util.UUID;
 public final class BukkitGameServer implements GameServer {
 
     private final String sharePermission;
+    private final String rollbackPermission;
 
-    public BukkitGameServer(String sharePermission) {
+    public BukkitGameServer(String sharePermission, String rollbackPermission) {
         this.sharePermission = Objects.requireNonNull(sharePermission, "sharePermission");
+        this.rollbackPermission = Objects.requireNonNull(rollbackPermission, "rollbackPermission");
     }
 
     @Override
@@ -26,8 +28,12 @@ public final class BukkitGameServer implements GameServer {
 
     @Override
     public boolean canShare(UUID player) {
-        Player online = Bukkit.getPlayer(player);
-        return online != null ? online.hasPermission(sharePermission) : Bukkit.getOfflinePlayer(player).isOp();
+        return permitted(player, sharePermission);
+    }
+
+    @Override
+    public boolean canRollback(UUID player) {
+        return permitted(player, rollbackPermission);
     }
 
     @Override
@@ -37,6 +43,11 @@ public final class BukkitGameServer implements GameServer {
             return Optional.of(world);
         }
         return loaded.equals(Bukkit.getWorlds().getFirst()) ? Optional.empty() : Optional.of(loaded.getKey().asString());
+    }
+
+    private static boolean permitted(UUID player, String permission) {
+        Player online = Bukkit.getPlayer(player);
+        return online != null ? online.hasPermission(permission) : Bukkit.getOfflinePlayer(player).isOp();
     }
 
     public static Map<String, Integer> palette() {

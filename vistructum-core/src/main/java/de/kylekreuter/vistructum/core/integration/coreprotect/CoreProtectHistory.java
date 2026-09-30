@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -69,6 +70,11 @@ public final class CoreProtectHistory implements BlockHistory {
     }
 
     @Override
+    public CompletableFuture<Integer> rollback(String world, BlockBox region, Set<String> players, Duration since) {
+        return CompletableFuture.supplyAsync(() -> revert(world, region, players, since), executor);
+    }
+
+    @Override
     public void close() {
         executor.shutdownNow();
     }
@@ -78,11 +84,9 @@ public final class CoreProtectHistory implements BlockHistory {
         if (world == null) {
             return List.of();
         }
-        Location center = new Location(world, region.centerX() + 0.5, Math.floorDiv(region.minY() + region.maxY(), 2),
-                region.centerZ() + 0.5);
         List<String[]> rows = api.performLookup(Math.toIntExact(window.toSeconds()), new ArrayList<>(),
                 new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(BLOCK_ACTIONS), radius(region),
-                center);
+                center(world, region));
         if (rows == null) {
             return List.of();
         }
@@ -102,6 +106,22 @@ public final class CoreProtectHistory implements BlockHistory {
                         row.getBlockData().getAsString(), row.getTimestamp()))
                 .toList()
                 .reversed();
+    }
+
+    private int revert(String worldName, BlockBox region, Set<String> players, Duration since) {
+        World world = Bukkit.getWorld(worldName);
+        if (world == null || players.isEmpty()) {
+            return 0;
+        }
+        List<String[]> rows = api.performRollback(Math.toIntExact(Math.max(1, since.toSeconds())),
+                new ArrayList<>(players), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
+                new ArrayList<>(BLOCK_ACTIONS), radius(region), center(world, region));
+        return rows == null ? 0 : rows.size();
+    }
+
+    private static Location center(World world, BlockBox region) {
+        return new Location(world, region.centerX() + 0.5, Math.floorDiv(region.minY() + region.maxY(), 2),
+                region.centerZ() + 0.5);
     }
 
     static int radius(BlockBox region) {
